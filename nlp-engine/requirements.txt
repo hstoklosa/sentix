@@ -1,3 +1,9 @@
+# Dependencies
+pandas
+numpy
+matplotlib
+seaborn
+
 # VS Code
 ipykernel
 ipython
