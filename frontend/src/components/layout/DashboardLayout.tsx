@@ -1,10 +1,13 @@
 const DashboardLayout = ({ children }) => {
   return (
-    <div className="grid grid-cols-[repeat(2,1fr)] grid-rows-[repeat(2,1fr)] gap-y-[5px] gap-x-[5px]">
-      <div className="row-1 row-2 col-1 col-2">1</div>
-      <div className="row-1 row-2 col-2 col-3">2</div>
-      <div className="row-2 row-3 col-1 col-2">3</div>
-      <div className="row-2 row-3 col-2 col-3">4</div>
+    <div className="grid grid-cols-[repeat(3,1fr)] grid-rows-[repeat(3,1fr)] gap-x-2 gap-y-2">
+      <div className="row-start-1 row-end-4 col-start-1 col-end-2">1</div>
+
+      <div className="row-start-1 row-end-2 col-start-2 col-end-4">2</div>
+
+      <div className="row-start-2 row-end-4 col-start-2 col-end-3">3</div>
+
+      <div className="row-start-2 row-end-4 col-start-3 col-end-4">4</div>
     </div>
   );
 };
