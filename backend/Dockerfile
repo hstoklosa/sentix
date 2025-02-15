@@ -20,4 +20,4 @@ RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
 COPY ./app /app/app
 
-CMD ["fastapi", "dev", "app/main.py"]
+CMD ["fastapi", "dev", "--host", "0.0.0.0", "--reload", "app/main.py"]
