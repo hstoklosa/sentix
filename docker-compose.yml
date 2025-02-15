@@ -1,8 +1,10 @@
+# <host_port>:<container_port/protocol_port>
+
 services:
   db:
     image: postgres:12
     ports:
-      - "5432:5432"
+      - 5432:5432
     env_file:
       - ./backend/.env
     volumes:
@@ -16,7 +18,7 @@ services:
   backend:
     image: sentix-backend
     ports:
-      - "8000:8000"
+      - 8000:8000
     build:
       context: ./backend
     env_file:
@@ -42,7 +44,7 @@ services:
   frontend:
     image: sentix-frontend
     ports:
-      - "5173:5173"
+      - 5173:5173
     build:
       context: ./frontend
       args:
@@ -50,6 +52,16 @@ services:
         - NODE_ENV=development
     env_file:
       - ./frontend/.env
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./frontend
+          target: /app
+          ignore:
+            - node_modules
+    volumes:
+      - /app/node_modules
+      - ./frontend:/app
 
 volumes:
   db-data:
