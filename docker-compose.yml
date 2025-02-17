@@ -1,12 +1,10 @@
-# <host_port>:<container_port/protocol_port>
-
 services:
   db:
     image: postgres:12
     ports:
-      - 5432:5432
+      - 5432:5432 # <host_port>:<container_port/protocol_port>
     env_file:
-      - ./backend/.env
+      - .env
     volumes:
       - db-data:/var/lib/postgresql/data/pgdata
     environment:
@@ -22,7 +20,7 @@ services:
     build:
       context: ./backend
     env_file:
-      - ./backend/.env
+      - .env
     # command:
     #   - fastapi
     #   - run
@@ -51,7 +49,7 @@ services:
         - VITE_API_URL=http://localhost:8000
         - NODE_ENV=development
     env_file:
-      - ./frontend/.env
+      - .env
     develop:
       watch:
         - action: sync+restart
