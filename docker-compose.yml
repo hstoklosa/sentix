@@ -36,6 +36,8 @@ services:
             - venv
         - path: ./backend/requirements.txt
           action: rebuild
+    volumes:
+      - ./backend/app:/app/app
     depends_on:
       - db
 
