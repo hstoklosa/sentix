@@ -1,12 +1,13 @@
-from typing import Annotated, Any, Literal
+import secrets
+from typing import Annotated, Any
 
 from pydantic import (
     AnyUrl,
     BeforeValidator,
+    PostgresDsn,
     computed_field,
-    PostgresDsn
 )
-from pydantic import AnyHttpUrl
+from pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,13 +19,13 @@ def parse_cors(v: Any) -> list[str] | str:
         return v
     raise ValueError(v)
 
-class Settings(BaseSettings):    
+class Settings(BaseSettings):
+    app_name: str = "SentiX: Backend"
+    admin_email: str = "hubert.stoklosa23@gmail.com"
+
     PROJECT_NAME: str = "SentiX"
     API_VERSION: str = "/api/v1"
     FRONTEND_HOST: str = "http://localhost:5173"
-    
-    app_name: str = "SentiX: Backend"
-    admin_email: str = "hubert.stoklosa23@gmail.com"
 
     model_config = SettingsConfigDict(
         env_file="../.env",
@@ -32,15 +33,21 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
-    BACKEND_CORS_ORIGINS: Annotated[list[AnyUrl] | str, BeforeValidator(parse_cors)] = []
+    # Security
+    SECRET_KEY: str = secrets.token_urlsafe(32)
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
+
+    BACKEND_CORS_ORIGINS: Annotated[
+        list[AnyUrl] | str, 
+        BeforeValidator(parse_cors)
+    ] = []
 
     @computed_field
     @property
     def all_cors_origins(self) -> list[str]:
-        return [str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS] + [
-            self.FRONTEND_HOST
-        ]
+        return [str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS] + [self.FRONTEND_HOST]
     
+    # Database
     POSTGRES_SERVER: str
     POSTGRES_PORT: int = 5432
     POSTGRES_USER: str
@@ -50,7 +57,7 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:
-        return PostgresDsn.build(
+        return MultiHostUrl.build(
             scheme="postgresql+psycopg",
             username=self.POSTGRES_USER,
             password=self.POSTGRES_PASSWORD,
