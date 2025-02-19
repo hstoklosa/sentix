@@ -1,67 +1,87 @@
 # SentiX: Real-Time Cryptocurrency Sentiment Analysis and Personalised Content Delivery System
 
-## Installation
+## Usage
 
-Clone the repository as the first step.
+The first step is to clone the repository:
 
 ```bash
 git clone git@github.com:hstoklosa/sentix.git
 ```
 
-### Manual
+### Manual Installation
 
 #### Backend
 
-After cloning the repository, navigate into the back-end directory:
+1. After cloning the repository, navigate into the back-end directory:
 
-```bash
-cd sentix/backend
-```
+   ```bash
+   cd sentix/backend
+   ```
 
-Set up a virtual environment:
+2. Set up a virtual environment:
 
-```bash
-python3 -m venv venv
-```
+   ```bash
+   python3 -m venv venv
+   ```
 
-Activate the virtual environment:
+3. Activate the virtual environment:
 
-```bash
-source venv/bin/activate
-```
+   ```bash
+   source venv/bin/activate
+   ```
 
-Install the `requirements.txt` dependencies:
+4. Install the `requirements.txt` dependencies:
 
-```bash
-pip install -r requirements.txt
-```
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-Run the development backend server:
+5. Run the development backend server:
 
-```bash
-fastapi dev main.py
-```
+   ```bash
+   fastapi dev main.py
+   ```
 
 #### Frontend
 
-Open a new terminal window and navigate into the front-end directory:
+6. Open a new terminal window and navigate into the front-end directory:
 
-```bash
-cd sentix/frontend
-```
+   ```bash
+   cd sentix/frontend
+   ```
 
-Install the `package.json` dependencies:
+7. Install the `package.json` dependencies:
 
-```bash
-npm install
-```
+   ```bash
+   npm install
+   ```
 
-Run the development frontend app:
+8. Run the development frontend app:
 
-```bash
-npm start
-```
+   ```bash
+   npm start
+   ```
 
-### Docker
+### Docker Installation
 
-COMING SOON
+1. After cloning the repository, navigate into the root directory:
+
+   ```bash
+   cd sentix
+   ```
+
+2. There are two recommended ways to build and run the Docker containers:
+
+   1. Run in the foreground:
+
+      ```bash
+       docker-compose up --build
+      ```
+
+   2. or run in detached mode:
+
+      ```bash
+      docker-compose up --build -d
+      ```
+
+Regardless of the method chosen, the frontend app should now be running on http://localhost:3000 and should be accessible from the browser. Additionally, the interactive API documentation for the backend can be accessed at http://localhost:8000/docs.
