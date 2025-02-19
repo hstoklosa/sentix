@@ -17,3 +17,12 @@ api.interceptors.request.use(
     return Promise.reject(error);
   }
 );
+
+api.interceptors.response.use(
+  (response) => {
+    return response.data;
+  },
+  async (error: AxiosError) => {
+    // placeholder for failed authentication, etc.
+  }
+);
