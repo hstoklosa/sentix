@@ -4,6 +4,7 @@ from typing import Annotated, Any
 from pydantic import (
     AnyUrl,
     BeforeValidator,
+    EmailStr,
     PostgresDsn,
     computed_field,
 )
@@ -47,6 +48,9 @@ class Settings(BaseSettings):
     def all_cors_origins(self) -> list[str]:
         return [str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS] + [self.FRONTEND_HOST]
     
+    SUPERUSER_EMAIL: EmailStr
+    SUPERUSER_PASSWORD: str
+
     # Database
     POSTGRES_SERVER: str
     POSTGRES_PORT: int = 5432
