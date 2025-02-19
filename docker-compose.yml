@@ -2,7 +2,7 @@ services:
   db:
     image: postgres:12
     ports:
-      - 5432:5432 # <host_port>:<container_port/protocol_port>
+      - 5432:5432
     env_file:
       - .env
     volumes:
@@ -21,11 +21,6 @@ services:
       context: ./backend
     env_file:
       - .env
-    # command:
-    #   - fastapi
-    #   - run
-    #   - --reload
-    #   - "app/main.py"
     develop:
       watch:
         - path: ./backend
