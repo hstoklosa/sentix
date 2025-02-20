@@ -1,17 +1,37 @@
+from datetime import datetime, timezone
+from typing import Optional
+
+from sqlalchemy import func
 from pydantic import EmailStr
-from sqlmodel import SQLModel, Field
+
+from sqlmodel import SQLModel, Field, Column, DateTime, TIMESTAMP
+
+# BASE MODEL
+class Base(SQLModel):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    created_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), server_default=func.now())
+    )
+    updated_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(
+            DateTime(timezone=True),
+            server_default=func.now(),
+            onupdate=func.now(),
+        )
+    )
 
 # USER MODELS
-class UserBase(SQLModel):
+class UserBase(Base):
     email: EmailStr = Field(unique=True, index=True, max_length=255)
     is_superuser: bool = False
 
 class User(UserBase, table=True):
-    id: int = Field(default=None, nullable=False, primary_key=True)
     password: str
 
 class UserPublic(UserBase):
-    id: int
+    pass
 
 class UserCreate(UserBase):
     password: str = Field(min_length=8, max_length=64)
