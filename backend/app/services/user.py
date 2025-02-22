@@ -17,7 +17,6 @@ def create_user(*, session: Session, user: UserCreate) -> User:
     session.refresh(db_user)
     return db_user
 
-
 def get_user_by_email(*, session: Session, email: str) -> Optional[User]:
     stmt = select(User).where(User.email == email)
     user = session.exec(stmt).first()

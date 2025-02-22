@@ -5,7 +5,7 @@ from sqlmodel import SQLModel, Session
 from fastapi import Depends
 
 from app.core.config import settings
-from app.crud import get_user_by_email, create_user
+from app.services.user import get_user_by_email, create_user
 from app.models import UserCreate
 
 DATABASE_URL = str(settings.SQLALCHEMY_DATABASE_URI)
