@@ -21,18 +21,16 @@ def parse_cors(v: Any) -> list[str] | str:
     raise ValueError(v)
 
 class Settings(BaseSettings):
-    app_name: str = "SentiX: Backend"
-    admin_email: str = "hubert.stoklosa23@gmail.com"
-
-    PROJECT_NAME: str = "SentiX"
-    API_VERSION: str = "/api/v1"
-    FRONTEND_HOST: str = "http://localhost:5173"
-
     model_config = SettingsConfigDict(
         env_file="../.env",
         env_ignore_empty=True,
         extra="ignore"
     )
+
+    PROJECT_NAME: str = "SentiX: Full-Stack Web Application"
+
+    FRONTEND_URL: str = "http://localhost:5173"
+    API_BASE_PATH: str = "/api/v1"
 
     # Security
     SECRET_KEY: str = secrets.token_urlsafe(32)
@@ -46,7 +44,7 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def all_cors_origins(self) -> list[str]:
-        return [str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS] + [self.FRONTEND_HOST]
+        return [str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS] + [self.FRONTEND_URL]
     
     SUPERUSER_EMAIL: EmailStr
     SUPERUSER_PASSWORD: str

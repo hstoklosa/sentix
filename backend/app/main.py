@@ -4,8 +4,8 @@ from app.core.db import create_db_and_tables
 from app.core.config import settings
 
 app = FastAPI(
-    title=settings.app_name,
-    openapi_url=f"{settings.API_VERSION}/openapi.json",
+    title=settings.PROJECT_NAME,
+    openapi_url=f"{settings.API_BASE_PATH}/openapi.json",
 )
 
 @app.on_event("startup")
