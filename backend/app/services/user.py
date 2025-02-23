@@ -1,7 +1,9 @@
 from typing import Optional
+
 from sqlmodel import Session, select
 
-from app.models import User, UserCreate
+from app.models.user import User
+from app.schemas.user import UserCreate
 from app.core.security import get_password_hash
 
 
@@ -16,7 +18,6 @@ def create_user(*, session: Session, user: UserCreate) -> User:
     session.commit()
     session.refresh(db_user)
     return db_user
-
 
 def get_user_by_email(*, session: Session, email: str) -> Optional[User]:
     stmt = select(User).where(User.email == email)

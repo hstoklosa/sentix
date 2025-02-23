@@ -1,15 +1,15 @@
-from typing import Generator, Annotated
+from typing import Generator
 
 from sqlalchemy import create_engine
 from sqlmodel import SQLModel, Session
-from fastapi import Depends
 
 from app.core.config import settings
-from app.crud import get_user_by_email, create_user
-from app.models import UserCreate
+from app.services.user import get_user_by_email, create_user
+from app.schemas.user import UserCreate
 
 DATABASE_URL = str(settings.SQLALCHEMY_DATABASE_URI)
 engine = create_engine(DATABASE_URL, echo=True)
+
 
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
@@ -28,5 +28,3 @@ def create_db_and_tables():
 def get_session() -> Generator[Session, None, None]:
     with Session(engine) as session:
         yield session
-
-SessionDep = Annotated[Session, Depends(get_session)]
