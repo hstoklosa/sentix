@@ -1,7 +1,9 @@
 from typing import Optional
+
 from sqlmodel import Session, select
 
-from app.models import User, UserCreate
+from app.models.user import User
+from app.schemas.user import UserCreate
 from app.core.security import get_password_hash
 
 
