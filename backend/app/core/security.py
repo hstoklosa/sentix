@@ -15,19 +15,42 @@ def get_password_hash(password: str) -> str:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
-def create_access_token(
-        subject: Union[str, Any], 
+def build_token(
+        subject: Union[str, Any],
+        token_type: str,
         expires_delta: Optional[timedelta] = None,
         extra_claims: Optional[dict[str, Any]] = None
-):
+) -> str:
     if expires_delta:
         expiration = datetime.now(timezone.utc) + expires_delta
     else:
-        expiration = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        default_exp = (
+            timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+            if token_type == "access"
+            else timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
+        )
+        expiration = datetime.now(timezone.utc) + default_exp
+    
+    claims = {"type": token_type}
+    if extra_claims:
+        claims.update(extra_claims)
+    
+    to_encode = {**claims, "sub": str(subject), "exp": expiration}
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
-    to_encode = { **extra_claims, "sub": str(subject), "exp": expiration }
-    encoded = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-    return encoded
+def create_access_token(
+        subject: Union[str, Any],
+        expires_delta: Optional[timedelta] = None,
+        extra_claims: Optional[dict[str, Any]] = None
+) -> str:
+    return build_token(subject, "access", expires_delta, extra_claims)
+
+def create_refresh_token(
+        subject: Union[str, Any],
+        expires_delta: Optional[timedelta] = None,
+        extra_claims: Optional[dict[str, Any]] = None
+) -> str:
+    return build_token(subject, "refresh", expires_delta, extra_claims)
 
 def decode_token(token: str) -> dict:
     try:

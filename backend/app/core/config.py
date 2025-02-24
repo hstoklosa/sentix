@@ -11,7 +11,6 @@ from pydantic import (
 from pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 # REF: https://github.com/fastapi/full-stack-fastapi-template
 def parse_cors(v: Any) -> list[str] | str:
     if isinstance(v, str) and not v.startswith("["):
@@ -35,8 +34,9 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str = secrets.token_urlsafe(32)
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7   # 7 days
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15   # 15 minutes
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
+    ENVIRONMENT: str = "development"
 
     BACKEND_CORS_ORIGINS: Annotated[
         list[AnyUrl] | str, 
