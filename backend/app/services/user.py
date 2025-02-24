@@ -27,6 +27,7 @@ def get_user_by_email(*, session: Session, email: str) -> Optional[User]:
 
 def authenticate_user(*, session: Session, email: str, password: str) -> User:
     user = get_user_by_email(session=session, email=email)
+
     if not user:
         raise InvalidCredentialsException()
     

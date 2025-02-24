@@ -1,20 +1,26 @@
-from datetime import datetime, timedelta, timezone
 from typing import Optional, Union, Any
+from datetime import datetime, timedelta, timezone
 
 from passlib.context import CryptContext
-from jose import JWTError, jwt
+from jose import jwt, JWTError
 
 from app.core.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
+"""
+PASSWORDS
+"""
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
+"""
+AUTH TOKENS (JWT)
+"""
 def build_token(
         subject: Union[str, Any],
         token_type: str,
