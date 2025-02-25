@@ -1,5 +1,17 @@
 # SentiX: Real-Time Cryptocurrency Sentiment Analysis and Personalised Content Delivery System
 
+## Features
+
+- Real-time cryptocurrency sentiment analysis
+- Personalised content delivery system
+- ...
+
+## Technologies
+
+- React
+- FastAPI
+- ...
+
 ## Usage
 
 The first step is to clone the repository:
@@ -84,4 +96,23 @@ git clone git@github.com:hstoklosa/sentix.git
       docker-compose up --build -d
       ```
 
+### Accessing the app
+
 Regardless of the method chosen, the frontend app should now be running on http://localhost:3000 and should be accessible from the browser. Additionally, the interactive API documentation for the backend can be accessed at http://localhost:8000/docs.
+
+## Copyright & Licenses
+
+### Code
+
+All code is written by [me](https://github.com/hstoklosa), unless it has been referenced.
+
+Imported libraries (authors and licenses):
+
+- FastAPI (Open-Source) - MIT License
+- ...
+
+<br />
+
+© 2025 H. Stoklosa - hubert.stoklosa23@gmail.com
+
+https://github.com/hstoklosa
