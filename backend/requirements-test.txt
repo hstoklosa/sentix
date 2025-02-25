@@ -1,0 +1,7 @@
+pytest
+pytest-asyncio
+httpx
+async-asgi-testclient
+pytest-env
+freezegun
+pytest-postgresql

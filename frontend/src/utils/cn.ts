@@ -7,10 +7,6 @@ import { twMerge } from "tailwind-merge";
  *
  * @param inputs - array of class values (strings, objects, arrays, etc.) to be merged
  * @returns a merged string of class names optimized for Tailwind CSS
- *
- * @example
- * cn('p-4', 'bg-blue-500', { 'text-white': true, 'rounded': false })
- *  => 'p-4 bg-blue-500 text-white'
  */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
