@@ -1,10 +1,11 @@
-from typing import Optional, Union, Any
+from typing import Optional
 from datetime import datetime, timedelta, timezone
 
 from passlib.context import CryptContext
 from jose import jwt, JWTError
 
 from app.core.config import settings
+from app.core.exceptions import InvalidCredentialsException
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -21,49 +22,36 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 """
 AUTH TOKENS (JWT)
 """
-def build_token(
-        subject: Union[str, Any],
-        token_type: str,
-        expires_delta: Optional[timedelta] = None,
-        extra_claims: Optional[dict[str, Any]] = None
+def create_token(
+        data: dict, 
+        expires_delta: Optional[timedelta] = None, 
+        token_type: str = "access"
 ) -> str:
+    raw_data = data.copy()
+    
     if expires_delta:
-        expiration = datetime.now(timezone.utc) + expires_delta
-    else:
-        default_exp = (
-            timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-            if token_type == "access"
-            else timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
-        )
-        expiration = datetime.now(timezone.utc) + default_exp
+        expire = datetime.now(timezone.utc) + expires_delta
+    elif token_type == "access":
+        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    else:  # token_type == "refresh"
+        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
     
-    claims = {"type": token_type}
-    if extra_claims:
-        claims.update(extra_claims)
+    raw_data.update({"exp": expire, "type": token_type})
     
-    to_encode = {**claims, "sub": str(subject), "exp": expiration}
-    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return jwt.encode(raw_data, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
-def create_access_token(
-        subject: Union[str, Any],
-        expires_delta: Optional[timedelta] = None,
-        extra_claims: Optional[dict[str, Any]] = None
-) -> str:
-    return build_token(subject, "access", expires_delta, extra_claims)
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    return create_token(data, expires_delta, token_type="access")
 
-def create_refresh_token(
-        subject: Union[str, Any],
-        expires_delta: Optional[timedelta] = None,
-        extra_claims: Optional[dict[str, Any]] = None
-) -> str:
-    return build_token(subject, "refresh", expires_delta, extra_claims)
+def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    return create_token(data, expires_delta, token_type="refresh")
 
 def decode_token(token: str) -> dict:
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         return payload
-    except JWTError as e:
-        raise e
+    except JWTError:
+        raise InvalidCredentialsException()
 
 def verify_token_type(token_data: dict, token_type: str):
     if token_data.get("type") != token_type:
