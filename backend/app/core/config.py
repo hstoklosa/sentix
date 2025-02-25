@@ -1,5 +1,5 @@
+from typing import Annotated
 import secrets
-from typing import Annotated, Any
 
 from pydantic import (
     AnyUrl,
@@ -11,13 +11,8 @@ from pydantic import (
 from pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# REF: https://github.com/fastapi/full-stack-fastapi-template
-def parse_cors(v: Any) -> list[str] | str:
-    if isinstance(v, str) and not v.startswith("["):
-        return [i.strip() for i in v.split(",")]
-    elif isinstance(v, list | str):
-        return v
-    raise ValueError(v)
+from app.utils import parse_cors
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
