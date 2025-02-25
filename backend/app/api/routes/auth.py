@@ -1,6 +1,16 @@
 from datetime import timedelta
-from fastapi import APIRouter, HTTPException, status, Depends, Response, Cookie, Request
+
+from fastapi import (
+    APIRouter, 
+    HTTPException, 
+    status, 
+    Depends, 
+    Response, 
+    Cookie, 
+    Request
+)
 from sqlmodel import Session
+from jose import JWTError
 
 from app.core.security import (
     create_access_token,
@@ -13,6 +23,7 @@ from app.services.user import get_user_by_email, create_user, authenticate_user
 from app.deps import get_session
 from app.schemas.user import UserCreate, UserLogin
 from app.schemas.token import Token
+from app.core.exceptions import InvalidCredentialsException, InvalidTokenException
 
 router = APIRouter(
     prefix="/auth",
@@ -51,8 +62,8 @@ async def register(
     user = create_user(session=session, user=user_data)
     
     # Generate tokens
-    access_token = create_access_token(subject=user.id)
-    refresh_token = create_refresh_token(subject=user.id)
+    access_token = create_access_token(data={"sub": str(user.id)})
+    refresh_token = create_refresh_token(data={"sub": str(user.id)})
     
     # Set refresh token cookie
     set_refresh_token_cookie(response, refresh_token)
@@ -65,21 +76,29 @@ async def login(
     credentials: UserLogin,
     session: Session = Depends(get_session)
 ) -> Token:
-    # Authenticate user (will raise InvalidCredentialsException if credentials are invalid)
-    user = authenticate_user(
-        session=session,
-        email=credentials.email,
-        password=credentials.password
-    )
+    try:
+        # Authenticate user (will raise InvalidCredentialsException if credentials are invalid)
+        user = authenticate_user(
+            session=session,
+            email=credentials.email,
+            password=credentials.password
+        )
+        
+        # Generate tokens
+        access_token = create_access_token(data={"sub": str(user.id)})
+        refresh_token = create_refresh_token(data={"sub": str(user.id)})
+        
+        # Set refresh token cookie
+        set_refresh_token_cookie(response, refresh_token)
+        
+        return Token(access_token=access_token)
     
-    # Generate tokens
-    access_token = create_access_token(subject=user.id)
-    refresh_token = create_refresh_token(subject=user.id)
-    
-    # Set refresh token cookie
-    set_refresh_token_cookie(response, refresh_token)
-    
-    return Token(access_token=access_token)
+    except InvalidCredentialsException:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 @router.post("/refresh", response_model=Token)
 async def refresh_token(
@@ -98,19 +117,24 @@ async def refresh_token(
         payload = decode_token(refresh_token)
         verify_token_type(payload, "refresh")
         
+        user_id = payload.get("sub")
+        if not user_id:
+            raise InvalidTokenException()
+        
         # Generate new tokens
-        access_token = create_access_token(subject=payload["sub"])
-        new_refresh_token = create_refresh_token(subject=payload["sub"])
+        access_token = create_access_token(data={"sub": user_id})
+        new_refresh_token = create_refresh_token(data={"sub": user_id})
         
         # Set new refresh token cookie
         set_refresh_token_cookie(response, new_refresh_token)
         
         return Token(access_token=access_token)
         
-    except Exception as e:
+    except (InvalidTokenException, JWTError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid refresh token"
+            detail="Invalid refresh token",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
 @router.post("/logout")
