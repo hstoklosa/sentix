@@ -1,42 +1,117 @@
-import websocket
+# https://tenacity.readthedocs.io
+# https://websockets.readthedocs.io/en/stable/
 
-API_KEY = "todo"
+from datetime import datetime, timezone
+import logging
+import json
+import websockets
+
+from websockets.exceptions import WebSocketException
+from typing import Optional, Callable, Any
+
+from app.core.news.types import NewsData
+
+logger = logging.getLogger(__name__)
+
+API_KEY = "treenews_api_key"
+
 
 class TreeNews():
-    """Fetch news from the TreeNews provider."""
+    """Fetch news from the TreeNews provider (Tree of Alpha)."""
 
     def __init__(self):
         self.wss = "wss://news.treeofalpha.com/ws"
-        self._socket = None
+        self._socket: Optional[websockets.WebSocketClientProtocol] = None
+        self._callback: Optional[Callable[[NewsData], Any]] = None
+        self._running = False
 
-    def connect(self) -> None:
-        if self._socket is None:
-            self._socket = websocket.WebSocketApp(
-                self.wss,
-                on_open=self.on_open,
-                on_message=self.on_message,
-                on_error=self.on_error,
-                on_close=self.on_close
-            )
+    async def connect(self, callback: Callable[[NewsData], Any]):
+        """Connect to the TreeNews WebSocket server with retry logic."""
+        self._callback = callback
+        self._running = True
         
-        self._socket.run_forever()
+        try:
+            async with websockets.connect(self.wss) as websocket:
+                self._socket = websocket
+                await websocket.send(f"login {API_KEY}")
+                logger.info("Connected to TreeNews WebSocket server and sent login")
+                await self._listen()
+        except WebSocketException as e:
+            logger.error(f"WebSocket error: {e}")
+            raise
+        finally:
+            self._socket = None
 
-    def on_message(self, ws: websocket.WebSocketApp, message: str) -> None:
-        print(f"Received: {message}")
+    async def _listen(self):
+        """Listen for incoming messages and process them."""
+        if not self._socket:
+            return
 
-    def on_error(self, ws: websocket.WebSocketApp, error: str) -> None:
-        print(error)
+        while self._running:
+            try:
+                message = await self._socket.recv()
+                await self._handle_message(message)
+            except websockets.ConnectionClosed:
+                logger.warning("WebSocket connection closed")
+                break
+            except Exception as e:
+                logger.error(f"Error processing message: {e}")
+                continue
 
-    def on_close(self, ws: websocket.WebSocketApp, close_status_code: int, close_msg: str) -> None:
-        print("### closed ###")
+    async def _handle_message(self, message: str):
+        """Process incoming message and convert to NewsData object.
+        https://docs.treeofalpha.com/websockets/response
+        """
+        if not self._callback:
+            return
 
-    def on_open(self, ws: websocket.WebSocketApp) -> None:
-        ws.send(f"login {API_KEY}")
+        try:
+            data = json.loads(message)
+            news = NewsData()
+            
+            news.title = data.get('title', '')
+            news.link = data.get('link', '')
+            news.body = data.get('body', '')
+            news.image = data.get('image', '')
+            
+            info = data.get('info', {})
+            news.is_quote = info.get('isQuote', False)
+            news.is_reply = info.get('isReply', False)
+            news.is_retweet = info.get('isRetweet', False)
+            
+            # Not provided in TreeNews response format
+            news.quote_message = ''
+            news.quote_user = ''
+            news.quote_image = ''
+            news.reply_user = ''
+            news.reply_message = ''
+            news.reply_image = ''
+            news.retweet_user = ''
+            
+            news.icon = data.get('icon', '')
+            news.source = data.get('source', '')
+            news.time = datetime.fromtimestamp(data.get('time', 0) / 1000, tz=timezone.utc)  # convert from milliseconds
+            
+            # handle coin data from suggestions
+            coins = set()
+            suggestions = data.get('suggestions', [])
+            for suggestion in suggestions:
+                if 'coin' in suggestion:
+                    coins.add(suggestion['coin'])
+            news.coin = coins
+            
+            news.feed = data.get('type', '')  # 'direct' or other types
+            news.sfx = ''  # no sound effects
+            news.ignored = not data.get('requireInteraction', True)
 
-    def format_news(self):
-        return
+            await self._callback(news)
+        except Exception as e:
+            logger.error(f"Error parsing message: {e}")
 
-
-# if __name__ == "__main__":
-#     tree_news = TreeNews()
-#     tree_news.connect()
+    async def disconnect(self):
+        """Gracefully disconnect from the WebSocket server."""
+        self._running = False
+        if self._socket:
+            await self._socket.close()
+            self._socket = None
+            logger.info("Disconnected from TreeNews WebSocket server")
