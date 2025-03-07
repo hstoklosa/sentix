@@ -1,23 +1,29 @@
 # https://tenacity.readthedocs.io
 # https://websockets.readthedocs.io/en/stable/
 
+from typing import Optional, Callable, Any
 from datetime import datetime, timezone
+
 import logging
 import json
 import websockets
 
+from tenacity import (
+    before_sleep_log,
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+) 
 from websockets.exceptions import WebSocketException
-from typing import Optional, Callable, Any
 
 from app.core.news.types import NewsData
 
 logger = logging.getLogger(__name__)
-
-API_KEY = "treenews_api_key"
+api_key = "treenews_api_key"
 
 
 class TreeNews():
-    """Fetch news from the TreeNews provider (Tree of Alpha)."""
+    """Fetch news from the TreeNews provider."""
 
     def __init__(self):
         self.wss = "wss://news.treeofalpha.com/ws"
@@ -25,6 +31,11 @@ class TreeNews():
         self._callback: Optional[Callable[[NewsData], Any]] = None
         self._running = False
 
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=1, min=4, max=60),
+        before_sleep=before_sleep_log(logger, logging.WARNING)
+    )
     async def connect(self, callback: Callable[[NewsData], Any]):
         """Connect to the TreeNews WebSocket server with retry logic."""
         self._callback = callback
@@ -33,7 +44,7 @@ class TreeNews():
         try:
             async with websockets.connect(self.wss) as websocket:
                 self._socket = websocket
-                await websocket.send(f"login {API_KEY}")
+                await websocket.send(f"login {api_key}")
                 logger.info("Connected to TreeNews WebSocket server and sent login")
                 await self._listen()
         except WebSocketException as e:
@@ -59,7 +70,7 @@ class TreeNews():
                 continue
 
     async def _handle_message(self, message: str):
-        """Process incoming message and convert to NewsData object.
+        """Process incoming message and convert to NewsData object. 
         https://docs.treeofalpha.com/websockets/response
         """
         if not self._callback:
@@ -79,7 +90,7 @@ class TreeNews():
             news.is_reply = info.get('isReply', False)
             news.is_retweet = info.get('isRetweet', False)
             
-            # Not provided in TreeNews response format
+            # not provided in TreeNews response format
             news.quote_message = ''
             news.quote_user = ''
             news.quote_image = ''
@@ -101,7 +112,7 @@ class TreeNews():
             news.coin = coins
             
             news.feed = data.get('type', '')  # 'direct' or other types
-            news.sfx = ''  # no sound effects
+            news.sfx = '' # no sound effects
             news.ignored = not data.get('requireInteraction', True)
 
             await self._callback(news)

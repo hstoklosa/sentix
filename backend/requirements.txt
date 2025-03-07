@@ -7,3 +7,4 @@ sqlmodel
 psycopg[binary,pool]
 passlib[bcrypt]
 python-jose[cryptography]
+tenacity
