@@ -36,15 +36,15 @@ const Landing = () => {
         <div className="flex gap-4 flex-col">
           <h1 className="text-5xl md:text-7xl max-w-2xl tracking-tighter text-center font-normal">
             <span className="text-primary">Trade smarter with</span>
-            <div className="flex justify-center items-center">
-              <span className="relative inline-block w-[275px] text-start">
-                <span className="invisible">
+            <div className="flex justify-center items-center space-x-4">
+              <div className="relative inline-flex">
+                <span className="invisible whitespace-nowrap">
                   {titles.reduce((a, b) => (a.length > b.length ? a : b))}
                 </span>
                 {titles.map((title, index) => (
                   <span
                     key={index}
-                    className={`absolute left-0 right-0 font-semibold transition-all duration-500 ease-in-out ${
+                    className={`absolute inset-0 font-semibold whitespace-nowrap transition-all duration-500 ease-in-out ${
                       titleIndex === index
                         ? "opacity-100 translate-y-0"
                         : titleIndex > index
@@ -55,8 +55,8 @@ const Landing = () => {
                     {title}
                   </span>
                 ))}
-              </span>
-              <span>insights</span>
+              </div>
+              <span>&nbsp;&nbsp;insights</span>
             </div>
           </h1>
 

@@ -5,9 +5,9 @@ export const DotPattern = () => {
         className="absolute inset-0 bg-dots-pattern"
         style={{
           maskImage:
-            "radial-gradient(circle at center, transparent 25%, rgba(0, 0, 0, 0.7) 50%, black 75%)",
+            "radial-gradient(ellipse 90% 70% at center, transparent 5%, rgba(0, 0, 0, 0.5) 20%, rgba(0, 0, 0, 0.8) 40%, black 60%)",
           WebkitMaskImage:
-            "radial-gradient(circle at center, transparent 25%, rgba(0, 0, 0, 0.7) 50%, black 75%)",
+            "radial-gradient(ellipse 90% 70% at center, transparent 5%, rgba(0, 0, 0, 0.5) 20%, rgba(0, 0, 0, 0.8) 40%, black 60%)",
         }}
       />
     </div>
