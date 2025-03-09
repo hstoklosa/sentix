@@ -1,4 +1,4 @@
-const DashboardLayout = ({ children }) => {
+const DashboardLayout = () => {
   return (
     <div className="grid grid-cols-[repeat(3,1fr)] grid-rows-[repeat(3,1fr)] gap-x-2 gap-y-2">
       <div className="row-start-1 row-end-4 col-start-1 col-end-2">1</div>
