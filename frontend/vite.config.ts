@@ -1,14 +1,24 @@
-import path from "path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 import tailwindcss from "@tailwindcss/vite";
+import path from "path";
 
 /**
- * CONFIGURE VITE:
+ * Vite Configuration:
  * https://vite.dev/config/
  */
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    TanStackRouterVite({
+      target: "react",
+      routesDirectory: "./src/app/routes",
+      generatedRouteTree: "./src/app/routeTree.gen.ts",
+      autoCodeSplitting: true,
+    }),
+    react(),
+    tailwindcss(),
+  ],
   server: {
     watch: {
       usePolling: true,
@@ -20,10 +30,10 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "@app": path.resolve(__dirname, "./app"),
+      "@app": path.resolve(__dirname, "./src/app"),
       "@components": path.resolve(__dirname, "./src/components"),
-      "@lib": path.resolve(__dirname, "./lib"),
-      "@utils": path.resolve(__dirname, "./utils"),
+      "@lib": path.resolve(__dirname, "./src/lib"),
+      "@utils": path.resolve(__dirname, "./src/utils"),
     },
   },
 });

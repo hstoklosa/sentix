@@ -1,11 +1,11 @@
-import { DashboardLayout } from "../components/layout";
+import AppProvider from "./provider";
+import AppRouter from "./router";
 
 const App = () => {
   return (
-    <div>
-      <h1>Hello world</h1>
-      <DashboardLayout />
-    </div>
+    <AppProvider>
+      <AppRouter />
+    </AppProvider>
   );
 };
 
