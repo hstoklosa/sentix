@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
 import { MoveRight, BarChart3 } from "lucide-react";
 
 import { Button, DotPattern } from "@/components/ui";
@@ -85,4 +86,6 @@ const Landing = () => {
   );
 };
 
-export default Landing;
+export const Route = createFileRoute("/")({
+  component: Landing,
+});
