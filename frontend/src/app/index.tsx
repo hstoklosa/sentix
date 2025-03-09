@@ -1,10 +1,11 @@
-import Landing from "./routes/landing";
+import AppProvider from "./provider";
+import AppRouter from "./router";
 
 const App = () => {
   return (
-    <div className="h-screen w-full mx-auto px-4">
-      <Landing />
-    </div>
+    <AppProvider>
+      <AppRouter />
+    </AppProvider>
   );
 };
 
