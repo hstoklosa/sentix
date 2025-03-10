@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { MoveRight, BarChart3 } from "lucide-react";
 
 import { Button, DotPattern } from "@/components/ui";
@@ -71,14 +71,21 @@ const Landing = () => {
             size="lg"
             className="gap-4"
             variant="outline"
+            asChild
           >
-            View dashboard <BarChart3 className="w-4 h-4" />
+            <Link to="/login">
+              View dashboard <BarChart3 className="w-4 h-4" />
+            </Link>
           </Button>
           <Button
             size="lg"
             className="gap-4"
+            asChild
           >
-            Get started <MoveRight className="w-4 h-4" />
+            <Link to="/register">
+              Get started
+              <MoveRight className="w-4 h-4" />
+            </Link>
           </Button>
         </div>
       </div>
