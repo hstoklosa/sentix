@@ -18,7 +18,7 @@ from app.core.security import (
     decode_token,
     verify_token_type,
 )
-from app.core.exceptions import InvalidCredentialsException, InvalidTokenException
+from app.core.exceptions import InvalidCredentialsException, InvalidTokenException, InvalidPasswordException
 from app.core.config import settings
 from app.services.user import get_user_by_email, create_user, authenticate_user
 from app.deps import get_session, SessionDep
@@ -51,32 +51,39 @@ async def register(
     user_data: UserCreate,
     session: Session = Depends(get_session)
 ) -> Token:
-    # Check if user already exists
-    if existing_user := get_user_by_email(session=session, email=user_data.email):
+    try:
+        # Check if user already exists
+        if existing_user := get_user_by_email(session=session, email=user_data.email):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+        
+        # Check if username already exists
+        from app.services.user import get_user_by_username
+        if existing_user := get_user_by_username(session=session, username=user_data.username):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username already taken"
+            )
+        
+        # Create new user (password hashing is handled in create_user)
+        user = create_user(session=session, user=user_data)
+        
+        # Generate tokens
+        access_token = create_access_token(data={"sub": str(user.id)})
+        refresh_token = create_refresh_token(data={"sub": str(user.id)})
+        
+        # Set refresh token cookie
+        set_refresh_token_cookie(response, refresh_token)
+        
+        return Token(access_token=access_token)
+    
+    except InvalidPasswordException as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
+            detail=str(e.detail)
         )
-    
-    # Check if username already exists
-    from app.services.user import get_user_by_username
-    if existing_user := get_user_by_username(session=session, username=user_data.username):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already taken"
-        )
-    
-    # Create new user (password hashing is handled in create_user)
-    user = create_user(session=session, user=user_data)
-    
-    # Generate tokens
-    access_token = create_access_token(data={"sub": str(user.id)})
-    refresh_token = create_refresh_token(data={"sub": str(user.id)})
-    
-    # Set refresh token cookie
-    set_refresh_token_cookie(response, refresh_token)
-    
-    return Token(access_token=access_token)
 
 @router.post("/login", response_model=Token)
 async def login(
@@ -102,6 +109,11 @@ async def login(
         
         return Token(access_token=access_token)
     
+    except InvalidPasswordException as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e.detail)
+        )
     except InvalidCredentialsException:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
