@@ -58,6 +58,14 @@ async def register(
             detail="Email already registered"
         )
     
+    # Check if username already exists
+    from app.services.user import get_user_by_username
+    if existing_user := get_user_by_username(session=session, username=user_data.username):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already taken"
+        )
+    
     # Create new user (password hashing is handled in create_user)
     user = create_user(session=session, user=user_data)
     
@@ -81,6 +89,7 @@ async def login(
         user = authenticate_user(
             session=session,
             email=credentials.email,
+            username=credentials.username,
             password=credentials.password
         )
         
@@ -96,7 +105,7 @@ async def login(
     except InvalidCredentialsException:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail="Incorrect username/email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

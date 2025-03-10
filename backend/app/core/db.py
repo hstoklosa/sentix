@@ -19,6 +19,7 @@ def create_db_and_tables():
 
         if not user:
             superuser = UserCreate(
+                username=settings.SUPERUSER_USERNAME,
                 email=settings.SUPERUSER_EMAIL,
                 password=settings.SUPERUSER_PASSWORD,
                 is_superuser=True,
