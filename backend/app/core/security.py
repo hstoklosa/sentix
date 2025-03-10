@@ -1,5 +1,6 @@
 from typing import Optional
 from datetime import datetime, timedelta, timezone
+import uuid
 
 from passlib.context import CryptContext
 from jose import jwt, JWTError
@@ -36,7 +37,15 @@ def create_token(
     else:  # token_type == "refresh"
         expire = datetime.now(timezone.utc) + timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
     
-    raw_data.update({"exp": expire, "type": token_type})
+    # Add JWT ID for token identification (useful for blacklisting)
+    jti = str(uuid.uuid4())
+    
+    raw_data.update({
+        "exp": expire, 
+        "type": token_type,
+        "jti": jti,
+        "iat": datetime.now(timezone.utc)
+    })
     
     return jwt.encode(raw_data, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
@@ -56,3 +65,7 @@ def decode_token(token: str) -> dict:
 def verify_token_type(token_data: dict, token_type: str):
     if token_data.get("type") != token_type:
         raise JWTError("Invalid token type")
+
+def get_token_jti(token_data: dict) -> Optional[str]:
+    """Extract JTI from token data"""
+    return token_data.get("jti")

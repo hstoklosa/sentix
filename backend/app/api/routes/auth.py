@@ -18,12 +18,12 @@ from app.core.security import (
     decode_token,
     verify_token_type,
 )
+from app.core.exceptions import InvalidCredentialsException, InvalidTokenException
 from app.core.config import settings
 from app.services.user import get_user_by_email, create_user, authenticate_user
-from app.deps import get_session
+from app.deps import get_session, SessionDep
 from app.schemas.user import UserCreate, UserLogin
 from app.schemas.token import Token
-from app.core.exceptions import InvalidCredentialsException, InvalidTokenException
 
 router = APIRouter(
     prefix="/auth",
@@ -104,8 +104,8 @@ async def login(
 async def refresh_token(
     request: Request,
     response: Response,
-    refresh_token: str | None = Cookie(None, include_in_schema=False),
-    session: Session = Depends(get_session)
+    session: SessionDep,
+    refresh_token: str | None = Cookie(None, include_in_schema=False)
 ) -> Token:
     if not refresh_token:
         raise HTTPException(
@@ -117,6 +117,14 @@ async def refresh_token(
         payload = decode_token(refresh_token)
         verify_token_type(payload, "refresh")
         
+        # Check if token is blacklisted
+        from app.services.token import is_token_blacklisted
+        from app.core.security import get_token_jti
+        
+        jti = get_token_jti(payload)
+        if jti and is_token_blacklisted(session=session, jti=jti):
+            raise InvalidTokenException()
+        
         user_id = payload.get("sub")
         if not user_id:
             raise InvalidTokenException()
@@ -124,6 +132,10 @@ async def refresh_token(
         # Generate new tokens
         access_token = create_access_token(data={"sub": user_id})
         new_refresh_token = create_refresh_token(data={"sub": user_id})
+        
+        # Blacklist the old refresh token
+        from app.services.token import blacklist_token
+        blacklist_token(session=session, token=refresh_token)
         
         # Set new refresh token cookie
         set_refresh_token_cookie(response, new_refresh_token)
@@ -140,13 +152,19 @@ async def refresh_token(
 @router.post("/logout")
 async def logout(
     response: Response,
+    session: Session,
     refresh_token: str | None = Cookie(None, include_in_schema=False)
 ):
-    """Clear refresh token cookie"""
+    """Blacklist refresh token and clear refresh token cookie"""
     secure_cookie = settings.ENVIRONMENT == "production"
     samesite = "lax" if settings.ENVIRONMENT == "development" else "strict"
     
-    # Even if no refresh token is present, we clear it
+    # Blacklist the refresh token if present
+    if refresh_token:
+        from app.services.token import blacklist_token
+        blacklist_token(session=session, token=refresh_token)
+    
+    # Clear refresh token cookie
     response.delete_cookie(
         key="refresh_token",
         secure=secure_cookie,
