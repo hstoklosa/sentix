@@ -1,36 +1,82 @@
-import { Button, Input, Label } from "@/components/ui";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+import { Button, Input } from "@/components/ui";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { cn } from "@/lib/utils";
+
+import { LoginFormValues, loginFormSchema } from "../types";
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
+  // Initialize the form with React Hook Form and Zod validation
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginFormSchema),
+    defaultValues: {
+      username: "",
+      password: "",
+    },
+  });
+
+  // Handle form submission
+  function onSubmit(values: LoginFormValues) {
+    // For now, just log the form values to the console
+    console.log(values);
+  }
+
   return (
     <div
       className={cn("flex flex-col gap-6", className)}
       {...props}
     >
-      <form>
-        <div className="flex flex-col gap-6">
+      <Form {...form}>
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="flex flex-col gap-6"
+        >
           <div className="flex flex-col gap-6">
-            <div className="grid gap-2">
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                type="text"
-                placeholder="Username"
-                required
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Password"
-                required
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="username"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Username</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Username"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      placeholder="Password"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <Button
               type="submit"
               className="w-full"
@@ -45,6 +91,7 @@ export function LoginForm({
           </div>
           <div className="grid">
             <Button
+              type="button"
               variant="outline"
               className="w-full"
             >
@@ -60,8 +107,8 @@ export function LoginForm({
               Continue with Google
             </Button>
           </div>
-        </div>
-      </form>
+        </form>
+      </Form>
     </div>
   );
 }
