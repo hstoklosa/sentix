@@ -13,3 +13,11 @@ export type User = Entity<{
   email: string;
   is_superuser: boolean;
 }>;
+
+export type AuthResponse = {
+  token: {
+    access_token: string;
+    token_type: string;
+  };
+  user: User;
+};

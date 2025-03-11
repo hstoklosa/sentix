@@ -13,12 +13,15 @@ import {
 import { cn } from "@/lib/utils";
 
 import { LoginFormValues, loginFormSchema } from "../types";
+import { useLogin } from "../api/login";
+import { AuthResponse } from "@/types/api";
 
-export function LoginForm({
-  className,
-  ...props
-}: React.ComponentPropsWithoutRef<"div">) {
-  // Initialize the form with React Hook Form and Zod validation
+type LoginFormProps = {
+  onSuccess?: (data: AuthResponse) => void;
+};
+
+const LoginForm = ({ onSuccess }: LoginFormProps) => {
+  // Initialise the form with React Hook Form and Zod validation
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
     defaultValues: {
@@ -27,17 +30,22 @@ export function LoginForm({
     },
   });
 
+  const loginMutation = useLogin({
+    onSuccess: (data) => {
+      onSuccess?.(data);
+    },
+    onError: (error) => {
+      console.error("Login failed:", error);
+    },
+  });
+
   // Handle form submission
   function onSubmit(values: LoginFormValues) {
-    // For now, just log the form values to the console
-    console.log(values);
+    loginMutation.mutate(values);
   }
 
   return (
-    <div
-      className={cn("flex flex-col gap-6", className)}
-      {...props}
-    >
+    <div className={cn("flex flex-col gap-6 mt-8 w-[400px]")}>
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
@@ -53,6 +61,7 @@ export function LoginForm({
                   <FormControl>
                     <Input
                       placeholder="Username"
+                      disabled={loginMutation.isPending}
                       {...field}
                     />
                   </FormControl>
@@ -70,6 +79,7 @@ export function LoginForm({
                     <Input
                       type="password"
                       placeholder="Password"
+                      disabled={loginMutation.isPending}
                       {...field}
                     />
                   </FormControl>
@@ -80,8 +90,9 @@ export function LoginForm({
             <Button
               type="submit"
               className="w-full"
+              disabled={loginMutation.isPending}
             >
-              Sign in
+              {loginMutation.isPending ? "Signing in..." : "Sign in"}
             </Button>
           </div>
           <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">
@@ -94,6 +105,7 @@ export function LoginForm({
               type="button"
               variant="outline"
               className="w-full"
+              disabled={loginMutation.isPending}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -111,6 +123,6 @@ export function LoginForm({
       </Form>
     </div>
   );
-}
+};
 
 export default LoginForm;

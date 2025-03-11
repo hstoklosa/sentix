@@ -18,10 +18,10 @@ from app.core.security import (
     decode_token,
     verify_token_type,
 )
-from app.services.user import get_user_by_email, create_user, authenticate_user
+from app.services.user import get_user_by_email, create_user, authenticate_user, get_user_by_id
 from app.deps import get_session, SessionDep, CurrentUserDep
 from app.schemas.user import UserCreate, UserLogin, UserPublic
-from app.schemas.token import Token
+from app.schemas.token import Token, AuthResponse
 from app.core.config import settings
 from app.core.exceptions import InvalidCredentialsException, InvalidTokenException, InvalidPasswordException
 
@@ -50,12 +50,12 @@ async def get_current_user(current_user: CurrentUserDep) -> UserPublic:
     """Get current authenticated user"""
     return current_user
 
-@router.post("/register", response_model=Token)
+@router.post("/register", response_model=AuthResponse)
 async def register(
     response: Response,
     user_data: UserCreate,
     session: Session = Depends(get_session)
-) -> Token:
+) -> AuthResponse:
     try:
         # Check if user already exists
         if existing_user := get_user_by_email(session=session, email=user_data.email):
@@ -79,19 +79,20 @@ async def register(
         
         set_refresh_token_cookie(response, refresh_token)
         
-        return Token(access_token=access_token)
+        token = Token(access_token=access_token)
+        return AuthResponse(token=token, user=user)
     except InvalidPasswordException as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e.detail)
         )
 
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=AuthResponse)
 async def login(
     response: Response,
     credentials: UserLogin,
     session: Session = Depends(get_session)
-) -> Token:
+) -> AuthResponse:
     try:
         # Authenticate user (will raise InvalidCredentialsException if credentials are invalid)
         user = authenticate_user(
@@ -106,7 +107,8 @@ async def login(
         
         set_refresh_token_cookie(response, refresh_token)
         
-        return Token(access_token=access_token)
+        token = Token(access_token=access_token)
+        return AuthResponse(token=token, user=user)
     except InvalidPasswordException as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -119,13 +121,13 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-@router.post("/refresh", response_model=Token)
+@router.post("/refresh", response_model=AuthResponse)
 async def refresh_token(
     request: Request,
     response: Response,
     session: SessionDep,
     refresh_token: str | None = Cookie(None, include_in_schema=False)
-) -> Token:
+) -> AuthResponse:
     if not refresh_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -148,6 +150,11 @@ async def refresh_token(
         if not user_id:
             raise InvalidTokenException()
         
+        # Get the user data
+        user = get_user_by_id(session=session, user_id=int(user_id))
+        if not user:
+            raise InvalidTokenException()
+        
         access_token = create_access_token(data={"sub": user_id})
         new_refresh_token = create_refresh_token(data={"sub": user_id})
         
@@ -157,7 +164,8 @@ async def refresh_token(
         
         set_refresh_token_cookie(response, new_refresh_token)
         
-        return Token(access_token=access_token)
+        token = Token(access_token=access_token)
+        return AuthResponse(token=token, user=user)
     except (InvalidTokenException, JWTError):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

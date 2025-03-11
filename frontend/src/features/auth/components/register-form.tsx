@@ -13,12 +13,15 @@ import {
 import { cn } from "@/lib/utils";
 
 import { RegisterFormValues, registerFormSchema } from "../types";
+import { useRegister } from "../api/register";
+import { AuthResponse } from "@/types/api";
 
-export function RegisterForm({
-  className,
-  ...props
-}: React.ComponentPropsWithoutRef<"div">) {
-  // Initialize the form with React Hook Form and Zod validation
+type RegisterFormProps = {
+  onSuccess?: (data: AuthResponse) => void;
+};
+
+const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
+  // Initialise the form with React Hook Form and Zod validation
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerFormSchema),
     defaultValues: {
@@ -29,17 +32,22 @@ export function RegisterForm({
     },
   });
 
+  const registerMutation = useRegister({
+    onSuccess: (data) => {
+      onSuccess?.(data);
+    },
+    onError: (error) => {
+      console.error("Registration failed:", error);
+    },
+  });
+
   // Handle form submission
   function onSubmit(values: RegisterFormValues) {
-    // For now, just log the form values to the console
-    console.log(values);
+    registerMutation.mutate(values);
   }
 
   return (
-    <div
-      className={cn("flex flex-col gap-6", className)}
-      {...props}
-    >
+    <div className={cn("flex flex-col gap-6 mt-8 w-[400px]")}>
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
@@ -55,6 +63,7 @@ export function RegisterForm({
                   <FormControl>
                     <Input
                       placeholder="Username"
+                      disabled={registerMutation.isPending}
                       {...field}
                     />
                   </FormControl>
@@ -72,6 +81,7 @@ export function RegisterForm({
                     <Input
                       type="email"
                       placeholder="m@example.com"
+                      disabled={registerMutation.isPending}
                       {...field}
                     />
                   </FormControl>
@@ -89,6 +99,7 @@ export function RegisterForm({
                     <Input
                       type="password"
                       placeholder="Password"
+                      disabled={registerMutation.isPending}
                       {...field}
                     />
                   </FormControl>
@@ -106,6 +117,7 @@ export function RegisterForm({
                     <Input
                       type="password"
                       placeholder="Confirm Password"
+                      disabled={registerMutation.isPending}
                       {...field}
                     />
                   </FormControl>
@@ -116,8 +128,11 @@ export function RegisterForm({
             <Button
               type="submit"
               className="w-full"
+              disabled={registerMutation.isPending}
             >
-              Create Account
+              {registerMutation.isPending
+                ? "Creating Account..."
+                : "Create Account"}
             </Button>
           </div>
           <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">
@@ -130,6 +145,7 @@ export function RegisterForm({
               type="button"
               variant="outline"
               className="w-full"
+              disabled={registerMutation.isPending}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -147,6 +163,6 @@ export function RegisterForm({
       </Form>
     </div>
   );
-}
+};
 
 export default RegisterForm;

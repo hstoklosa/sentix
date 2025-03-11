@@ -4,7 +4,7 @@ import { GalleryVerticalEnd } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-import { RegisterForm } from "@/features/auth/components/register-form";
+import RegisterForm from "@/features/auth/components/register-form";
 
 const Register = () => {
   return (
@@ -35,7 +35,11 @@ const Register = () => {
         </div>
       </div>
 
-      <RegisterForm className="mt-6 w-[400px]" />
+      <RegisterForm
+        onSuccess={() => {
+          console.log("success");
+        }}
+      />
     </div>
   );
 };

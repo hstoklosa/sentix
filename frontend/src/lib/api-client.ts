@@ -16,6 +16,12 @@ type RetryableRequestConfig = {
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     config.headers["Content-Type"] = "application/json";
+
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${JSON.parse(token)}`;
+    }
+
     return config;
   },
   (error: AxiosError) => {

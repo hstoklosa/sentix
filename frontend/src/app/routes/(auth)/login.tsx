@@ -4,7 +4,7 @@ import { GalleryVerticalEnd } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-import { LoginForm } from "@/features/auth/components/login-form";
+import LoginForm from "@/features/auth/components/login-form";
 
 const Login = () => {
   return (
@@ -34,7 +34,11 @@ const Login = () => {
         </div>
       </div>
 
-      <LoginForm className="mt-8 w-[400px]" />
+      <LoginForm
+        onSuccess={() => {
+          console.log("success");
+        }}
+      />
     </div>
   );
 };
