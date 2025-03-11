@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from sqlmodel import Session
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from starlette.middleware.cors import CORSMiddleware
 
 from app.api.main import api_router
 from app.core.db import create_db_and_tables, engine
@@ -48,5 +49,14 @@ async def cleanup_expired_tokens():
             logger.info(f"Removed {removed_count} expired tokens from database")
     except Exception as e:
         logger.error(f"Error cleaning up expired tokens: {e}")
+
+if settings.all_cors_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.all_cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 app.include_router(api_router, prefix=settings.API_BASE_PATH)
