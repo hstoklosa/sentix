@@ -1,15 +1,17 @@
 from typing import Annotated
 
 from sqlmodel import Session
-from fastapi import Depends, Cookie
+from fastapi import Depends, Cookie, status, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
 
 from app.core.db import get_session
+from app.services.token import is_token_blacklisted
+from app.services.user import get_user_by_id
+from app.models.user import User
 from app.core.config import settings
 from app.core.security import decode_token, verify_token_type, get_token_jti
 from app.core.exceptions import InvalidTokenException
-from app.services.token import is_token_blacklisted
 
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_BASE_PATH}/auth/login"
@@ -48,7 +50,31 @@ async def verify_refresh_token(
     except JWTError:
         raise InvalidTokenException()
     
+async def get_current_user(
+    session: Annotated[Session, Depends(get_session)],
+    token_payload: Annotated[dict, Depends(verify_access_token)]
+) -> User:
+    """Get the current authenticated user"""
+    user_id = token_payload.get("sub")
+    if not user_id:
+        raise InvalidTokenException()
+    
+    try:
+        user_id = int(user_id)
+    except (TypeError, ValueError):
+        raise InvalidTokenException()
+    
+    user = get_user_by_id(session=session, user_id=user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    return user
+
 SessionDep = Annotated[Session, Depends(get_session)]
 TokenDep = Annotated[str, Depends(oauth2_scheme)]
 TokenPayloadDep = Annotated[dict, Depends(verify_access_token)]
 RefreshTokenPayloadDep = Annotated[dict, Depends(verify_refresh_token)]
+CurrentUserDep = Annotated[User, Depends(get_current_user)]

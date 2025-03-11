@@ -18,12 +18,12 @@ from app.core.security import (
     decode_token,
     verify_token_type,
 )
-from app.core.exceptions import InvalidCredentialsException, InvalidTokenException, InvalidPasswordException
-from app.core.config import settings
 from app.services.user import get_user_by_email, create_user, authenticate_user
-from app.deps import get_session, SessionDep
-from app.schemas.user import UserCreate, UserLogin
+from app.deps import get_session, SessionDep, CurrentUserDep
+from app.schemas.user import UserCreate, UserLogin, UserPublic
 from app.schemas.token import Token
+from app.core.config import settings
+from app.core.exceptions import InvalidCredentialsException, InvalidTokenException, InvalidPasswordException
 
 router = APIRouter(
     prefix="/auth",
@@ -44,6 +44,11 @@ def set_refresh_token_cookie(response: Response, refresh_token: str):
         samesite=samesite,
         max_age=max_age
     )
+
+@router.get("/me", response_model=UserPublic)
+async def get_current_user(current_user: CurrentUserDep) -> UserPublic:
+    """Get current authenticated user"""
+    return current_user
 
 @router.post("/register", response_model=Token)
 async def register(
@@ -67,18 +72,14 @@ async def register(
                 detail="Username already taken"
             )
         
-        # Create new user (password hashing is handled in create_user)
         user = create_user(session=session, user=user_data)
         
-        # Generate tokens
         access_token = create_access_token(data={"sub": str(user.id)})
         refresh_token = create_refresh_token(data={"sub": str(user.id)})
         
-        # Set refresh token cookie
         set_refresh_token_cookie(response, refresh_token)
         
         return Token(access_token=access_token)
-    
     except InvalidPasswordException as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -100,15 +101,12 @@ async def login(
             password=credentials.password
         )
         
-        # Generate tokens
         access_token = create_access_token(data={"sub": str(user.id)})
         refresh_token = create_refresh_token(data={"sub": str(user.id)})
         
-        # Set refresh token cookie
         set_refresh_token_cookie(response, refresh_token)
         
         return Token(access_token=access_token)
-    
     except InvalidPasswordException as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -150,7 +148,6 @@ async def refresh_token(
         if not user_id:
             raise InvalidTokenException()
         
-        # Generate new tokens
         access_token = create_access_token(data={"sub": user_id})
         new_refresh_token = create_refresh_token(data={"sub": user_id})
         
@@ -158,14 +155,12 @@ async def refresh_token(
         from app.services.token import blacklist_token
         blacklist_token(session=session, token=refresh_token)
         
-        # Set new refresh token cookie
         set_refresh_token_cookie(response, new_refresh_token)
         
         return Token(access_token=access_token)
-        
     except (InvalidTokenException, JWTError):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid refresh token",
             headers={"WWW-Authenticate": "Bearer"},
         )
@@ -173,7 +168,7 @@ async def refresh_token(
 @router.post("/logout")
 async def logout(
     response: Response,
-    session: Session,
+    session: SessionDep,
     refresh_token: str | None = Cookie(None, include_in_schema=False)
 ):
     """Blacklist refresh token and clear refresh token cookie"""

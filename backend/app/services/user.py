@@ -31,6 +31,12 @@ def get_user_by_username(*, session: Session, username: str) -> Optional[User]:
     user = session.exec(stmt).first()
     return user
 
+def get_user_by_id(*, session: Session, user_id: int) -> Optional[User]:
+    """Get a user by their ID"""
+    stmt = select(User).where(User.id == user_id)
+    user = session.exec(stmt).first()
+    return user
+
 def authenticate_user(*, session: Session, email: Optional[str] = None, username: Optional[str] = None, password: str) -> User:
     user = None
     
