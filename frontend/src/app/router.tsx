@@ -2,7 +2,8 @@ import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 
 import useAuth, { type AuthState } from "@/hooks/use-auth";
-import { routeTree } from "./routeTree.gen";
+
+import { routeTree } from "./route-tree.gen";
 
 // Initialise a router instance
 export const router = createRouter({
