@@ -73,7 +73,7 @@ const Landing = () => {
             variant="outline"
             asChild
           >
-            <Link to="/login">
+            <Link to="/dashboard">
               View dashboard <BarChart3 className="w-4 h-4" />
             </Link>
           </Button>

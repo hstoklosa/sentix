@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 import LoginForm from "@/features/auth/components/login-form";
 
 const Login = () => {
+  const navigate = Route.useNavigate();
+
   return (
     <div className="h-full w-auto flex flex-col items-center justify-center">
       <div className="flex flex-col items-center gap-2">
@@ -34,11 +36,7 @@ const Login = () => {
         </div>
       </div>
 
-      <LoginForm
-        onSuccess={() => {
-          console.log("success");
-        }}
-      />
+      <LoginForm onSuccess={() => navigate({ to: "/dashboard" })} />
     </div>
   );
 };

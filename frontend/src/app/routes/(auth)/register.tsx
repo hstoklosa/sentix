@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 import RegisterForm from "@/features/auth/components/register-form";
 
 const Register = () => {
+  const navigate = Route.useNavigate();
+
   return (
     <div className="h-full w-auto flex flex-col items-center justify-center">
       <div className="flex flex-col items-center gap-2">
@@ -35,11 +37,7 @@ const Register = () => {
         </div>
       </div>
 
-      <RegisterForm
-        onSuccess={() => {
-          console.log("success");
-        }}
-      />
+      <RegisterForm onSuccess={() => navigate({ to: "/dashboard" })} />
     </div>
   );
 };
