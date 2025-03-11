@@ -22,6 +22,6 @@ function RouteComponent() {
   );
 }
 
-export const Route = createFileRoute("/_dashboard/dashboard")({
+export const Route = createFileRoute("/_app/dashboard")({
   component: RouteComponent,
 });

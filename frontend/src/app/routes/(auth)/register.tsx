@@ -1,5 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { GalleryVerticalEnd } from "lucide-react";
+import { z } from "zod";
 
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -43,5 +44,12 @@ const Register = () => {
 };
 
 export const Route = createFileRoute("/(auth)/register")({
+  validateSearch: z.object({
+    redirect: z.string().optional().catch(""),
+  }),
+  beforeLoad: ({ context, search }) => {
+    if (context.auth.status === "AUTHENTICATED")
+      throw redirect({ to: search.redirect || "/dashboard" });
+  },
   component: Register,
 });
