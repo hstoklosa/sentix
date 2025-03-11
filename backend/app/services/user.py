@@ -11,6 +11,7 @@ from app.core.exceptions import InvalidCredentialsException
 def create_user(*, session: Session, user: UserCreate) -> User:
     hashed_password = get_password_hash(user.password)
     db_user = User(
+        username=user.username,
         email=user.email, 
         password=hashed_password, 
         is_superuser=user.is_superuser
@@ -25,8 +26,24 @@ def get_user_by_email(*, session: Session, email: str) -> Optional[User]:
     user = session.exec(stmt).first()
     return user
 
-def authenticate_user(*, session: Session, email: str, password: str) -> User:
-    user = get_user_by_email(session=session, email=email)
+def get_user_by_username(*, session: Session, username: str) -> Optional[User]:
+    stmt = select(User).where(User.username == username)
+    user = session.exec(stmt).first()
+    return user
+
+def get_user_by_id(*, session: Session, user_id: int) -> Optional[User]:
+    """Get a user by their ID"""
+    stmt = select(User).where(User.id == user_id)
+    user = session.exec(stmt).first()
+    return user
+
+def authenticate_user(*, session: Session, email: Optional[str] = None, username: Optional[str] = None, password: str) -> User:
+    user = None
+    
+    if email:
+        user = get_user_by_email(session=session, email=email)
+    elif username:
+        user = get_user_by_username(session=session, username=username)
 
     if not user:
         raise InvalidCredentialsException()

@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     def all_cors_origins(self) -> list[str]:
         return [str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS] + [self.FRONTEND_URL]
     
+    SUPERUSER_USERNAME: str = "admin"
     SUPERUSER_EMAIL: EmailStr
     SUPERUSER_PASSWORD: str
 

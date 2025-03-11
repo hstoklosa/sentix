@@ -15,3 +15,10 @@ class InvalidTokenException(HTTPException):
             detail="Invalid token",
             headers={"WWW-Authenticate": "Bearer"}
         )
+
+class InvalidPasswordException(HTTPException):
+    def __init__(self, detail: str = "Password does not meet security requirements"):
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=detail
+        )

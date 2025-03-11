@@ -1,17 +1,55 @@
-from pydantic import BaseModel, EmailStr, Field, SecretStr
 from datetime import datetime
 from typing import Optional
 
+from pydantic import BaseModel, EmailStr, Field, validator
+
+from app.core.security import validate_password
+
 class UserBase(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr = Field(..., max_length=255)
     is_superuser: bool = Field(default=False)
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8, max_length=64)
+    
+    @validator('password')
+    def validate_password_field(cls, v):
+        # Use the centralized password validation function
+        try:
+            validate_password(v)
+            return v
+        except Exception as e:
+            # Extract the detail from the exception if it's an InvalidPasswordException
+            if hasattr(e, 'detail'):
+                raise ValueError(str(e.detail))
+            # Otherwise, just use the string representation of the exception
+            raise ValueError(str(e))
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    email: Optional[EmailStr] = None
+    username: Optional[str] = None
     password: str = Field(..., min_length=8, max_length=64)
+    
+    @validator('password')
+    def validate_password_field(cls, v):
+        # Use the centralized password validation function
+        try:
+            validate_password(v)
+            return v
+        except Exception as e:
+            # Extract the detail from the exception if it's an InvalidPasswordException
+            if hasattr(e, 'detail'):
+                raise ValueError(str(e.detail))
+            # Otherwise, just use the string representation of the exception
+            raise ValueError(str(e))
+    
+    @validator('username')
+    def validate_login_fields(cls, v, values):
+        email = values.get('email')
+        if not email and not v:
+            raise ValueError('Either email or username must be provided')
+        return v
 
 class UserPublic(UserBase):
     id: Optional[int] = None
