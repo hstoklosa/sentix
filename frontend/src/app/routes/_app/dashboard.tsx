@@ -24,4 +24,7 @@ function RouteComponent() {
 
 export const Route = createFileRoute("/_app/dashboard")({
   component: RouteComponent,
+  head: () => ({
+    meta: [{ title: "Dashboard | Sentix" }],
+  }),
 });
