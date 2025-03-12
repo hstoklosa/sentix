@@ -95,4 +95,7 @@ const Landing = () => {
 
 export const Route = createFileRoute("/")({
   component: Landing,
+  head: () => ({
+    meta: [{ title: "Sentix | Real-Time Insights for Crypto Markets" }],
+  }),
 });

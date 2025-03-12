@@ -1,6 +1,7 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { GalleryVerticalEnd } from "lucide-react";
 import { z } from "zod";
+
+import sentixLogo from "@/assets/sentix-logo.png";
 
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -18,7 +19,11 @@ const Register = () => {
           className="flex flex-col items-center gap-2 font-medium"
         >
           <div className="flex h-8 w-8 items-center justify-center rounded-md">
-            <GalleryVerticalEnd className="size-6" />
+            <img
+              src={sentixLogo}
+              alt="Sentix Logo"
+              className="w-8 h-8"
+            />
           </div>
           <span className="sr-only">SentiX</span>
         </Link>
@@ -52,4 +57,7 @@ export const Route = createFileRoute("/(auth)/register")({
       throw redirect({ to: search.redirect || "/dashboard" });
   },
   component: Register,
+  head: () => ({
+    meta: [{ title: "Sign Up | Sentix" }],
+  }),
 });
