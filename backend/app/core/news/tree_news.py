@@ -83,19 +83,35 @@ class TreeNews():
                 print((json.dumps(data, indent=2) + ",\n"))
 
             news = NewsData()
+            news.source = data.get('source', '')
+            news.icon = data.get('icon', '')
+            news.feed = data.get('type', '')
+            
+            news.link = data.get('link', '')
             news.title = data.get('title', '')
             news.body = data.get('body', '')
+
+            if news.source is None:
+                news.source = "Twitter"
+                
+                info = data.get('info', {})
+                news.is_quote = info.get('isQuote', False)
+                news.is_reply = info.get('isReply', False)
+                news.is_retweet = info.get('isRetweet', False)
+            elif news.source == "Blogs":
+                title_split = news.get("title").split(":") 
+                news.source = title_split[0].strip().lower().capitalize()
+            else:
+                news.source = "Other"
+            
             news.image = data.get('image', '')
             news.time = datetime_from_timestamp(data.get('time', 0))
 
-            news.link = data.get('link', '')
-            news.source = data.get('source', '')
-            news.icon = data.get('icon', '')
-
-            info = data.get('info', {})
-            news.is_quote = info.get('isQuote', False)
-            news.is_reply = info.get('isReply', False)
-            news.is_retweet = info.get('isRetweet', False)
+            coins = set()
+            suggestions = data.get('suggestions', [])
+            for suggestion in suggestions:
+                if 'coin' in suggestion: coins.add(suggestion['coin'])
+            news.coin = coins
             
             news.quote_message = ''
             news.quote_user = ''
@@ -104,15 +120,7 @@ class TreeNews():
             news.reply_message = ''
             news.reply_image = ''
             news.retweet_user = ''
-
-            coins = set()
-            suggestions = data.get('suggestions', [])
-            for suggestion in suggestions:
-                if 'coin' in suggestion:
-                    coins.add(suggestion['coin'])
-            news.coin = coins
             
-            news.feed = data.get('type', '')
             news.ignored = not data.get('requireInteraction', True)
 
             await self._callback(news)
