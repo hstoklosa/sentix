@@ -87,8 +87,8 @@ class TreeNews():
             news.icon = data.get('icon', '')
             news.feed = data.get('type', '')
             
-            news.link = data.get('link', '')
-            news.title = data.get('title', '')
+            news.url = data.get('url', data.get('link', ''))
+            news.title = data.get('title', data.get('en', ''))
             news.body = data.get('body', '')
 
             if news.source is None:

@@ -4,7 +4,7 @@ class NewsData():
     source: str
     icon: str
     feed: str
-    link: str
+    url: str
     title: str
     body: str
     image: str
