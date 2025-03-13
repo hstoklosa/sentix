@@ -14,12 +14,3 @@ class NewsData():
     is_quote: bool
     is_retweet: bool
     coin: set[str]
-    quote_message: str
-    quote_user: str
-    quote_image: str
-    reply_user: str
-    reply_message: str
-    reply_image: str
-    retweet_user: str
-
-    ignored: bool

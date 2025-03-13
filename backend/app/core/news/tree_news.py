@@ -98,6 +98,7 @@ class TreeNews():
                 news.is_quote = info.get('isQuote', False)
                 news.is_reply = info.get('isReply', False)
                 news.is_retweet = info.get('isRetweet', False)
+                news.is_self_reply = info.get('isSelfReply', False)
             elif news.source == "Blogs":
                 title_split = news.get("title").split(":") 
                 news.source = title_split[0].strip().lower().capitalize()
@@ -112,16 +113,6 @@ class TreeNews():
             for suggestion in suggestions:
                 if 'coin' in suggestion: coins.add(suggestion['coin'])
             news.coin = coins
-            
-            news.quote_message = ''
-            news.quote_user = ''
-            news.quote_image = ''
-            news.reply_user = ''
-            news.reply_message = ''
-            news.reply_image = ''
-            news.retweet_user = ''
-            
-            news.ignored = not data.get('requireInteraction', True)
 
             await self._callback(news)
         except Exception as e:
