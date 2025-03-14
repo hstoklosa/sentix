@@ -30,6 +30,7 @@ class NewsWebSocketManager:
         self.tree_news = TreeNews()
         self.active_connections: Dict[WebSocket, WebSocketConnection] = {}  # store WebSocket connections with user info
         self.is_connected = False
+        self.connection_lock = asyncio.Lock()  # Add a lock for TreeNews connection management
     
     @classmethod
     def get_instance(cls):
@@ -41,11 +42,13 @@ class NewsWebSocketManager:
     
     async def connect_tree_news(self):
         """Connect to TreeNews if not already connected"""
-        if not self.is_connected:
-            logger.info("Connecting to TreeNews service...")
-            await self.tree_news.connect(self.on_news_received)
-            self.is_connected = True
-            logger.info("Connected to TreeNews service")
+        # Use lock to prevent multiple concurrent connection attempts
+        async with self.connection_lock:
+            if not self.is_connected:
+                logger.info("Connecting to TreeNews service...")
+                await self.tree_news.connect(self.on_news_received)
+                self.is_connected = True
+                logger.info("Connected to TreeNews service")
     
     async def on_news_received(self, news_data: NewsData):
         """
@@ -73,7 +76,8 @@ class NewsWebSocketManager:
         
         # Start TreeNews connection if this is the first client
         if len(self.active_connections) == 1:
-            await self.connect_tree_news()
+            # Use a task to avoid blocking the client connection
+            asyncio.create_task(self.connect_tree_news())
     
     async def remove_client(self, websocket: WebSocket):
         """
@@ -88,9 +92,11 @@ class NewsWebSocketManager:
         
         # Disconnect from TreeNews if no clients left
         if len(self.active_connections) == 0 and self.is_connected:
-            logger.info("No clients left, disconnecting from TreeNews")
-            await self.tree_news.disconnect()
-            self.is_connected = False
+            async with self.connection_lock:
+                if self.is_connected:
+                    logger.info("No clients left, disconnecting from TreeNews")
+                    await self.tree_news.disconnect()
+                    self.is_connected = False
     
     async def send_to_client(self, websocket: WebSocket, connection: WebSocketConnection, message: Dict[str, Any]) -> bool:
         """

@@ -57,38 +57,29 @@ async def news_websocket(websocket: WebSocket, client_id: str):
     # Singleton manager instance
     manager = NewsWebSocketManager.get_instance() 
     
-    # Accept the connection and add to manager
-    await websocket.accept()
-    await manager.add_client(websocket, user)
-    
-    logger.info(f"Client {client_id} connected to news WebSocket")
-    
-    # Create a receive lock for this specific connection
-    receive_lock = asyncio.Lock()
-    
     try:
+        # Accept the connection and add to manager
+        await websocket.accept()
+        await manager.add_client(websocket, user)
+        
+        logger.info(f"Client {client_id} connected to news WebSocket")
+        
+        # Keep the connection alive until client disconnects
         while True:
-            # Use the lock to ensure only one receive operation at a time
-            async with receive_lock:
-                try:
-                    # Wait for messages from the client
-                    data = await websocket.receive_json()
-                    logger.info(f"Received message from client {client_id}: {data}")
-                    
-                    # Handle ping messages
-                    if "type" in data and data["type"] == "ping":
-                        await websocket.send_json({"type": "pong"})
-                except Exception as e:
-                    logger.error(f"Error processing message: {e}")
-                    # Don't re-raise the exception, just continue the loop
-                    # This prevents the WebSocket from disconnecting on errors
-                    await asyncio.sleep(0.1)  # Small delay to prevent tight loop
-                    continue
-            
-    except WebSocketDisconnect:
-        logger.info(f"Client {client_id} disconnected from news WebSocket")
+            try:
+                # Wait for messages from the client
+                data = await websocket.receive_json()
+                logger.info(f"Received message from client {client_id}: {data}")
+                
+                # Handle ping messages
+                if "type" in data and data["type"] == "ping":
+                    await websocket.send_json({"type": "pong"})
+            except WebSocketDisconnect:
+                logger.info(f"Client {client_id} disconnected from news WebSocket")
+                break
     except Exception as e:
-        logger.error(f"Error in news WebSocket connection with client {client_id}: {e}")
+        logger.error(f"Error in WebSocket connection: {e}")
     finally:
         # Clean up by removing the client from the manager
         await manager.remove_client(websocket)
+        logger.info(f"Client {client_id} removed from news WebSocket manager")
