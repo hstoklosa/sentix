@@ -1,12 +1,22 @@
 import logging
-from typing import Set, Dict, Any
+from typing import Set, Dict, Any, Optional
 from datetime import datetime
 
 from fastapi import WebSocket
 from app.core.news.tree_news import TreeNews
 from app.core.news.types import NewsData
+from app.models.user import User
 
 logger = logging.getLogger(__name__)
+
+class WebSocketConnection:
+    """
+    Class to store WebSocket connection information
+    """
+    def __init__(self, websocket: WebSocket, user: Optional[User] = None):
+        self.websocket = websocket
+        self.user = user
+        self.connected_at = datetime.now()
 
 class NewsWebSocketManager:
     """
@@ -16,7 +26,7 @@ class NewsWebSocketManager:
     
     def __init__(self):
         self.tree_news = TreeNews()
-        self.active_clients: Set[WebSocket] = set()  # store WebSocket connections
+        self.active_connections: Dict[WebSocket, WebSocketConnection] = {}  # store WebSocket connections with user info
         self.is_connected = False
     
     @classmethod
@@ -48,18 +58,19 @@ class NewsWebSocketManager:
         
         await self.broadcast_to_clients(news_data)
     
-    async def add_client(self, websocket: WebSocket):
+    async def add_client(self, websocket: WebSocket, user: Optional[User] = None):
         """
         Register a new client WebSocket connection
         
         Args:
             websocket: The WebSocket connection to add
+            user: The authenticated user (optional)
         """
-        self.active_clients.add(websocket)
-        logger.info(f"Client added. Total clients: {len(self.active_clients)}")
+        self.active_connections[websocket] = WebSocketConnection(websocket, user)
+        logger.info(f"Client added. Total clients: {len(self.active_connections)}")
         
         # Start TreeNews connection if this is the first client
-        if len(self.active_clients) == 1:
+        if len(self.active_connections) == 1:
             await self.connect_tree_news()
     
     async def remove_client(self, websocket: WebSocket):
@@ -69,12 +80,12 @@ class NewsWebSocketManager:
         Args:
             websocket: The WebSocket connection to remove
         """
-        if websocket in self.active_clients:
-            self.active_clients.remove(websocket)
-            logger.info(f"Client removed. Total clients: {len(self.active_clients)}")
+        if websocket in self.active_connections:
+            del self.active_connections[websocket]
+            logger.info(f"Client removed. Total clients: {len(self.active_connections)}")
         
         # Disconnect from TreeNews if no clients left
-        if len(self.active_clients) == 0 and self.is_connected:
+        if len(self.active_connections) == 0 and self.is_connected:
             logger.info("No clients left, disconnecting from TreeNews")
             await self.tree_news.disconnect()
             self.is_connected = False
@@ -87,18 +98,18 @@ class NewsWebSocketManager:
             news_data: The news data to broadcast
         """
         message = self.format_news_for_clients(news_data)
-        disconnected_clients = set()
+        disconnected_websockets = []
         
-        for client in self.active_clients:
+        for websocket, connection in self.active_connections.items():
             try:
-                await client.send_json(message)
+                await websocket.send_json(message)
             except Exception as e:
                 logger.error(f"Error sending to client: {e}")
-                disconnected_clients.add(client)
+                disconnected_websockets.append(websocket)
         
         # Clean up disconnected clients
-        for client in disconnected_clients:
-            await self.remove_client(client)
+        for websocket in disconnected_websockets:
+            await self.remove_client(websocket)
     
     def format_news_for_clients(self, news_data: NewsData) -> Dict[str, Any]:
         """
