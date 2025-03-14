@@ -1,8 +1,4 @@
-# https://tenacity.readthedocs.io
-# https://websockets.readthedocs.io/en/stable/
-
 from typing import Optional, Callable, Any
-from datetime import datetime, timezone
 
 import logging
 import json
@@ -16,11 +12,14 @@ from tenacity import (
 ) 
 from websockets.exceptions import WebSocketException
 
+from app.core.config import settings
 from app.core.news.types import NewsData
+from app.utils import datetime_from_timestamp, pretty_print
+
+# https://tenacity.readthedocs.io
+# https://websockets.readthedocs.io/en/stable/
 
 logger = logging.getLogger(__name__)
-api_key = "treenews_api_key"
-
 
 class TreeNews():
     """Fetch news from the TreeNews provider."""
@@ -44,7 +43,7 @@ class TreeNews():
         try:
             async with websockets.connect(self.wss) as websocket:
                 self._socket = websocket
-                await websocket.send(f"login {api_key}")
+                await websocket.send(f"login {settings.TREENEWS_API_KEY}")
                 logger.info("Connected to TreeNews WebSocket server and sent login")
                 await self._listen()
         except WebSocketException as e:
@@ -70,7 +69,8 @@ class TreeNews():
                 continue
 
     async def _handle_message(self, message: str):
-        """Process incoming message and convert to NewsData object. 
+        """
+        Process incoming message and convert to NewsData object. 
         https://docs.treeofalpha.com/websockets/response
         """
         if not self._callback:
@@ -78,42 +78,41 @@ class TreeNews():
 
         try:
             data = json.loads(message)
+            
+            if settings.ENVIRONMENT == "development": 
+                pretty_print(data, ",\n")
+
             news = NewsData()
-            
-            news.title = data.get('title', '')
-            news.link = data.get('link', '')
-            news.body = data.get('body', '')
-            news.image = data.get('image', '')
-            
-            info = data.get('info', {})
-            news.is_quote = info.get('isQuote', False)
-            news.is_reply = info.get('isReply', False)
-            news.is_retweet = info.get('isRetweet', False)
-            
-            # not provided in TreeNews response format
-            news.quote_message = ''
-            news.quote_user = ''
-            news.quote_image = ''
-            news.reply_user = ''
-            news.reply_message = ''
-            news.reply_image = ''
-            news.retweet_user = ''
-            
-            news.icon = data.get('icon', '')
             news.source = data.get('source', '')
-            news.time = datetime.fromtimestamp(data.get('time', 0) / 1000, tz=timezone.utc)  # convert from milliseconds
+            news.icon = data.get('icon', '')
+            news.feed = data.get('type', '')
             
-            # handle coin data from suggestions
+            news.url = data.get('url', data.get('link', ''))
+            news.title = data.get('title', data.get('en', ''))
+            news.body = data.get('body', '')
+
+            if news.source is None:
+                news.source = "Twitter"
+                
+                info = data.get('info', {})
+                news.is_quote = info.get('isQuote', False)
+                news.is_reply = info.get('isReply', False)
+                news.is_retweet = info.get('isRetweet', False)
+                news.is_self_reply = info.get('isSelfReply', False)
+            elif news.source == "Blogs":
+                title_split = news.title.split(":")
+                news.source = title_split[0].strip().lower().capitalize()
+            else:
+                news.source = "Other"
+            
+            news.image = data.get('image', '')
+            news.time = datetime_from_timestamp(data.get('time', 0))
+
             coins = set()
             suggestions = data.get('suggestions', [])
             for suggestion in suggestions:
-                if 'coin' in suggestion:
-                    coins.add(suggestion['coin'])
+                if 'coin' in suggestion: coins.add(suggestion['coin'])
             news.coin = coins
-            
-            news.feed = data.get('type', '')  # 'direct' or other types
-            news.sfx = '' # no sound effects
-            news.ignored = not data.get('requireInteraction', True)
 
             await self._callback(news)
         except Exception as e:
@@ -122,6 +121,7 @@ class TreeNews():
     async def disconnect(self):
         """Gracefully disconnect from the WebSocket server."""
         self._running = False
+
         if self._socket:
             await self._socket.close()
             self._socket = None

@@ -29,14 +29,11 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str = secrets.token_urlsafe(32)
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15   # 15 minutes
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15            # 15 minutes
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
     ENVIRONMENT: str = "development"
 
-    BACKEND_CORS_ORIGINS: Annotated[
-        list[AnyUrl] | str, 
-        BeforeValidator(parse_cors)
-    ] = []
+    BACKEND_CORS_ORIGINS: Annotated[list[AnyUrl] | str, BeforeValidator(parse_cors)] = []
 
     @computed_field
     @property
@@ -65,5 +62,7 @@ class Settings(BaseSettings):
             port=self.POSTGRES_PORT,
             path=self.POSTGRES_DB,
         )
+
+    TREENEWS_API_KEY: str
     
 settings = Settings()
