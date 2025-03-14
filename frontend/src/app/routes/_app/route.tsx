@@ -11,14 +11,12 @@ const DashboardLayout = () => {
 export const Route = createFileRoute("/_app")({
   beforeLoad: ({ context }) => {
     if (
-      context.auth.status !== "AUTHENTICATED" &&
-      context.auth.status !== "UNAUTHENTICATED"
+      context.auth.status == "PENDING" ||
+      context.auth.status == "UNAUTHENTICATED"
     ) {
       throw redirect({
         to: "/login",
-        search: {
-          redirect: location.href,
-        },
+        search: { redirect: location.href },
       });
     }
   },
