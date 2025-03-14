@@ -1,9 +1,9 @@
 import logging
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Depends
+
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.core.news.news_manager import NewsWebSocketManager
 
 logger = logging.getLogger(__name__)
-
 router = APIRouter(prefix="/news", tags=["news"])
 
 @router.websocket("/ws/{client_id}")
@@ -15,10 +15,12 @@ async def news_websocket(websocket: WebSocket, client_id: str):
         websocket: The WebSocket connection
         client_id: A unique identifier for the client
     """
-    manager = NewsWebSocketManager.get_instance() # singleton manager instance
+    # Singleton manager instance
+    manager = NewsWebSocketManager.get_instance() 
     
     await websocket.accept()
     await manager.add_client(websocket)
+    
     logger.info(f"Client {client_id} connected to news WebSocket")
     
     try:
@@ -27,9 +29,8 @@ async def news_websocket(websocket: WebSocket, client_id: str):
             data = await websocket.receive_json()
             logger.info(f"Received message from client {client_id}: {data}")
             
-            if "type" in data:
-                if data["type"] == "ping":
-                    await websocket.send_json({"type": "pong"})
+            if "type" in data and data["type"] == "ping":
+                await websocket.send_json({"type": "pong"})
             
     except WebSocketDisconnect:
         logger.info(f"Client {client_id} disconnected from news WebSocket")
