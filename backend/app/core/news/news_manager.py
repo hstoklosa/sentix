@@ -1,6 +1,7 @@
 import logging
 from typing import Set, Dict, Any, Optional
 from datetime import datetime
+import asyncio
 
 from fastapi import WebSocket
 from app.core.news.tree_news import TreeNews
@@ -17,6 +18,7 @@ class WebSocketConnection:
         self.websocket = websocket
         self.user = user
         self.connected_at = datetime.now()
+        self.send_lock = asyncio.Lock()  # Add a dedicated lock for sending messages
 
 class NewsWebSocketManager:
     """
@@ -90,6 +92,27 @@ class NewsWebSocketManager:
             await self.tree_news.disconnect()
             self.is_connected = False
     
+    async def send_to_client(self, websocket: WebSocket, connection: WebSocketConnection, message: Dict[str, Any]) -> bool:
+        """
+        Send a message to a specific client with proper locking
+        
+        Args:
+            websocket: The WebSocket connection
+            connection: The WebSocketConnection object
+            message: The message to send
+            
+        Returns:
+            True if the message was sent successfully, False otherwise
+        """
+        try:
+            # Use the connection's dedicated send lock
+            async with connection.send_lock:
+                await websocket.send_json(message)
+            return True
+        except Exception as e:
+            logger.error(f"Error sending to client: {e}")
+            return False
+    
     async def broadcast_to_clients(self, news_data: NewsData):
         """
         Broadcast news data to all connected clients
@@ -100,11 +123,13 @@ class NewsWebSocketManager:
         message = self.format_news_for_clients(news_data)
         disconnected_websockets = []
         
-        for websocket, connection in self.active_connections.items():
-            try:
-                await websocket.send_json(message)
-            except Exception as e:
-                logger.error(f"Error sending to client: {e}")
+        # Create a copy of the connections to avoid modification during iteration
+        connections = list(self.active_connections.items())
+        
+        # Send the message to each client
+        for websocket, connection in connections:
+            success = await self.send_to_client(websocket, connection, message)
+            if not success:
                 disconnected_websockets.append(websocket)
         
         # Clean up disconnected clients
