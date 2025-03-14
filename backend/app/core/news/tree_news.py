@@ -100,7 +100,7 @@ class TreeNews():
                 news.is_retweet = info.get('isRetweet', False)
                 news.is_self_reply = info.get('isSelfReply', False)
             elif news.source == "Blogs":
-                title_split = news.get("title").split(":") 
+                title_split = news.title.split(":")
                 news.source = title_split[0].strip().lower().capitalize()
             else:
                 news.source = "Other"

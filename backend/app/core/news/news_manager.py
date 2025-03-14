@@ -87,7 +87,6 @@ class NewsWebSocketManager:
             news_data: The news data to broadcast
         """
         message = self.format_news_for_clients(news_data)
-        
         disconnected_clients = set()
         
         for client in self.active_clients:
@@ -118,7 +117,7 @@ class NewsWebSocketManager:
                 "body": news_data.body,
                 "source": news_data.source,
                 "time": news_data.time.isoformat() if isinstance(news_data.time, datetime) else news_data.time,
-                "link": news_data.link,
+                "url": news_data.url,
                 "image": news_data.image,
                 "icon": news_data.icon,
                 "coins": list(news_data.coin) if news_data.coin else [],
