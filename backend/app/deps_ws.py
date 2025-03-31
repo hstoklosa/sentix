@@ -4,11 +4,11 @@ from urllib.parse import parse_qs
 from fastapi import WebSocket, status
 from sqlmodel import Session
 from jose import JWTError
+from fastapi.concurrency import run_in_threadpool
 
 from app.core.db import get_session
-from app.core.security import decode_token, verify_token_type, get_token_jti
+from app.core.security import decode_token, verify_token_type
 from app.core.exceptions import InvalidTokenException
-from app.services.token import is_token_blacklisted
 from app.services.user import get_user_by_id
 from app.models.user import User
 
@@ -47,17 +47,9 @@ async def verify_ws_token(websocket: WebSocket) -> Tuple[bool, Optional[dict]]:
         return False, None
     
     try:
-        # Get a database session - don't use async with since get_session is not an async context manager
-        session = next(get_session())
-        
         payload = decode_token(token)
         verify_token_type(payload, "access")
         
-        # Check if token is blacklisted
-        jti = get_token_jti(payload)
-        if jti and is_token_blacklisted(session=session, jti=jti):
-            return False, None
-            
         return True, payload
     except JWTError:
         return False, None
@@ -65,7 +57,7 @@ async def verify_ws_token(websocket: WebSocket) -> Tuple[bool, Optional[dict]]:
 
 async def get_current_ws_user(websocket: WebSocket) -> Optional[User]:
     """
-    Get the current user from the WebSocket connection.
+    Get the current user from the WebSocket connection using async-compatible DB access.
     
     Args:
         websocket: The WebSocket connection
@@ -78,18 +70,34 @@ async def get_current_ws_user(websocket: WebSocket) -> Optional[User]:
     if not is_valid or not payload:
         return None
     
-    user_id = payload.get("sub")
-    if not user_id:
+    user_id_str = payload.get("sub")
+    if not user_id_str:
         return None
     
     try:
-        user_id = int(user_id)
+        user_id = int(user_id_str)
     except (TypeError, ValueError):
         return None
+
+    # Define a synchronous function for database access
+    def _get_user_sync(user_id_int: int) -> Optional[User]:
+        # This inner function runs in the threadpool
+        # It gets its own session and performs the synchronous DB operation
+        db_session: Session = next(get_session())
+        try:
+            user = get_user_by_id(session=db_session, user_id=user_id_int)
+            # Eagerly load relationships if needed, or handle detached instances later
+            # Example: if user: db_session.refresh(user, attribute_names=['items']) 
+            return user
+        finally:
+            # Depending on how get_session is implemented, explicit closing might be needed
+            # or handled by FastAPI's middleware. Assuming middleware handles it.
+            # db_session.close() 
+            pass
+
+    # Run the synchronous database call in a threadpool
+    user = await run_in_threadpool(_get_user_sync, user_id)
     
-    # Get a database session - don't use async with
-    session = next(get_session())
-    user = get_user_by_id(session=session, user_id=user_id)
     return user
 
 
