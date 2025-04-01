@@ -2,6 +2,7 @@ from typing import Optional, Callable, Any
 
 import logging
 import json
+import asyncio
 import websockets
 
 from tenacity import (
@@ -29,6 +30,7 @@ class TreeNews():
         self._socket: Optional[websockets.WebSocketClientProtocol] = None
         self._callback: Optional[Callable[[NewsData], Any]] = None
         self._running = False
+        self._recv_lock = asyncio.Lock()  # Add a lock for WebSocket recv operations
 
     @retry(
         stop=stop_after_attempt(5),
@@ -59,7 +61,11 @@ class TreeNews():
 
         while self._running:
             try:
-                message = await self._socket.recv()
+                # Use the lock to ensure only one coroutine can call recv at a time
+                async with self._recv_lock:
+                    message = await self._socket.recv()
+                
+                # Process message outside the lock
                 await self._handle_message(message)
             except websockets.ConnectionClosed:
                 logger.warning("WebSocket connection closed")

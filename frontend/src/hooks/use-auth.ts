@@ -18,6 +18,7 @@ const useAuth = (): AuthState => {
   const authQuery = useAuthQuery();
 
   useEffect(() => {
+    console.log("authQuery.data", authQuery.data);
     router.invalidate();
   }, [authQuery.data]);
 
@@ -27,12 +28,12 @@ const useAuth = (): AuthState => {
   }, [authQuery.error, queryClient]);
 
   switch (true) {
-    case !authQuery.data:
-      return { user: null, status: "UNAUTHENTICATED" };
+    case !!authQuery.data:
+      return { user: authQuery.data, status: "AUTHENTICATED" };
     case authQuery.isPending:
       return { user: null, status: "PENDING" };
     default:
-      return { user: authQuery.data, status: "AUTHENTICATED" };
+      return { user: null, status: "UNAUTHENTICATED" };
   }
 };
 
