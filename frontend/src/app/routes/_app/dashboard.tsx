@@ -12,13 +12,13 @@ function RouteComponent() {
   const navigate = Route.useNavigate();
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
 
-  const logoutMutation = useLogout({
-    onSuccess: () => {
-      router.invalidate().finally(() => {
-        navigate({ to: "/" });
-      });
-    },
-  });
+  // const logoutMutation = useLogout({
+  //   onSuccess: () => {
+  //     router.invalidate().finally(() => {
+  //       navigate({ to: "/" });
+  //     });
+  //   },
+  // });
 
   const handleNewsMessage = (news: NewsItem) => {
     setNewsItems((prev) => [news, ...prev].slice(0, 100)); // Keep last 100 items
@@ -30,58 +30,64 @@ function RouteComponent() {
   });
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
+    <>
+      {/* <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
         <div className="flex items-center gap-4">
           <div className="text-sm">
             WebSocket:{" "}
             {isConnected ? (
-              <span className="text-green-500">Connected</span>
+              <span className="text-chart-1">Connected</span>
             ) : (
-              <span className="text-red-500">Disconnected</span>
+              <span className="text-destructive">Disconnected</span>
             )}
           </div>
           <Button onClick={() => logoutMutation.mutate(undefined)}>Logout</Button>
         </div>
-      </div>
+      </div> */}
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-        {/* Sidebar */}
-        <div className="col-span-1 md:col-span-3">
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+      <div className="grid grid-cols-[repeat(3,1fr)] grid-rows-[repeat(3,1fr)] gap-x-2 gap-y-2 h-[calc(100vh-2rem)] overflow-hidden">
+        <div className="row-start-1 row-end-4 col-start-1 col-end-2 flex flex-col border-1 border-border rounded-md">
+          <div className="p-4 rounded-lg shadow mb-2">
             <h2 className="text-xl font-semibold mb-4">News Feed</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-muted-foreground">
               Live cryptocurrency news and updates.
             </p>
-            {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
+            {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
           </div>
-        </div>
 
-        {/* News list */}
-        <div className="col-span-1 md:col-span-9">
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+          <div className="p-4 rounded-lg shadow flex-1 overflow-y-auto">
             {newsItems.length === 0 ? (
-              <p className="text-gray-500">Waiting for news updates...</p>
+              <p className="text-muted-foreground">Waiting for news updates...</p>
             ) : (
               <div className="space-y-4">
                 {newsItems.map((item, index) => (
                   <div
                     key={index}
-                    className="border-b pb-4"
+                    className="border-b border-border pb-4"
                   >
                     <h3 className="font-medium">{item.title}</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {item.body}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{item.body}</p>
                   </div>
                 ))}
               </div>
             )}
           </div>
         </div>
+
+        <div className="row-start-1 row-end-2 col-start-2 col-end-4 flex flex-col border-1 border-border rounded-md">
+          2
+        </div>
+
+        <div className="row-start-2 row-end-4 col-start-2 col-end-3 flex flex-col border-1 border-border rounded-md">
+          3
+        </div>
+
+        <div className="row-start-2 row-end-4 col-start-3 col-end-4 flex flex-col border-1 border-border rounded-md">
+          4
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
