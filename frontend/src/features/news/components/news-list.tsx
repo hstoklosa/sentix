@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { useNewsWebSocket } from "../hooks";
 import { NewsItem as NewsItemType } from "../types";
@@ -7,11 +7,21 @@ import NewsItem from "./news-item";
 
 const NewsList = () => {
   const [newsItems, setNewsItems] = useState<NewsItemType[]>([]);
+  const [refreshCounter, setRefreshCounter] = useState(0);
   const { isConnected, error } = useNewsWebSocket({
     onMessage: (news: NewsItemType) => {
       setNewsItems((prev) => [news, ...prev].slice(0, 100));
     },
   });
+
+  // Update refresh counter every 5 seconds to trigger relative time recalculation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRefreshCounter((count) => count + 1);
+    }, 5000); // 5 seconds for more responsive updates
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <>
@@ -38,6 +48,7 @@ const NewsList = () => {
               <NewsItem
                 key={index}
                 news={item}
+                refreshCounter={refreshCounter}
               />
             ))}
           </div>
