@@ -1,2 +1,2 @@
-export { NewsItem as NewsItemComponent } from "./news-item";
-export * from "./news-list";
+export { default as NewsItem } from "./news-item";
+export { default as NewsList } from "./news-list";

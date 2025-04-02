@@ -1,10 +1,11 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { AppLayout } from "@/components/layout";
 
 const DashboardLayout = () => {
   return (
-    <div>
+    <AppLayout>
       <Outlet />
-    </div>
+    </AppLayout>
   );
 };
 
