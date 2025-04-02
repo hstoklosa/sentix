@@ -1,5 +1,9 @@
+import { useRouter } from "@tanstack/react-router";
+
 import sentixLogo from "@/assets/sentix-logo.png";
 import useAuth from "@/hooks/use-auth";
+
+import { useLogout } from "@/features/auth/api/logout";
 
 import { Button } from "../ui";
 import {
@@ -13,6 +17,15 @@ import {
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
+  const router = useRouter();
+
+  const logoutMutation = useLogout({
+    onSuccess: () => {
+      router.invalidate().finally(() => {
+        router.navigate({ to: "/" });
+      });
+    },
+  });
 
   return (
     <div className="">
@@ -53,7 +66,9 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
             <DropdownMenuSeparator />
             <DropdownMenuItem>Settings</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Logout</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => logoutMutation.mutate(undefined)}>
+              Logout
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
