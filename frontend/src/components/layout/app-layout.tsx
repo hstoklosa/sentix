@@ -1,10 +1,11 @@
 import { useRouter, Link } from "@tanstack/react-router";
 import { ChevronDown, Settings, LogOut } from "lucide-react";
 
-import sentixLogo from "@/assets/sentix-logo.png";
 import useAuth from "@/hooks/use-auth";
 import { useLogout } from "@/features/auth/api/logout";
 
+import Logo from "../logo";
+import ThemeToggle from "../theme-toggle";
 import { Button } from "../ui";
 import {
   DropdownMenu,
@@ -14,7 +15,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "../ui/dropdown-menu";
-import ThemeToggle from "../theme-toggle";
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
@@ -34,11 +34,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           to="/dashboard"
           className="flex items-center cursor-pointer"
         >
-          <img
-            src={sentixLogo}
-            alt="Sentix Logo"
-            className="h-8"
-          />
+          <Logo className="size-8" />
           <h1 className="text-md font-[Inter] ml-0.5">SENTIX</h1>
         </Link>
 
