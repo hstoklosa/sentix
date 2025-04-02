@@ -35,7 +35,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           className="flex items-center cursor-pointer"
         >
           <Logo className="size-8" />
-          <h1 className="text-md font-[Inter] ml-0.5">SENTIX</h1>
+          <h1 className="text-md font-[Inter] ml-1">SENTIX</h1>
         </Link>
 
         <DropdownMenu>
@@ -73,7 +73,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
               <span>Settings</span>
               <Settings className="size-4 ml-auto" />
             </DropdownMenuItem>
-            <div className="flex justify-between items-center px-2 py-2 text-sm text-foreground">
+            <div className="flex justify-between items-center px-2 py-1.5 text-sm text-foreground cursor-default">
               <span>Theme</span>
               <ThemeToggle />
             </div>
