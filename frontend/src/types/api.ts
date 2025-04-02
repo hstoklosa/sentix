@@ -1,3 +1,9 @@
+import { InternalAxiosRequestConfig } from "axios";
+
+export type RetryableRequestConfig = {
+  _retry?: boolean;
+} & InternalAxiosRequestConfig;
+
 export type BaseEntity = {
   id: number;
   created_at: string;

@@ -14,11 +14,10 @@ export type AuthState =
 
 const useAuth = (): AuthState => {
   const queryClient = useQueryClient();
-  // const router = useRouter();
   const authQuery = useAuthQuery();
+  // const router = useRouter();
 
   useEffect(() => {
-    console.log("authQuery.data", authQuery.data);
     router.invalidate();
   }, [authQuery.data]);
 
