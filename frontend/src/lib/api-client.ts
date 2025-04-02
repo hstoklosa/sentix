@@ -4,14 +4,12 @@ import axios, {
   InternalAxiosRequestConfig,
 } from "axios";
 
+import { RetryableRequestConfig, AuthResponse } from "@/types/api";
+
 export const api: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   withCredentials: true,
 });
-
-type RetryableRequestConfig = {
-  _retry?: boolean;
-} & InternalAxiosRequestConfig;
 
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
@@ -45,7 +43,13 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        await api.post("/auth/refresh");
+        const refreshResponse = await api.post<never, AuthResponse>(
+          "/auth/refresh"
+        );
+        localStorage.setItem(
+          "access_token",
+          JSON.stringify(refreshResponse.token.access_token)
+        );
         return api(originalRequest);
       } catch (refreshError) {
         localStorage.removeItem("access_token");
