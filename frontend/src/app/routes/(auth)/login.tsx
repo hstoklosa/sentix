@@ -1,8 +1,7 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { z } from "zod";
 
-import sentixLogo from "@/assets/sentix-logo.png";
-
+import Logo from "@/components/logo";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -19,11 +18,7 @@ const Login = () => {
           className="flex flex-col items-center gap-2 font-medium"
         >
           <div className="flex h-8 w-8 items-center justify-center rounded-md">
-            <img
-              src={sentixLogo}
-              alt="Sentix Logo"
-              className="w-8 h-8"
-            />
+            <Logo className="size-8" />
           </div>
           <span className="sr-only">SentiX</span>
         </Link>
