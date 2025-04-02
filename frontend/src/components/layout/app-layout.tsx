@@ -1,8 +1,8 @@
 import { useRouter } from "@tanstack/react-router";
+import { ChevronDown, Settings, LogOut } from "lucide-react";
 
 import sentixLogo from "@/assets/sentix-logo.png";
 import useAuth from "@/hooks/use-auth";
-
 import { useLogout } from "@/features/auth/api/logout";
 
 import { Button } from "../ui";
@@ -16,8 +16,8 @@ import {
 } from "../ui/dropdown-menu";
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
-  const { user } = useAuth();
   const router = useRouter();
+  const { user } = useAuth();
 
   const logoutMutation = useLogout({
     onSuccess: () => {
@@ -45,8 +45,10 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
               <Button
                 variant="ghost"
                 size="sm"
+                className="flex items-center gap-1.5"
               >
                 {user?.username}
+                <ChevronDown className="w-4 h-4 text-foreground" />
               </Button>
             </div>
           </DropdownMenuTrigger>
@@ -55,7 +57,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
             side="bottom"
             sideOffset={12}
           >
-            <DropdownMenuLabel>
+            <DropdownMenuLabel className="cursor-default">
               <p className="text-sm font-normal text-foreground">
                 {user?.username}
               </p>
@@ -64,10 +66,17 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
               </p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Settings</DropdownMenuItem>
+            <DropdownMenuItem className="flex justify-between items-center cursor-pointer">
+              Settings
+              <Settings className="w-4 h-4 ml-auto" />
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => logoutMutation.mutate(undefined)}>
+            <DropdownMenuItem
+              onClick={() => logoutMutation.mutate(undefined)}
+              className="flex justify-between items-center cursor-pointer"
+            >
               Logout
+              <LogOut className="w-4 h-4 ml-auto" />
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
