@@ -89,7 +89,7 @@ class TreeNews():
                 pretty_print(data, ",\n")
 
             news = NewsData()
-            news.source = data.get('source', '')
+            news.source = data.get('source', None)
             news.icon = data.get('icon', '')
             news.feed = data.get('type', '')
             
@@ -108,6 +108,7 @@ class TreeNews():
             elif news.source == "Blogs":
                 title_split = news.title.split(":")
                 news.source = title_split[0].strip().lower().capitalize()
+                news.title = title_split[1].strip()
             else:
                 news.source = "Other"
             
