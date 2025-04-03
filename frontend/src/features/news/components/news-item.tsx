@@ -1,7 +1,9 @@
 import { useMemo, useRef } from "react";
-import { ExternalLink, Link as LinkIcon, Copy } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { ExternalLink, Link as LinkIcon, Copy } from "lucide-react";
 
+import xIcon from "@/assets/x.png";
+import newsIcon from "@/assets/news.png";
 import { formatRelativeTime } from "@/utils/format";
 
 import { NewsItem as NewsItemType } from "@/features/news/types";
@@ -69,7 +71,7 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
 
   return (
     <Link
-      to=""
+      to="/dashboard"
       className="group relative block p-2.5 border-b border-border hover:bg-muted/50 transition-colors"
     >
       <div className="flex items-start gap-3">
@@ -82,18 +84,39 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
           </span>
         </div>
         <div className="flex-1">
-          <h3 className="font-medium text-sm mb-2">{news.title}</h3>
+          <div className="flex items-center gap-1.5 mb-2">
+            {news.icon && (
+              <img
+                src={news.icon}
+                alt={news.source}
+                className="size-4 rounded-full"
+              />
+            )}
+            <h3 className="font-medium text-sm">{news.title}</h3>
+          </div>
           {/* <p className="text-sm text-muted-foreground mb-3">{news.body}</p> */}
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-1">
-              {news.icon && (
-                <img
-                  src={news.icon}
-                  alt={news.source}
-                  className="w-4 h-4 rounded-full"
-                />
+              {news.source === "Twitter" ? (
+                <div className="flex justify-center items-center size-4 bg-black rounded-full">
+                  <img
+                    src={xIcon}
+                    alt="X"
+                    className="size-2.5"
+                  />
+                </div>
+              ) : (
+                <div className="flex justify-center items-center size-4 bg-[#7233F7] rounded-full">
+                  <img
+                    src={newsIcon}
+                    alt="News"
+                    className="w-2.5"
+                  />
+                </div>
               )}
-              <span className="text-xs text-muted-foreground">{news.source}</span>
+              <span className="text-xs text-muted-foreground capitalize">
+                {news.source}
+              </span>
             </div>
 
             {news.coins && news.coins.length > 0 && (
