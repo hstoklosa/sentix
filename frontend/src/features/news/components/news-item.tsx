@@ -84,15 +84,17 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
           </span>
         </div>
         <div className="flex-1">
-          <div className="flex items-center gap-1.5 mb-2">
+          <div className="flex items-start gap-1.5 mb-2">
             {news.icon && (
               <img
                 src={news.icon}
                 alt={news.source}
-                className="size-4 rounded-full"
+                className="size-4 rounded-full shrink-0"
               />
             )}
-            <h3 className="font-medium text-sm">{news.title}</h3>
+            <h3 className="font-medium text-sm line-clamp-2 overflow-hidden text-ellipsis">
+              {news.title}
+            </h3>
           </div>
           {/* <p className="text-sm text-muted-foreground mb-3">{news.body}</p> */}
           <div className="flex items-center gap-2 flex-wrap">
