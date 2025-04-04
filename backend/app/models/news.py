@@ -21,7 +21,7 @@ class NewsBase(Base):
     title: str = Field(index=True)
     body: Optional[str] = None
     source: str = Field(index=True)
-    published_at: datetime = Field(index=True)
+    time: datetime = Field(index=True)
     url: str = Field(unique=True, index=True)
     image_url: Optional[str] = None
     icon_url: Optional[str] = None

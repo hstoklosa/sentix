@@ -1,6 +1,5 @@
 import logging
-from typing import List, Optional, Set, Union
-from datetime import datetime
+from typing import Optional, Set, Union
 
 from sqlmodel import Session, select
 
@@ -49,7 +48,7 @@ async def create_news_article(session: Session, news_data: NewsData) -> NewsArti
         title=news_data.title,
         body=news_data.body or "",
         source=news_data.source,
-        published_at=news_data.time,
+        time=news_data.time,
         url=news_data.url,
         image_url=news_data.image,
         icon_url=news_data.icon,
@@ -84,7 +83,7 @@ async def create_social_post(session: Session, news_data: NewsData) -> SocialPos
         title=news_data.title,
         body=news_data.body or "",
         source=news_data.source,
-        published_at=news_data.time,
+        time=news_data.time,
         url=news_data.url,
         image_url=news_data.image,
         icon_url=news_data.icon,

@@ -65,7 +65,7 @@ class NewsWebSocketManager:
         logger.info(f"Received news: {news_data.title}")
 
         # TODO: compute sentiment score
-        await self._save_news_to_db(news_data)
+        news_data = await self._save_news_to_db(news_data)
         await self.broadcast_to_clients(news_data)
     
     async def _save_news_to_db(self, news_data: NewsData):
@@ -76,11 +76,9 @@ class NewsWebSocketManager:
             news_data: The news data to save
         """
         try:
-            # Get a database session from the pool
             session = next(get_session())
             news_item = await save_news_item(session, news_data)
-
-            logger.info(f"Saved news to database with ID: {news_item.id}")
+            return news_item
         except Exception as e:
             logger.error(f"Error saving news to database: {str(e)}")
     
