@@ -4,9 +4,12 @@ from datetime import datetime
 import asyncio
 
 from fastapi import WebSocket
+from sqlmodel import Session
+from app.core.db import get_session
 from app.core.news.tree_news import TreeNews
 from app.core.news.types import NewsData
 from app.models.user import User
+from app.services.news import save_news_item
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +34,7 @@ class NewsWebSocketManager:
         self.active_connections: Dict[WebSocket, WebSocketConnection] = {}  # store WebSocket connections with user info
         self.is_connected = False
         self.connection_lock = asyncio.Lock()  # Add a lock for TreeNews connection management
+        self.db_pool = None  # Database session pool
     
     @classmethod
     def get_instance(cls):
@@ -42,6 +46,7 @@ class NewsWebSocketManager:
     
     async def connect_tree_news(self):
         """Connect to TreeNews if not already connected"""
+
         # Use lock to prevent multiple concurrent connection attempts
         async with self.connection_lock:
             if not self.is_connected:
@@ -59,9 +64,25 @@ class NewsWebSocketManager:
         """
         logger.info(f"Received news: {news_data.title}")
 
-        # TODO: Save to db, compute sentiment, etc...
-        
+        # TODO: compute sentiment score
+        await self._save_news_to_db(news_data)
         await self.broadcast_to_clients(news_data)
+    
+    async def _save_news_to_db(self, news_data: NewsData):
+        """
+        Save news data to the database
+        
+        Args:
+            news_data: The news data to save
+        """
+        try:
+            # Get a database session from the pool
+            session = next(get_session())
+            news_item = await save_news_item(session, news_data)
+
+            logger.info(f"Saved news to database with ID: {news_item.id}")
+        except Exception as e:
+            logger.error(f"Error saving news to database: {str(e)}")
     
     async def add_client(self, websocket: WebSocket, user: Optional[User] = None):
         """
