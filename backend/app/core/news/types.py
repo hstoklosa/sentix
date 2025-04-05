@@ -13,4 +13,4 @@ class NewsData():
     is_self_reply: bool
     is_quote: bool
     is_retweet: bool
-    coin: set[str]
+    coins: set[str]
