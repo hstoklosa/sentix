@@ -1,7 +1,7 @@
 import logging
 
-from sqlmodel import Session, select, func
-from sqlalchemy.orm import joinedload, selectinload
+from sqlmodel import Session, select
+from sqlalchemy.orm import selectinload
 
 from app.models.news import Coin, NewsItem, NewsCoin
 from app.core.news.types import NewsData

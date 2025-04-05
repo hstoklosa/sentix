@@ -8,7 +8,11 @@ export type NewsItem = Entity<{
   url: string;
   image_url?: string;
   icon_url?: string;
-  coins: string[];
+  coins: {
+    id: number;
+    symbol: string;
+    name: string;
+  }[];
   feed: string;
   _type: string;
 }>;

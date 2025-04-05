@@ -128,10 +128,10 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
                 <span className="text-xs text-muted-foreground">|</span>
                 {news.coins.map((coin) => (
                   <span
-                    key={coin}
+                    key={coin.id}
                     className="px-2 py-1 bg-secondary text-xs rounded-full"
                   >
-                    {coin}
+                    {coin.symbol}
                   </span>
                 ))}
               </>

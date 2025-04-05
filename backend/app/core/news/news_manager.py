@@ -4,7 +4,6 @@ import logging
 import asyncio
 
 from fastapi import WebSocket
-from fastapi.encoders import jsonable_encoder
 
 from app.core.db import get_session
 from app.models.user import User
@@ -92,6 +91,7 @@ class NewsWebSocketManager:
         if len(self.active_connections) == 1:
             # Task to avoid blocking the client connection
             asyncio.create_task(self.connect_tree_news())
+
     
     async def remove_client(self, websocket: WebSocket):
         """
@@ -147,11 +147,37 @@ class NewsWebSocketManager:
         connections = list(self.active_connections.items())
         disconnected_websockets = []
         
-        # Send the message to each client
+        # Format the response structure including coins data 
+        # and datetime serialization
+        coins = []
+        for news_coin in post.coins:
+            coin = news_coin.coin
+            coins.append({
+                "id": coin.id,
+                "symbol": coin.symbol,
+                "name": coin.name
+            })
+
+        formatted_post = {
+            "id": post.id,
+            "_type": post.item_type,
+            "title": post.title,
+            "body": post.body,
+            "source": post.source,
+            "url": post.url,
+            "icon_url": post.icon_url,
+            "image_url": post.image_url,
+            "feed": post.feed,
+            "time": post.time.isoformat(),
+            "created_at": post.created_at.isoformat(),
+            "updated_at": post.updated_at.isoformat(),
+            "coins": coins
+        }
+
         for websocket, connection in connections:
             success = await self.send_to_client(websocket, connection, {
                 "type": "news",
-                "data": jsonable_encoder(post)
+                "data": formatted_post
             })
 
             if not success:
