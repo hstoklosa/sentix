@@ -10,8 +10,8 @@ const AppProvider = ({ children }: { children: React.ReactNode }) => {
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <ReactQueryDevtools
-          buttonPosition="top-right"
           initialIsOpen={false}
+          buttonPosition="bottom-right"
         />
         {children}
       </QueryClientProvider>

@@ -148,3 +148,7 @@
     transparent 0.75px
   );
 }
+
+.tsqd-open-btn-container {
+  bottom: 50px !important;
+}
