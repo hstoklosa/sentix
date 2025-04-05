@@ -1,7 +1,9 @@
+from typing import List, Tuple, Dict, Any
+
 import logging
 
-from sqlmodel import Session, select
-from sqlalchemy.orm import selectinload
+from sqlmodel import Session, select, func
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.models.news import Coin, NewsItem, NewsCoin
 from app.core.news.types import NewsData
@@ -115,3 +117,37 @@ async def save_news_item(session: Session, news_data: NewsData) -> NewsItem:
     except Exception as e:
         logger.error(f"Error saving news item: {str(e)}")
         raise
+
+
+async def get_news_feed(
+    session: Session, 
+    page: int = 1, 
+    page_size: int = 20
+) -> Tuple[List[NewsItem], int]:
+    """
+    Get a paginated feed of news items ordered by published date
+    
+    Args:
+        session: The database session
+        page: The page number (1-indexed)
+        page_size: Number of items per page
+    
+    Returns:
+        Tuple containing:
+            - List of news items
+            - Total count of items
+    """
+    offset = (page - 1) * page_size
+    total_count = session.exec(select(func.count()).select_from(NewsItem)).one()
+    
+    # Query for items, sorted by time and paginated
+    stmt = (
+        select(NewsItem)
+        .options(selectinload(NewsItem.coins).selectinload(NewsCoin.coin))
+        .order_by(NewsItem.time.desc())
+        .offset(offset)
+        .limit(page_size)
+    )
+    items = session.exec(stmt).all()
+    
+    return items, total_count

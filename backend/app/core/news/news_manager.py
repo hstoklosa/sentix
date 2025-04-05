@@ -92,7 +92,6 @@ class NewsWebSocketManager:
             # Task to avoid blocking the client connection
             asyncio.create_task(self.connect_tree_news())
 
-    
     async def remove_client(self, websocket: WebSocket):
         """
         Remove a client WebSocket connection
