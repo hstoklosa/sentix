@@ -5,72 +5,56 @@ from sqlalchemy import UniqueConstraint
 
 from app.models.base import Base
 
+
 class Coin(Base, table=True):
     """Table to store cryptocurrency coins/tokens"""
     __tablename__ = "coins"
     
     symbol: str = Field(unique=True, index=True)
     name: Optional[str] = None
-    
-    # Relationships
+
     news_items: List["NewsCoin"] = Relationship(back_populates="coin")
 
 
-class NewsBase(Base):
-    """Base model for news items (articles and posts)"""
+class NewsItem(Base, table=True):
+    """Model for all news items (articles and posts)"""
+    __tablename__ = "news_items"
+    
+    feed: str = "Sentix"
+    item_type: str = Field(index=True)  # 'article' or 'post'
+    
+    source: str = Field(index=True)
+    url: str = Field(unique=True, index=True)
+    icon_url: Optional[str] = None
+
     title: str = Field(index=True)
     body: Optional[str] = None
-    source: str = Field(index=True)
-    time: datetime = Field(index=True)
-    url: str = Field(unique=True, index=True)
     image_url: Optional[str] = None
-    icon_url: Optional[str] = None
-    feed_type: Optional[str] = None
+    time: datetime = Field(index=True)
 
-
-class NewsArticle(NewsBase, table=True):
-    """Model for news articles from publications"""
-    __tablename__ = "news_articles"
+    coins: List["NewsCoin"] = Relationship(back_populates="news_item")
     
-    # Relationships
-    coins: List["NewsCoin"] = Relationship(back_populates="article")
-
-
-class SocialPost(NewsBase, table=True):
-    """Model for social media posts (Twitter/X)"""
-    __tablename__ = "social_posts"
+    @property
+    def is_article(self) -> bool:
+        return self.item_type == "article"
     
-    is_reply: bool = Field(default=False)
-    is_self_reply: bool = Field(default=False)
-    is_quote: bool = Field(default=False)
-    is_retweet: bool = Field(default=False)
-    
-    # Relationships
-    coins: List["NewsCoin"] = Relationship(back_populates="post")
+    @property
+    def is_post(self) -> bool:
+        return self.item_type == "post"
 
 
 class NewsCoin(SQLModel, table=True):
     """Association table for many-to-many relationship between news and coins"""
     __tablename__ = "news_coins"
     
-    # Add a standalone primary key
     id: Optional[int] = Field(default=None, primary_key=True)
-    
-    # Make these regular foreign keys, not part of the primary key
-    article_id: Optional[int] = Field(
-        default=None, foreign_key="news_articles.id", nullable=True
-    )
-    post_id: Optional[int] = Field(
-        default=None, foreign_key="social_posts.id", nullable=True
-    )
+    news_item_id: int = Field(foreign_key="news_items.id")
     coin_id: int = Field(foreign_key="coins.id")
     
-    # Add a unique constraint to enforce uniqueness between article/post and coin
+    # Add a unique constraint to enforce uniqueness between news item and coin
     __table_args__ = (
-        UniqueConstraint("article_id", "post_id", "coin_id", name="unique_news_coin"),
+        UniqueConstraint("news_item_id", "coin_id", name="unique_news_coin"),
     )
     
-    # Relationships
-    article: Optional[NewsArticle] = Relationship(back_populates="coins")
-    post: Optional[SocialPost] = Relationship(back_populates="coins")
+    news_item: NewsItem = Relationship(back_populates="coins")
     coin: Coin = Relationship(back_populates="news_items")

@@ -1,22 +1,25 @@
-export interface NewsItem {
+import { Entity } from "@/types/api";
+
+export type NewsItem = Entity<{
   title: string;
   body: string;
   source: string;
   time: string;
   url: string;
-  image?: string;
-  icon?: string;
+  image_url?: string;
+  icon_url?: string;
   coins: string[];
   feed: string;
-}
+  _type: string;
+}>;
 
-export interface NewsMessage {
+export type NewsMessage = {
   type: "news";
-  data?: NewsItem;
-}
+  data: NewsItem;
+};
 
-export interface PongMessage {
+export type PongMessage = {
   type: "pong";
-}
+};
 
 export type WebSocketMessage = NewsMessage | PongMessage;
