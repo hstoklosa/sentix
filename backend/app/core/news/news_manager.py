@@ -1,14 +1,19 @@
-import logging
-from typing import Set, Dict, Any, Optional
+from typing import Dict, Any, Optional
 from datetime import datetime
+import logging
 import asyncio
 
 from fastapi import WebSocket
+
+from app.core.db import get_session
+from app.models.user import User
 from app.core.news.tree_news import TreeNews
 from app.core.news.types import NewsData
-from app.models.user import User
+from app.models.news import NewsItem
+from app.services.news import save_news_item
 
 logger = logging.getLogger(__name__)
+
 
 class WebSocketConnection:
     """
@@ -18,19 +23,20 @@ class WebSocketConnection:
         self.websocket = websocket
         self.user = user
         self.connected_at = datetime.now()
-        self.send_lock = asyncio.Lock()  # Add a dedicated lock for sending messages
+        self.send_lock = asyncio.Lock()  # dedicated lock for sending messages
 
 class NewsWebSocketManager:
     """
-    A singleton manager that handles WebSocket connections between clients and TreeNews, acting as a middleman to broadcast TreeNews data to all connected clients. 
+    A singleton manager that handles WebSocket connections between clients and TreeNews, 
+    acting as a middleman to broadcast TreeNews data to all connected clients. 
     """
     _instance = None
     
     def __init__(self):
         self.tree_news = TreeNews()
-        self.active_connections: Dict[WebSocket, WebSocketConnection] = {}  # store WebSocket connections with user info
+        self.active_connections: Dict[WebSocket, WebSocketConnection] = {}
+        self.connection_lock = asyncio.Lock()
         self.is_connected = False
-        self.connection_lock = asyncio.Lock()  # Add a lock for TreeNews connection management
     
     @classmethod
     def get_instance(cls):
@@ -42,13 +48,15 @@ class NewsWebSocketManager:
     
     async def connect_tree_news(self):
         """Connect to TreeNews if not already connected"""
+        
         # Use lock to prevent multiple concurrent connection attempts
         async with self.connection_lock:
-            if not self.is_connected:
-                logger.info("Connecting to TreeNews service...")
-                await self.tree_news.connect(self.on_news_received)
-                self.is_connected = True
-                logger.info("Connected to TreeNews service")
+            if self.is_connected:
+                return
+                
+            await self.tree_news.connect(self.on_news_received)
+            self.is_connected = True
+            logger.info("Connected to TreeNews service")
     
     async def on_news_received(self, news_data: NewsData):
         """
@@ -59,9 +67,15 @@ class NewsWebSocketManager:
         """
         logger.info(f"Received news: {news_data.title}")
 
-        # TODO: Save to db, compute sentiment, etc...
-        
-        await self.broadcast_to_clients(news_data)
+        try:
+            session = next(get_session())
+            saved_post = await save_news_item(session, news_data)
+            
+            # TODO: Compute sentiment score, price forecast, filter, etc
+
+            await self.broadcast_to_clients(saved_post)
+        except Exception as e:
+            logger.error(f"Error saving news to database: {str(e)}")
     
     async def add_client(self, websocket: WebSocket, user: Optional[User] = None):
         """
@@ -73,12 +87,11 @@ class NewsWebSocketManager:
         """
         self.active_connections[websocket] = WebSocketConnection(websocket, user)
         logger.info(f"Client added. Total clients: {len(self.active_connections)}")
-        
-        # Start TreeNews connection if this is the first client
+
         if len(self.active_connections) == 1:
-            # Use a task to avoid blocking the client connection
+            # Task to avoid blocking the client connection
             asyncio.create_task(self.connect_tree_news())
-    
+
     async def remove_client(self, websocket: WebSocket):
         """
         Remove a client WebSocket connection
@@ -93,10 +106,13 @@ class NewsWebSocketManager:
         # Disconnect from TreeNews if no clients left
         if len(self.active_connections) == 0 and self.is_connected:
             async with self.connection_lock:
-                if self.is_connected:
-                    logger.info("No clients left, disconnecting from TreeNews")
-                    await self.tree_news.disconnect()
-                    self.is_connected = False
+                # Checking again as conditions might have changed
+                if not self.is_connected:
+                    return
+                
+                logger.info("No clients left, disconnecting from TreeNews")
+                await self.tree_news.disconnect()
+                self.is_connected = False
     
     async def send_to_client(self, websocket: WebSocket, connection: WebSocketConnection, message: Dict[str, Any]) -> bool:
         """
@@ -114,55 +130,58 @@ class NewsWebSocketManager:
             # Use the connection's dedicated send lock
             async with connection.send_lock:
                 await websocket.send_json(message)
+                
             return True
         except Exception as e:
             logger.error(f"Error sending to client: {e}")
             return False
     
-    async def broadcast_to_clients(self, news_data: NewsData):
+    async def broadcast_to_clients(self, post: NewsItem):
         """
         Broadcast news data to all connected clients
         
         Args:
             news_data: The news data to broadcast
         """
-        message = self.format_news_for_clients(news_data)
+        connections = list(self.active_connections.items())
         disconnected_websockets = []
         
-        # Create a copy of the connections to avoid modification during iteration
-        connections = list(self.active_connections.items())
-        
-        # Send the message to each client
+        # Format the response structure including coins data 
+        # and datetime serialization
+        coins = []
+        for news_coin in post.coins:
+            coin = news_coin.coin
+            coins.append({
+                "id": coin.id,
+                "symbol": coin.symbol,
+                "name": coin.name
+            })
+
+        formatted_post = {
+            "id": post.id,
+            "_type": post.item_type,
+            "title": post.title,
+            "body": post.body,
+            "source": post.source,
+            "url": post.url,
+            "icon_url": post.icon_url,
+            "image_url": post.image_url,
+            "feed": post.feed,
+            "time": post.time.isoformat(),
+            "created_at": post.created_at.isoformat(),
+            "updated_at": post.updated_at.isoformat(),
+            "coins": coins
+        }
+
         for websocket, connection in connections:
-            success = await self.send_to_client(websocket, connection, message)
+            success = await self.send_to_client(websocket, connection, {
+                "type": "news",
+                "data": formatted_post
+            })
+
             if not success:
                 disconnected_websockets.append(websocket)
         
         # Clean up disconnected clients
         for websocket in disconnected_websockets:
             await self.remove_client(websocket)
-    
-    def format_news_for_clients(self, news_data: NewsData) -> Dict[str, Any]:
-        """
-        Convert NewsData to a client-friendly format
-        
-        Args:
-            news_data: The news data to format
-            
-        Returns:
-            A dictionary with the formatted news data
-        """
-        return {
-            "type": "news",
-            "data": {
-                "title": news_data.title,
-                "body": news_data.body,
-                "source": news_data.source,
-                "time": news_data.time.isoformat() if isinstance(news_data.time, datetime) else news_data.time,
-                "url": news_data.url,
-                "image": news_data.image,
-                "icon": news_data.icon,
-                "coins": list(news_data.coin) if news_data.coin else [],
-                "feed": news_data.feed
-            }
-        } 

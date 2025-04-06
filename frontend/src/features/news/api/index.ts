@@ -1,2 +1,1 @@
-export { useNewsWebSocket } from "./use-news-websocket";
-export { useNewsState } from "./use-news-state";
+export { useGetNews, useUpdateNewsCache } from "./get-news";

@@ -85,9 +85,9 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
         </div>
         <div className="flex-1">
           <div className="flex items-start gap-1.5 mb-2">
-            {news.icon && (
+            {news.icon_url && (
               <img
-                src={news.icon}
+                src={news.icon_url}
                 alt={news.source}
                 className="size-4 rounded-full shrink-0"
               />
@@ -96,7 +96,9 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
               {news.title}
             </h3>
           </div>
+
           {/* <p className="text-sm text-muted-foreground mb-3">{news.body}</p> */}
+
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-1">
               {news.source === "Twitter" ? (
@@ -126,18 +128,15 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
                 <span className="text-xs text-muted-foreground">|</span>
                 {news.coins.map((coin) => (
                   <span
-                    key={coin}
+                    key={coin.id}
                     className="px-2 py-1 bg-secondary text-xs rounded-full"
                   >
-                    {coin}
+                    {coin.symbol}
                   </span>
                 ))}
               </>
             )}
           </div>
-          {/* <div className="flex justify-between items-center mt-2">
-            <span className="text-xs text-muted-foreground">{news.feed}</span>
-          </div> */}
         </div>
       </div>
 

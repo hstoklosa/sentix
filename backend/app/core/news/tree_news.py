@@ -89,22 +89,26 @@ class TreeNews():
                 pretty_print(data, ",\n")
 
             news = NewsData()
+            news.feed = "TreeNews"
+
             news.source = data.get('source', None)
             news.icon = data.get('icon', '')
-            news.feed = data.get('type', '')
-            
             news.url = data.get('url', data.get('link', ''))
+
             news.title = data.get('title', data.get('en', ''))
             news.body = data.get('body', '')
+            news.image = data.get('image', '')
+            news.time = datetime_from_timestamp(data.get('time', 0))
 
             if news.source is None:
                 news.source = "Twitter"
                 
-                info = data.get('info', {})
-                news.is_quote = info.get('isQuote', False)
-                news.is_reply = info.get('isReply', False)
-                news.is_retweet = info.get('isRetweet', False)
-                news.is_self_reply = info.get('isSelfReply', False)
+                source_info = data.get('info', {})
+                if source_info:
+                    news.is_quote = source_info.get('isQuote', False)
+                    news.is_reply = source_info.get('isReply', False)
+                    news.is_retweet = source_info.get('isRetweet', False)
+                    news.is_self_reply = source_info.get('isSelfReply', False)
             elif news.source == "Blogs":
                 title_split = news.title.split(":")
                 news.source = title_split[0].strip().lower().capitalize()
@@ -112,14 +116,11 @@ class TreeNews():
             else:
                 news.source = "Other"
             
-            news.image = data.get('image', '')
-            news.time = datetime_from_timestamp(data.get('time', 0))
-
-            coins = set()
-            suggestions = data.get('suggestions', [])
-            for suggestion in suggestions:
-                if 'coin' in suggestion: coins.add(suggestion['coin'])
-            news.coin = coins
+            news.coins = {
+                suggestion['coin'] 
+                for suggestion in data.get('suggestions', []) 
+                    if 'coin' in suggestion
+            }
 
             await self._callback(news)
         except Exception as e:
@@ -132,4 +133,5 @@ class TreeNews():
         if self._socket:
             await self._socket.close()
             self._socket = None
-            logger.info("Disconnected from TreeNews WebSocket server")
+        
+        logger.info("Disconnected from TreeNews WebSocket server")
