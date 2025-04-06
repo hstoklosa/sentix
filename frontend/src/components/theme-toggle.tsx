@@ -12,7 +12,12 @@ const ThemeToggle = () => {
       variant="outline"
       size="sm"
       value={theme}
-      onValueChange={setTheme}
+      onValueChange={(value) => {
+        // Prevent theme change when clicking the already selected theme option
+        if (value && value !== theme) {
+          setTheme(value as "light" | "dark" | "system");
+        }
+      }}
     >
       <ToggleGroupItem
         value="light"

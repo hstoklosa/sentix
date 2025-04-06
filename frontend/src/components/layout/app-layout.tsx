@@ -1,5 +1,5 @@
 import { useRouter, Link } from "@tanstack/react-router";
-import { ChevronDown, Settings, LogOut } from "lucide-react";
+import { UserRound, ChevronDown, Settings, LogOut } from "lucide-react";
 
 import useAuth from "@/hooks/use-auth";
 import { useLogout } from "@/features/auth/api/logout";
@@ -40,14 +40,17 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <div className="flex items-center">
+            <div className="flex items-center group">
               <Button
                 variant="ghost"
                 size="sm"
-                className="flex items-center gap-1.5"
+                className="font-normal flex items-center gap-2.5 p-2! h-9"
               >
+                <div className="flex items-center justify-center p-1.5 bg-card text-foreground rounded group-hover:bg-muted transition-colors">
+                  <UserRound className="size-2.5 font-light" />
+                </div>
                 {user?.username}
-                <ChevronDown className="size-4 text-foreground" />
+                <ChevronDown className="size-3.5 text-foreground" />
               </Button>
             </div>
           </DropdownMenuTrigger>
