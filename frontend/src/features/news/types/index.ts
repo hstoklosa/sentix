@@ -1,4 +1,4 @@
-import { Entity } from "@/types/api";
+import { Entity, PaginatedResponse } from "@/types/api";
 
 export type NewsItem = Entity<{
   title: string;
@@ -17,13 +17,8 @@ export type NewsItem = Entity<{
   _type: string;
 }>;
 
-export type NewsMessage = {
-  type: "news";
-  data: NewsItem;
-};
-
-export type PongMessage = {
-  type: "pong";
-};
-
+export type NewsMessage = { type: "news"; data: NewsItem };
+export type PongMessage = { type: "pong" };
 export type WebSocketMessage = NewsMessage | PongMessage;
+
+export type NewsFeedResponse = PaginatedResponse<NewsItem>;

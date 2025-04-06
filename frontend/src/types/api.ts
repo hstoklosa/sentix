@@ -14,6 +14,21 @@ export type Entity<T> = {
   [K in keyof T]: T[K];
 } & BaseEntity;
 
+export type PaginationParams = {
+  page: number;
+  page_size: number;
+};
+
+export type PaginatedResponse<T> = {
+  items: T[];
+  page: number;
+  page_size: number;
+  total: number;
+  total_pages: number;
+  has_next: boolean;
+  has_prev: boolean;
+};
+
 export type User = Entity<{
   username: string;
   email: string;
