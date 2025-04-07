@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Info, ExternalLink } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Info, ExternalLink, X, Copy, Link2 } from "lucide-react";
 
 import xIcon from "@/assets/x.png";
 import newsIcon from "@/assets/news.png";
@@ -17,8 +17,8 @@ function PostComponent() {
   if (isLoading) {
     return (
       <Spinner
-        fullScreen
-        size="lg"
+        className="h-full w-full"
+        size="md"
       />
     );
   }
@@ -33,6 +33,12 @@ function PostComponent() {
       </div>
     );
   }
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text).catch((error) => {
+      console.error(`Failed to copy: ${error}`);
+    });
+  };
 
   return (
     <div className="flex flex-col">
@@ -59,10 +65,49 @@ function PostComponent() {
             )}
           </div>
           <div className="flex flex-col text-xs">
-            <span className="text-foreground capitalize">{post.source}</span>
+            <div className="flex items-center gap-1 mb-0.5">
+              <span className="text-sm text-foreground capitalize">
+                {post.source}
+              </span>
+              <a
+                aria-label="Read more"
+                href={post.url}
+                target="_blank"
+                className="flex items-center justify-center rounded-sm text-muted-foreground hover:text-primary transition-colors"
+                rel="noopener noreferrer"
+              >
+                <ExternalLink className="size-3.5" />
+              </a>
+            </div>
             <span className="text-muted-foreground">
               {formatDateTime(post.time)}
             </span>
+          </div>
+
+          <div className="ml-auto flex items-center gap-3">
+            <button
+              aria-label="Copy Title"
+              className="flex items-center justify-center rounded-sm text-muted-foreground hover:text-primary transition-colors"
+              onClick={(e) => handleCopy(post.title)}
+            >
+              <Copy className="size-4" />
+            </button>
+            <button
+              aria-label="Copy URL"
+              className="flex items-center justify-center rounded-sm text-muted-foreground hover:text-primary transition-colors"
+              onClick={(e) => handleCopy(post.url)}
+            >
+              <Link2 className="size-4" />
+            </button>
+
+            {/* <div className="h-[18px] w-[1px] rounded-full bg-muted-foreground/50" /> */}
+
+            <Link
+              to="/dashboard"
+              className="flex items-center justify-center rounded-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              <X className="size-5" />
+            </Link>
           </div>
         </div>
       </div>
