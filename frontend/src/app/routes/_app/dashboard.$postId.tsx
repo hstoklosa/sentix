@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Info, ExternalLink } from "lucide-react";
 
 import xIcon from "@/assets/x.png";
 import newsIcon from "@/assets/news.png";
@@ -24,9 +25,11 @@ function PostComponent() {
 
   if (error || !post) {
     return (
-      <div className="p-4 flex flex-col gap-3">
-        <h2 className="text-xl font-semibold text-red-500">Error loading post</h2>
-        <p className="text-muted-foreground">Unable to load post {postId}</p>
+      <div className="flex h-full items-center justify-center gap-3">
+        <Info className="size-8 text-muted-foreground" />
+        <h2 className="text-lg text-muted-foreground font-normal">
+          An error occurred while loading the post
+        </h2>
       </div>
     );
   }
