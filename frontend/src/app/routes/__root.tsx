@@ -43,8 +43,5 @@ const Root = () => {
 export const Route = createRootRouteWithContext<RouterContext>()({
   component: Root,
   notFoundComponent: NotFound,
-  head: () => ({
-    meta: [{ title: "Sentix" }],
-    links: [{ rel: "icon", href: "/favicon-bg.png" }],
-  }),
+  head: () => ({ meta: [{ title: "Sentix" }] }),
 });
