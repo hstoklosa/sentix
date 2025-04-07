@@ -26,3 +26,30 @@ export const formatRelativeTime = (timestamp: string): string => {
 
   return `${value}${unit.label}`;
 };
+
+/**
+ * Formats a date string into a localised date and time string in 12-hour format.
+ *
+ * @param dateString - ISO 8601 date string to format
+ * @returns Formatted string in the format "MM/DD/YYYY, H:MM am/pm"
+ * @example
+ * formatDateTime("2024-02-14T09:30:00Z") // Returns "02/14/2024, 9:30 am"
+ */
+export const formatDateTime = (dateString: string) => {
+  const date = new Date(dateString);
+  return (
+    date.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }) +
+    ", " +
+    date
+      .toLocaleTimeString(undefined, {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })
+      .toLowerCase()
+  );
+};
