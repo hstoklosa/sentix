@@ -4,6 +4,7 @@ import { ExternalLink, Link as LinkIcon, Copy } from "lucide-react";
 
 import xIcon from "@/assets/x.png";
 import newsIcon from "@/assets/news.png";
+import { cn } from "@/lib/utils";
 import { formatRelativeTime } from "@/utils/format";
 
 import { NewsItem as NewsItemType } from "@/features/news/types";
@@ -14,17 +15,8 @@ type NewsItemProps = {
 };
 
 /**
- * Determines if the relative time display should be recalculated based on item age and refresh counter.
- *
- * Implements an adaptive refresh strategy:
- * - For items less than 1 minute old: updates every refresh cycle (5s)
- * - For items 1-5 minutes old: updates every 2 refresh cycles (10s)
- * - For items 5-30 minutes old: updates every 6 refresh cycles (30s)
- * - For items older than 30 minutes: updates every 12 refresh cycles (60s)
- *
- * @param timestamp - The ISO timestamp string of the news item
- * @param counter - The current refresh counter (increments with each refresh cycle)
- * @returns Boolean indicating whether the time should be recalculated
+ * Determines if the relative time display should be recalculated based on
+ * item age and refresh counter (implementing an adaptive refresh strategy).
  */
 const shouldRecalculateTime = (timestamp: string, counter: number = 0): boolean => {
   if (!counter) return true; // always recalculate on first render (counter = 0)
@@ -34,12 +26,16 @@ const shouldRecalculateTime = (timestamp: string, counter: number = 0): boolean 
   const ageInSeconds = Math.floor((now - date) / 1000);
 
   switch (true) {
+    // less than 1 minute old: updates every refresh cycle (5s)
     case ageInSeconds < 60:
       return true;
+    // 1-5 minutes old: updates every 2 refresh cycles (10s)
     case ageInSeconds < 300:
       return counter % 2 === 0;
+    // 5-30 minutes old: updates every 6 refresh cycles (30s)
     case ageInSeconds < 1800:
       return counter % 6 === 0;
+    // older than 30 minutes: updates every 12 refresh cycles (60s)
     default:
       return counter % 12 === 0;
   }
@@ -90,7 +86,7 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
               <img
                 src={news.icon_url}
                 alt={news.source}
-                className="size-4 rounded-full shrink-0"
+                className="size-4 rounded-full shrink-0 mt-0.5"
               />
             )}
             <h3 className="font-medium text-sm line-clamp-2 overflow-hidden text-ellipsis">
@@ -102,23 +98,26 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
 
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-1">
-              {news.source === "Twitter" ? (
-                <div className="flex justify-center items-center size-4 bg-black rounded-full">
+              <div
+                className={cn(
+                  "flex justify-center items-center size-4 rounded-full bg-primary/10",
+                  news.source === "Twitter" ? "bg-black" : "bg-[#7233F7]"
+                )}
+              >
+                {news.source === "Twitter" ? (
                   <img
                     src={xIcon}
                     alt="X"
                     className="size-2.5"
                   />
-                </div>
-              ) : (
-                <div className="flex justify-center items-center size-4 bg-[#7233F7] rounded-full">
+                ) : (
                   <img
                     src={newsIcon}
                     alt="News"
                     className="w-2.5"
                   />
-                </div>
-              )}
+                )}
+              </div>
               <span className="text-xs text-muted-foreground capitalize">
                 {news.source}
               </span>
