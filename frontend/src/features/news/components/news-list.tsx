@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { AlertCircle } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
@@ -32,12 +32,18 @@ const NewsList = () => {
     ? data.pages.flatMap((page: NewsFeedResponse) => page.items)
     : [];
 
-  // Set up virtualizer for rendering only visible items
+  // Set up virtualizer for rendering only visible items with dynamic measurement
   const rowVirtualizer = useVirtualizer({
     count: hasNextPage ? allNewsItems.length + 1 : allNewsItems.length, // +1 for loading row
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 120, // Estimated height of each news item
+    estimateSize: () => 100, // Initial estimate, will be refined by actual measurements
     overscan: 5,
+    measureElement: useCallback((element: Element | null) => {
+      // Get actual height of the element including margins
+      if (!element) return 100;
+      const rect = element.getBoundingClientRect();
+      return rect.height;
+    }, []),
   });
 
   // Load more items when user scrolls to bottom
@@ -127,6 +133,7 @@ const NewsList = () => {
                 <div
                   key={virtualRow.key}
                   data-index={virtualRow.index}
+                  ref={rowVirtualizer.measureElement}
                   style={{
                     position: "absolute",
                     top: 0,
