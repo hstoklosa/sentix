@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 
 import Logo from "@/components/logo";
 import { NewsList } from "@/features/news/components";
@@ -10,8 +10,10 @@ function RouteComponent() {
         <NewsList />
       </div>
 
-      <div className="row-start-1 row-end-3 col-start-2 col-end-3 h-full flex flex-col justify-center items-center border-1 border-border rounded-md bg-card">
-        <Logo className="size-16" />
+      <div className="row-start-1 row-end-3 col-start-2 col-end-3 h-full flex flex-col border-1 border-border rounded-md bg-card overflow-hidden">
+        <div className="h-full overflow-y-auto">
+          <Outlet />
+        </div>
       </div>
 
       <div className="row-start-3 row-end-5 col-start-2 col-end-3 h-full flex flex-col justify-center items-center border-1 border-border rounded-md bg-card">

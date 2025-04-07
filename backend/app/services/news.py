@@ -1,4 +1,4 @@
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Optional
 
 import logging
 
@@ -151,3 +151,22 @@ async def get_news_feed(
     items = session.exec(stmt).all()
     
     return items, total_count
+
+
+async def get_post_by_id(session: Session, post_id: int) -> Optional[NewsItem]:
+    """
+    Args:
+        session: The database session
+        post_id: The post item ID
+    
+    Returns:
+        The news item if found, None otherwise
+    """
+    stmt = (
+        select(NewsItem)
+        .where(NewsItem.id == post_id)
+        .options(selectinload(NewsItem.coins).selectinload(NewsCoin.coin))
+    )
+    
+    item = session.exec(stmt).first()
+    return item

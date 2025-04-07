@@ -71,7 +71,8 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
 
   return (
     <Link
-      to="/dashboard"
+      to="/dashboard/$postId"
+      params={{ postId: news.id.toString() }}
       className="group relative block p-2.5 border-b border-border hover:bg-muted/50 transition-colors"
     >
       <div className="flex items-start gap-3">
