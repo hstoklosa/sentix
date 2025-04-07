@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 
 import { api } from "@/lib/api-client";
 import { QueryConfig } from "@/lib/react-query";
@@ -7,11 +7,15 @@ import { PaginationParams } from "@/types/api";
 import { NewsItem, NewsFeedResponse } from "../types";
 
 const DEFAULT_PAGE_SIZE = 20;
+const INITIAL_PARAMS = {
+  page: 1,
+  page_size: DEFAULT_PAGE_SIZE,
+};
 
-export const getNews = async (
-  params: PaginationParams = { page: 1, page_size: DEFAULT_PAGE_SIZE }
+export const getPosts = async (
+  params: PaginationParams = INITIAL_PARAMS
 ): Promise<NewsFeedResponse> => {
-  return api.get<NewsFeedResponse>("/news/feed", {
+  return await api.get("/news", {
     params: {
       page: params.page,
       page_size: params.page_size,
@@ -19,36 +23,44 @@ export const getNews = async (
   });
 };
 
-export const useGetNews = (
-  params: PaginationParams = { page: 1, page_size: DEFAULT_PAGE_SIZE },
-  config?: QueryConfig<typeof getNews>
+export const useGetInfinitePosts = (
+  pageSize: number = DEFAULT_PAGE_SIZE,
+  config?: QueryConfig<typeof getPosts>
 ) => {
-  return useQuery({
-    queryKey: ["news", "feed", params],
-    queryFn: () => getNews(params),
+  return useInfiniteQuery({
+    queryKey: ["news", "list", { pageSize }],
+    queryFn: ({ pageParam = 1 }) =>
+      getPosts({ page: pageParam, page_size: pageSize }),
+    getNextPageParam: (lastPage) =>
+      lastPage.has_next ? lastPage.page + 1 : undefined,
+    initialPageParam: 1,
     ...config,
   });
 };
 
-export const useUpdateNewsCache = () => {
+export const useUpdatePostsCache = () => {
   const queryClient = useQueryClient();
 
-  const updateNewsCache = (news: NewsItem) => {
-    const defaultParams = { page: 1, page_size: DEFAULT_PAGE_SIZE };
-
+  const updatePostsCache = (news: NewsItem) => {
     // Update query cache for the default params
     queryClient.setQueryData(
-      ["news", "feed", defaultParams],
-      (oldData: NewsFeedResponse | undefined) => {
-        if (!oldData) return oldData;
+      ["news", "list", { pageSize: DEFAULT_PAGE_SIZE }],
+      (oldData: any) => {
+        if (!oldData || !oldData.pages || !oldData.pages.length) return oldData;
+
+        const newPages = [...oldData.pages];
+        const firstPage = { ...newPages[0] };
+
+        firstPage.items = [news, ...firstPage.items];
+        newPages[0] = firstPage;
 
         return {
           ...oldData,
-          items: [news, ...(oldData.items || [])],
+          pages: newPages,
         };
       }
     );
   };
 
-  return updateNewsCache;
+  return updatePostsCache;
 };

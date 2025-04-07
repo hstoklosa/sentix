@@ -157,6 +157,7 @@
   @apply bg-accent rounded-full
 } */
 
+/* REF: https://github.com/shadcn-ui/ui/issues/1815#issuecomment-2259480789 */
 ::-webkit-scrollbar {
   @apply w-1.5 h-1.5;
 }
