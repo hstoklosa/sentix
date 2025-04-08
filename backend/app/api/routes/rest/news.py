@@ -17,20 +17,20 @@ router = APIRouter(
 )
 
 
-@router.get("/feed", response_model=NewsFeedResponse)
-async def get_news_feed_endpoint(
+@router.get("/", response_model=NewsFeedResponse)
+async def get_posts(
     pagination: PaginationParams = Depends(),
     session: Session = Depends(get_session)
 ) -> NewsFeedResponse:
     """
-    Get a paginated feed of posts (articles and social) ordered by published date
+    Get a paginated list of posts ordered by published date
     
     Args:
         pagination: Pagination parameters
         session: Database session
     
     Returns:
-        Paginated response containing news feed items
+        Paginated response containing posts from the feed
     """
     items, total_count = await get_news_feed(
         session=session, 

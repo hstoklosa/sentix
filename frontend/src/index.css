@@ -152,3 +152,25 @@
 .tsqd-open-btn-container {
   bottom: 50px !important;
 }
+
+/* [data-slot="scroll-area-scrollbar"] {
+  @apply bg-accent rounded-full
+} */
+
+/* REF: https://github.com/shadcn-ui/ui/issues/1815#issuecomment-2259480789 */
+::-webkit-scrollbar {
+  @apply w-1.5 h-1.5;
+}
+
+::-webkit-scrollbar-thumb,
+::-webkit-scrollbar-track {
+  @apply rounded-full;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-muted;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-border bg-clip-padding;
+}
