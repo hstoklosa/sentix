@@ -28,16 +28,16 @@ const NewsList = () => {
   });
   const updatePostsCache = useUpdatePostsCache();
 
-  const btcPrice = useTokenPrice("BTC");
-  const ethPrice = useTokenPrice("ETH");
+  // const btcPrice = useTokenPrice("BTC");
+  // const ethPrice = useTokenPrice("ETH");
 
-  useEffect(() => {
-    console.log(`[NewsList] BTC price updated:`, btcPrice);
-  }, [btcPrice]);
+  // useEffect(() => {
+  //   console.log(`[NewsList] BTC price updated:`, btcPrice);
+  // }, [btcPrice]);
 
-  useEffect(() => {
-    console.log(`[NewsList] ETH price updated:`, ethPrice);
-  }, [ethPrice]);
+  // useEffect(() => {
+  //   console.log(`[NewsList] ETH price updated:`, ethPrice);
+  // }, [ethPrice]);
 
   // Flatten all news items from all pages
   const allNewsItems = data
@@ -111,7 +111,7 @@ const NewsList = () => {
           />
           News Feed
         </h2>
-        <div className="flex gap-4 mt-2 text-sm">
+        {/* <div className="flex gap-4 mt-2 text-sm">
           <span>
             BTC:{" "}
             {btcPrice
@@ -124,7 +124,7 @@ const NewsList = () => {
               ? `$${ethPrice.price.toLocaleString()} (${ethPrice.changePercent > 0 ? "+" : ""}${ethPrice.changePercent.toFixed(2)}%)`
               : "Loading..."}
           </span>
-        </div>
+        </div> */}
       </div>
 
       {isError || isWebsocketError ? (
