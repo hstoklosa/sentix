@@ -13,29 +13,40 @@ type TokenPriceStore = {
   updatePrice: (symbol: string, price: number, changePercent: number) => void;
 };
 
+/**
+ * Normalise a symbol by removing the USDT suffix and converting to * uppercase
+ *
+ * @param symbol - The symbol to normalise
+ * @returns The normalised symbol
+ */
+const normaliseSymbol = (symbol: string): string => {
+  return symbol.replace(/usdt$/i, "").toUpperCase();
+};
+
 export const usePriceStore = create<TokenPriceStore>((set, get) => ({
   prices: {},
 
   getPrice: (symbol) => {
     if (!symbol) return null;
 
-    const upperSymbol = symbol.toUpperCase();
-    const price = get().prices[upperSymbol];
+    const normalisedSymbol = normaliseSymbol(symbol);
+    const price = get().prices[normalisedSymbol];
+
     return price || null;
   },
 
   updatePrice: (symbol, price, changePercent) => {
-    const upperSymbol = symbol.toUpperCase();
+    const normalisedSymbol = normaliseSymbol(symbol);
 
     console.log(
-      `[TokenPriceStore] Updating price for ${upperSymbol}: ${price} (${changePercent}%)`
+      `[TokenPriceStore] Updating price for ${normalisedSymbol} (from ${symbol}): ${price} (${changePercent}%)`
     );
 
     set((state) => ({
       prices: {
         ...state.prices,
-        [upperSymbol]: {
-          symbol: upperSymbol,
+        [normalisedSymbol]: {
+          symbol: normalisedSymbol,
           price,
           changePercent,
           lastUpdated: Date.now(),
