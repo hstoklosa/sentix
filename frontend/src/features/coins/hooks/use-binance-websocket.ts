@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+
+import { useTokenPrice } from "../context/token-price-context";
 
 const BINANCE_WS_URL = "wss://stream.binance.com:9443/ws";
 
@@ -8,115 +10,177 @@ type PriceUpdateCallback = (
   changePercent: number
 ) => void;
 
-const useBinanceWebSocket = () => {
-  const wsRef = useRef<WebSocket | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const subscribedSymbols = useRef<Set<string>>(new Set());
-  const callbacksRef = useRef<PriceUpdateCallback[]>([]);
+class BinanceWebSocketManager {
+  private static instance: BinanceWebSocketManager;
 
-  // Connect to WebSocket
-  useEffect(() => {
-    const connect = () => {
-      wsRef.current = new WebSocket(BINANCE_WS_URL);
+  private socket: WebSocket | null;
+  private subscriptions: Set<string>;
+  private updateTokenPrice: PriceUpdateCallback;
 
-      wsRef.current.onopen = () => {
-        console.log("Connected to Binance WebSocket");
-        setIsConnected(true);
+  private constructor(updateFn: PriceUpdateCallback) {
+    this.socket = null;
+    this.subscriptions = new Set();
+    this.updateTokenPrice = updateFn;
+  }
 
-        // Resubscribe to all symbols
-        if (subscribedSymbols.current.size > 0) {
-          const symbols = Array.from(subscribedSymbols.current);
-          subscribeToSymbols(symbols);
-        }
-      };
+  public static getInstance(
+    updateFn: PriceUpdateCallback
+  ): BinanceWebSocketManager {
+    if (!BinanceWebSocketManager.instance) {
+      BinanceWebSocketManager.instance = new BinanceWebSocketManager(updateFn);
+    }
 
-      wsRef.current.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          // Handle ticker data
-          if (data.s && data.c && data.P) {
-            const symbol = data.s;
-            const price = parseFloat(data.c);
-            const changePercent = parseFloat(data.P);
+    return BinanceWebSocketManager.instance;
+  }
 
-            // Notify all callbacks
-            callbacksRef.current.forEach((callback) => {
-              callback(symbol, price, changePercent);
-            });
-          }
-        } catch (error) {
-          console.error("Error parsing Binance message:", error);
-        }
-      };
+  public connect(): void {
+    if (this.socket?.readyState === WebSocket.OPEN) return;
 
-      wsRef.current.onclose = () => {
-        console.log("Binance WebSocket closed");
-        setIsConnected(false);
-      };
+    this.socket = new WebSocket(BINANCE_WS_URL);
 
-      wsRef.current.onerror = (error) => {
-        console.error("Binance WebSocket error:", error);
-      };
+    this.socket.onopen = () => {
+      console.log("Connected to Binance WebSocket");
+      this.resubscribeAll();
     };
 
-    connect();
-
-    // Cleanup on unmount
-    return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
+    this.socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.s && data.c && data.P) {
+          const symbol = data.s;
+          const price = parseFloat(data.c);
+          const changePercent = parseFloat(data.P);
+          this.updateTokenPrice(symbol, price, changePercent);
+        }
+      } catch (error) {
+        console.error("Error parsing Binance message:", error);
       }
     };
-  }, []);
 
-  // Subscribe to symbols
-  const subscribeToSymbols = (symbols: string[]) => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+    this.socket.onclose = () => {
+      console.log("Binance WebSocket closed");
+    };
 
-    const message = {
+    this.socket.onerror = (error) => {
+      console.error("Binance WebSocket error:", error);
+      this.socket?.close();
+    };
+  }
+
+  public subscribe(symbol: string): void {
+    const formattedSymbol = this.formatSymbol(symbol);
+
+    if (this.subscriptions.has(formattedSymbol)) return;
+    this.subscriptions.add(formattedSymbol);
+
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      this.sendSubscription(formattedSymbol);
+    } else if (!this.socket || this.socket.readyState === WebSocket.CLOSED) {
+      this.connect();
+    }
+  }
+
+  public unsubscribe(symbol: string): void {
+    const formattedSymbol = this.formatSymbol(symbol);
+
+    if (!this.subscriptions.has(formattedSymbol)) return;
+    this.subscriptions.delete(formattedSymbol);
+
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      this.sendUnsubscription(formattedSymbol);
+    }
+
+    // Close socket if no more subscriptions
+    if (this.subscriptions.size === 0) {
+      this.disconnect();
+    }
+  }
+
+  private formatSymbol(symbol: string): string {
+    // Convert to lowercase and assume USDT trading pair
+    return `${symbol.toLowerCase()}usdt`;
+  }
+
+  private sendSubscription(formattedSymbol: string): void {
+    const subscribeMsg = {
       method: "SUBSCRIBE",
-      params: symbols.map((s) => `${s.toLowerCase()}@ticker`),
+      params: [`${formattedSymbol}@ticker`],
       id: Date.now(),
     };
 
-    wsRef.current.send(JSON.stringify(message));
+    this.socket?.send(JSON.stringify(subscribeMsg));
+  }
 
-    // Add to tracked symbols
-    symbols.forEach((symbol) => subscribedSymbols.current.add(symbol));
-  };
-
-  // Unsubscribe from symbols
-  const unsubscribeFromSymbols = (symbols: string[]) => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
-
-    const message = {
+  private sendUnsubscription(formattedSymbol: string): void {
+    const unsubscribeMsg = {
       method: "UNSUBSCRIBE",
-      params: symbols.map((s) => `${s.toLowerCase()}@ticker`),
+      params: [`${formattedSymbol}@ticker`],
       id: Date.now(),
     };
 
-    wsRef.current.send(JSON.stringify(message));
+    this.socket?.send(JSON.stringify(unsubscribeMsg));
+  }
 
-    // Remove from tracked symbols
-    symbols.forEach((symbol) => subscribedSymbols.current.delete(symbol));
+  private resubscribeAll(): void {
+    if (this.subscriptions.size === 0) return;
+
+    const subscribeMsg = {
+      method: "SUBSCRIBE",
+      params: Array.from(this.subscriptions).map((s) => `${s}@ticker`),
+      id: Date.now(),
+    };
+
+    this.socket?.send(JSON.stringify(subscribeMsg));
+  }
+
+  public disconnect(): void {
+    if (this.socket) {
+      this.socket.onclose = null;
+      this.socket.onerror = null;
+      this.socket.onmessage = null;
+      this.socket.onopen = null;
+
+      if (this.socket.readyState === WebSocket.OPEN) {
+        this.socket.close();
+      }
+
+      this.socket = null;
+    }
+
+    this.subscriptions.clear();
+  }
+}
+
+const useBinanceWebSocket = () => {
+  const { addOrUpdatePrice } = useTokenPrice();
+  const managerRef = useRef<BinanceWebSocketManager | null>(null);
+
+  useEffect(() => {
+    // Initialise singleton manager on component mount
+    managerRef.current = BinanceWebSocketManager.getInstance(
+      (symbol, price, changePercent) => {
+        addOrUpdatePrice(symbol, price, changePercent);
+      }
+    );
+
+    // Do not disconnect since other components might be using the manager
+    // The manager itself will handle cleanup when no more subscriptions
+    return () => {};
+  }, [addOrUpdatePrice]);
+
+  const subscribeToSymbol = (symbol: string) => {
+    if (!symbol) return;
+    managerRef.current?.subscribe(symbol);
   };
 
-  // Register a callback for price updates
-  const onPriceUpdate = (callback: PriceUpdateCallback) => {
-    callbacksRef.current.push(callback);
-
-    // Return function to unregister callback
-    return () => {
-      callbacksRef.current = callbacksRef.current.filter((cb) => cb !== callback);
-    };
+  const unsubscribeFromSymbol = (symbol: string) => {
+    if (!symbol) return;
+    managerRef.current?.unsubscribe(symbol);
   };
 
   return {
-    isConnected,
-    subscribeToSymbols,
-    unsubscribeFromSymbols,
-    onPriceUpdate,
+    subscribeToSymbol,
+    unsubscribeFromSymbol,
   };
 };
 

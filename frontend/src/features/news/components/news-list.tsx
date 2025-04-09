@@ -9,10 +9,15 @@ import NewsItem from "./news-item";
 import { useGetInfinitePosts, useUpdatePostsCache } from "../api";
 import { useNewsWebSocket } from "../hooks";
 import { NewsItem as NewsItemType, NewsFeedResponse } from "../types";
+import { useTokenPrice } from "@/features/coins/context/token-price-context";
+import useBinanceWebSocket from "@/features/coins/hooks/use-binance-websocket";
 
 const NewsList = () => {
   const [refreshCounter, setRefreshCounter] = useState(0);
   const parentRef = useRef<HTMLDivElement>(null);
+
+  const { tokenPrices } = useTokenPrice();
+  const { subscribeToSymbol, unsubscribeFromSymbol } = useBinanceWebSocket();
 
   const {
     data,
@@ -26,6 +31,26 @@ const NewsList = () => {
     onMessage: (news: NewsItemType) => updatePostsCache(news),
   });
   const updatePostsCache = useUpdatePostsCache();
+
+  const coins = ["BTC", "ETH"];
+
+  // Subscribe to coin prices
+  useEffect(() => {
+    // Subscribe to each coin
+    coins.forEach((coin) => {
+      subscribeToSymbol(coin);
+    });
+
+    // Log token prices whenever they change
+    console.log("Current token prices:", tokenPrices);
+
+    // Cleanup subscriptions when component unmounts
+    return () => {
+      coins.forEach((coin) => {
+        unsubscribeFromSymbol(coin);
+      });
+    };
+  }, [subscribeToSymbol, unsubscribeFromSymbol, tokenPrices]);
 
   // Flatten all news items from all pages
   const allNewsItems = data
