@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from "react";
 
-import { useTokenPrice } from "../context/token-price-context";
+import { usePriceStore } from "./use-price-store";
 
 const BINANCE_WS_URL = "wss://stream.binance.com:9443/ws";
 
@@ -50,6 +50,9 @@ class BinanceWebSocketManager {
           const symbol = data.s;
           const price = parseFloat(data.c);
           const changePercent = parseFloat(data.P);
+          console.log(
+            `[BinanceWS] Received price update for ${symbol}: ${price} (${changePercent}%)`
+          );
           this.updateTokenPrice(symbol, price, changePercent);
         }
       } catch (error) {
@@ -69,9 +72,13 @@ class BinanceWebSocketManager {
 
   public subscribe(symbol: string): void {
     const formattedSymbol = this.formatSymbol(symbol);
+    console.log(`[BinanceWS] Attempting to subscribe to ${formattedSymbol}`);
 
     if (this.subscriptions.has(formattedSymbol)) return;
     this.subscriptions.add(formattedSymbol);
+    console.log(
+      `[BinanceWS] Added ${formattedSymbol} to subscriptions. Total: ${this.subscriptions.size}`
+    );
 
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.sendSubscription(formattedSymbol);
@@ -152,7 +159,7 @@ class BinanceWebSocketManager {
 }
 
 const useBinanceWebSocket = () => {
-  const { addOrUpdatePrice } = useTokenPrice();
+  const { updatePrice } = usePriceStore();
   const managerRef = useRef<BinanceWebSocketManager | null>(null);
 
   const stableSubscribeToSymbol = useRef<(symbol: string) => void>(
@@ -167,7 +174,7 @@ const useBinanceWebSocket = () => {
     // Initialise singleton manager on component mount
     const manager = BinanceWebSocketManager.getInstance(
       (symbol, price, changePercent) => {
-        addOrUpdatePrice(symbol, price, changePercent);
+        updatePrice(symbol, price, changePercent);
       }
     );
 
@@ -186,7 +193,7 @@ const useBinanceWebSocket = () => {
     // Do not disconnect since other components might be using the manager
     // The manager itself will handle cleanup when no more subscriptions
     return () => {};
-  }, [addOrUpdatePrice]);
+  }, [updatePrice]);
 
   // Wrap the ref access in stable function references
   const subscribeToSymbol = useCallback((symbol: string) => {

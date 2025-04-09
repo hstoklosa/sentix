@@ -9,15 +9,11 @@ import NewsItem from "./news-item";
 import { useGetInfinitePosts, useUpdatePostsCache } from "../api";
 import { useNewsWebSocket } from "../hooks";
 import { NewsItem as NewsItemType, NewsFeedResponse } from "../types";
-import { useTokenPrice } from "@/features/coins/context/token-price-context";
-import useBinanceWebSocket from "@/features/coins/hooks/use-binance-websocket";
+import { useTokenPrice } from "@/features/coins/hooks/use-token-price";
 
 const NewsList = () => {
   const [refreshCounter, setRefreshCounter] = useState(0);
   const parentRef = useRef<HTMLDivElement>(null);
-
-  const { tokenPrices } = useTokenPrice();
-  const { subscribeToSymbol, unsubscribeFromSymbol } = useBinanceWebSocket();
 
   const {
     data,
@@ -32,25 +28,16 @@ const NewsList = () => {
   });
   const updatePostsCache = useUpdatePostsCache();
 
-  const coins = ["BTC", "ETH"];
+  const btcPrice = useTokenPrice("BTC");
+  const ethPrice = useTokenPrice("ETH");
 
-  // Subscribe to coin prices
   useEffect(() => {
-    // Subscribe to each coin
-    coins.forEach((coin) => {
-      subscribeToSymbol(coin);
-    });
+    console.log(`[NewsList] BTC price updated:`, btcPrice);
+  }, [btcPrice]);
 
-    // Log token prices whenever they change
-    console.log("Current token prices:", tokenPrices);
-
-    // Cleanup subscriptions when component unmounts
-    return () => {
-      coins.forEach((coin) => {
-        unsubscribeFromSymbol(coin);
-      });
-    };
-  }, [subscribeToSymbol, unsubscribeFromSymbol, tokenPrices]);
+  useEffect(() => {
+    console.log(`[NewsList] ETH price updated:`, ethPrice);
+  }, [ethPrice]);
 
   // Flatten all news items from all pages
   const allNewsItems = data
@@ -124,6 +111,20 @@ const NewsList = () => {
           />
           News Feed
         </h2>
+        <div className="flex gap-4 mt-2 text-sm">
+          <span>
+            BTC:{" "}
+            {btcPrice
+              ? `$${btcPrice.price.toLocaleString()} (${btcPrice.changePercent > 0 ? "+" : ""}${btcPrice.changePercent.toFixed(2)}%)`
+              : "Loading..."}
+          </span>
+          <span>
+            ETH:{" "}
+            {ethPrice
+              ? `$${ethPrice.price.toLocaleString()} (${ethPrice.changePercent > 0 ? "+" : ""}${ethPrice.changePercent.toFixed(2)}%)`
+              : "Loading..."}
+          </span>
+        </div>
       </div>
 
       {isError || isWebsocketError ? (
