@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 
 import { useTokenPrice } from "../context/token-price-context";
 
@@ -155,28 +155,47 @@ const useBinanceWebSocket = () => {
   const { addOrUpdatePrice } = useTokenPrice();
   const managerRef = useRef<BinanceWebSocketManager | null>(null);
 
+  const stableSubscribeToSymbol = useRef<(symbol: string) => void>(
+    (_: string) => {}
+  );
+
+  const stableUnsubscribeFromSymbol = useRef<(symbol: string) => void>(
+    (_: string) => {}
+  );
+
   useEffect(() => {
     // Initialise singleton manager on component mount
-    managerRef.current = BinanceWebSocketManager.getInstance(
+    const manager = BinanceWebSocketManager.getInstance(
       (symbol, price, changePercent) => {
         addOrUpdatePrice(symbol, price, changePercent);
       }
     );
 
+    managerRef.current = manager;
+
+    // Create stable reference to subscription functions
+    stableSubscribeToSymbol.current = (symbol: string) => {
+      if (!symbol) return;
+      managerRef.current?.subscribe(symbol);
+    };
+
+    stableUnsubscribeFromSymbol.current = (symbol: string) => {
+      if (!symbol) return;
+      managerRef.current?.unsubscribe(symbol);
+    };
     // Do not disconnect since other components might be using the manager
     // The manager itself will handle cleanup when no more subscriptions
     return () => {};
   }, [addOrUpdatePrice]);
 
-  const subscribeToSymbol = (symbol: string) => {
-    if (!symbol) return;
-    managerRef.current?.subscribe(symbol);
-  };
+  // Wrap the ref access in stable function references
+  const subscribeToSymbol = useCallback((symbol: string) => {
+    stableSubscribeToSymbol.current(symbol);
+  }, []);
 
-  const unsubscribeFromSymbol = (symbol: string) => {
-    if (!symbol) return;
-    managerRef.current?.unsubscribe(symbol);
-  };
+  const unsubscribeFromSymbol = useCallback((symbol: string) => {
+    stableUnsubscribeFromSymbol.current(symbol);
+  }, []);
 
   return {
     subscribeToSymbol,
