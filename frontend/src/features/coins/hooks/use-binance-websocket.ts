@@ -10,17 +10,29 @@ type PriceUpdateCallback = (
   changePercent: number
 ) => void;
 
+/**
+ * Singleton WebSocket manager for Binance price data
+ * Provides efficient handling of multiple symbol subscriptions
+ */
 class BinanceWebSocketManager {
   private static instance: BinanceWebSocketManager;
 
   private socket: WebSocket | null;
   private subscriptions: Set<string>;
   private updateTokenPrice: PriceUpdateCallback;
+  private pendingSubscriptions: Set<string>;
+  private pendingUnsubscriptions: Set<string>;
+  private batchTimeoutId: number | null;
+  private isConnecting: boolean;
 
   private constructor(updateFn: PriceUpdateCallback) {
     this.socket = null;
     this.subscriptions = new Set();
     this.updateTokenPrice = updateFn;
+    this.pendingSubscriptions = new Set();
+    this.pendingUnsubscriptions = new Set();
+    this.batchTimeoutId = null;
+    this.isConnecting = false;
   }
 
   public static getInstance(
@@ -34,13 +46,17 @@ class BinanceWebSocketManager {
   }
 
   public connect(): void {
-    if (this.socket?.readyState === WebSocket.OPEN) return;
+    if (this.socket?.readyState === WebSocket.OPEN || this.isConnecting) return;
 
+    this.isConnecting = true;
     this.socket = new WebSocket(BINANCE_WS_URL);
 
     this.socket.onopen = () => {
       console.log("Connected to Binance WebSocket");
-      this.resubscribeAll();
+      this.isConnecting = false;
+
+      // Process any pending subscriptions that accumulated while connecting
+      this.processBatchedSubscriptions();
     };
 
     this.socket.onmessage = (event) => {
@@ -50,9 +66,9 @@ class BinanceWebSocketManager {
           const symbol = data.s;
           const price = parseFloat(data.c);
           const changePercent = parseFloat(data.P);
-          console.log(
-            `[BinanceWS] Received price update for ${symbol}: ${price} (${changePercent}%)`
-          );
+          // console.log(
+          //   `[BinanceWS] Received price update for ${symbol}: ${price} (${changePercent}%)`
+          // );
           this.updateTokenPrice(symbol, price, changePercent);
         }
       } catch (error) {
@@ -62,44 +78,165 @@ class BinanceWebSocketManager {
 
     this.socket.onclose = () => {
       console.log("Binance WebSocket closed");
+      this.isConnecting = false;
+      this.socket = null;
     };
 
     this.socket.onerror = (error) => {
       console.error("Binance WebSocket error:", error);
+      this.isConnecting = false;
       this.socket?.close();
     };
   }
 
+  /**
+   * Add a subscription - batches multiple subscription requests
+   */
   public subscribe(symbol: string): void {
+    if (!symbol) return;
+
     const formattedSymbol = this.formatSymbol(symbol);
-    console.log(`[BinanceWS] Attempting to subscribe to ${formattedSymbol}`);
 
-    if (this.subscriptions.has(formattedSymbol)) return;
-    this.subscriptions.add(formattedSymbol);
-    console.log(
-      `[BinanceWS] Added ${formattedSymbol} to subscriptions. Total: ${this.subscriptions.size}`
-    );
-
-    if (this.socket?.readyState === WebSocket.OPEN) {
-      this.sendSubscription(formattedSymbol);
-    } else if (!this.socket || this.socket.readyState === WebSocket.CLOSED) {
-      this.connect();
+    // Skip if already subscribed or pending subscription
+    if (
+      this.subscriptions.has(formattedSymbol) ||
+      this.pendingSubscriptions.has(formattedSymbol)
+    ) {
+      return;
     }
+
+    // If in pending unsubscriptions, just remove it from there
+    if (this.pendingUnsubscriptions.has(formattedSymbol)) {
+      this.pendingUnsubscriptions.delete(formattedSymbol);
+      return; // No need to add to pending subscriptions if already subscribed
+    }
+
+    // Add to pending subscriptions
+    this.pendingSubscriptions.add(formattedSymbol);
+
+    // Schedule batch processing
+    this.scheduleBatch();
   }
 
+  /**
+   * Remove a subscription - batches multiple unsubscription requests
+   */
   public unsubscribe(symbol: string): void {
+    if (!symbol) return;
+
     const formattedSymbol = this.formatSymbol(symbol);
 
-    if (!this.subscriptions.has(formattedSymbol)) return;
-    this.subscriptions.delete(formattedSymbol);
+    // Already unsubscribed or pending unsubscription
+    if (
+      !this.subscriptions.has(formattedSymbol) &&
+      !this.pendingSubscriptions.has(formattedSymbol)
+    ) {
+      return;
+    }
 
-    if (this.socket?.readyState === WebSocket.OPEN) {
-      this.sendUnsubscription(formattedSymbol);
+    // Remove from pending subscriptions if it's there
+    if (this.pendingSubscriptions.has(formattedSymbol)) {
+      this.pendingSubscriptions.delete(formattedSymbol);
+      return; // No need to add to unsubscribe if not yet subscribed
+    }
+
+    // Otherwise add to pending unsubscriptions
+    this.pendingUnsubscriptions.add(formattedSymbol);
+
+    // Schedule batch processing
+    this.scheduleBatch();
+  }
+
+  /**
+   * Schedule a batch operation with debouncing
+   */
+  private scheduleBatch(): void {
+    if (this.batchTimeoutId !== null) {
+      window.clearTimeout(this.batchTimeoutId);
+    }
+
+    this.batchTimeoutId = window.setTimeout(() => {
+      this.batchTimeoutId = null;
+      this.processBatchedSubscriptions();
+    }, 100); // Batch window of 100ms
+  }
+
+  /**
+   * Process all pending subscriptions and unsubscriptions in a single batch
+   */
+  private processBatchedSubscriptions(): void {
+    // Don't process empty batches
+    if (
+      this.pendingSubscriptions.size === 0 &&
+      this.pendingUnsubscriptions.size === 0
+    ) {
+      return;
+    }
+
+    // Ensure socket is connected
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      if (!this.isConnecting) {
+        this.connect(); // Connect if we have pending operations
+      }
+      return; // Wait for connection
+    }
+
+    // Process subscriptions
+    if (this.pendingSubscriptions.size > 0) {
+      const symbols = Array.from(this.pendingSubscriptions);
+
+      const batchSubscribe = {
+        method: "SUBSCRIBE",
+        params: symbols.map((s) => `${s}@ticker`),
+        id: Date.now(),
+      };
+
+      this.socket.send(JSON.stringify(batchSubscribe));
+
+      // Add to active subscriptions
+      symbols.forEach((symbol) => {
+        this.subscriptions.add(symbol);
+      });
+
+      console.log(
+        `[BinanceWS] Batch subscribed to ${symbols.length} symbols: ${symbols.join(", ")}`
+      );
+
+      this.pendingSubscriptions.clear();
+    }
+
+    // Process unsubscriptions
+    if (this.pendingUnsubscriptions.size > 0) {
+      const symbols = Array.from(this.pendingUnsubscriptions);
+
+      const batchUnsubscribe = {
+        method: "UNSUBSCRIBE",
+        params: symbols.map((s) => `${s}@ticker`),
+        id: Date.now(),
+      };
+
+      this.socket.send(JSON.stringify(batchUnsubscribe));
+
+      // Remove from active subscriptions
+      symbols.forEach((symbol) => {
+        this.subscriptions.delete(symbol);
+      });
+
+      console.log(
+        `[BinanceWS] Batch unsubscribed from ${symbols.length} symbols: ${symbols.join(", ")}`
+      );
+
+      this.pendingUnsubscriptions.clear();
     }
 
     // Close socket if no more subscriptions
     if (this.subscriptions.size === 0) {
+      console.log(`[BinanceWS] No active subscriptions, closing connection`);
       this.disconnect();
+    } else {
+      console.log(
+        `[BinanceWS] Active subscriptions remaining: ${this.subscriptions.size}`
+      );
     }
   }
 
@@ -108,39 +245,28 @@ class BinanceWebSocketManager {
     return `${symbol.toLowerCase()}usdt`;
   }
 
-  private sendSubscription(formattedSymbol: string): void {
-    const subscribeMsg = {
-      method: "SUBSCRIBE",
-      params: [`${formattedSymbol}@ticker`],
-      id: Date.now(),
-    };
-
-    this.socket?.send(JSON.stringify(subscribeMsg));
-  }
-
-  private sendUnsubscription(formattedSymbol: string): void {
-    const unsubscribeMsg = {
-      method: "UNSUBSCRIBE",
-      params: [`${formattedSymbol}@ticker`],
-      id: Date.now(),
-    };
-
-    this.socket?.send(JSON.stringify(unsubscribeMsg));
-  }
-
   private resubscribeAll(): void {
     if (this.subscriptions.size === 0) return;
 
+    const symbols = Array.from(this.subscriptions);
     const subscribeMsg = {
       method: "SUBSCRIBE",
-      params: Array.from(this.subscriptions).map((s) => `${s}@ticker`),
+      params: symbols.map((s) => `${s}@ticker`),
       id: Date.now(),
     };
 
     this.socket?.send(JSON.stringify(subscribeMsg));
+    console.log(
+      `[BinanceWS] Resubscribed to ${symbols.length} symbols: ${symbols.join(", ")}`
+    );
   }
 
   public disconnect(): void {
+    if (this.batchTimeoutId !== null) {
+      window.clearTimeout(this.batchTimeoutId);
+      this.batchTimeoutId = null;
+    }
+
     if (this.socket) {
       this.socket.onclose = null;
       this.socket.onerror = null;
@@ -155,9 +281,18 @@ class BinanceWebSocketManager {
     }
 
     this.subscriptions.clear();
+    this.pendingSubscriptions.clear();
+    this.pendingUnsubscriptions.clear();
+    this.isConnecting = false;
+
+    console.log(`[BinanceWS] Disconnected and cleared all subscriptions`);
   }
 }
 
+/**
+ * Hook for interacting with the BinanceWebSocketManager
+ * Provides stable subscription methods for components
+ */
 const useBinanceWebSocket = () => {
   const { updatePrice } = usePriceStore();
   const managerRef = useRef<BinanceWebSocketManager | null>(null);
@@ -190,6 +325,7 @@ const useBinanceWebSocket = () => {
       if (!symbol) return;
       managerRef.current?.unsubscribe(symbol);
     };
+
     // Do not disconnect since other components might be using the manager
     // The manager itself will handle cleanup when no more subscriptions
     return () => {};
