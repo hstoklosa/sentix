@@ -88,23 +88,23 @@ function PostComponent() {
             <button
               aria-label="Copy Title"
               className="flex items-center justify-center rounded-sm text-muted-foreground hover:text-primary transition-colors"
-              onClick={(e) => handleCopy(post.title)}
+              onClick={(_) => handleCopy(post.title)}
             >
               <Copy className="size-4" />
             </button>
             <button
               aria-label="Copy URL"
               className="flex items-center justify-center rounded-sm text-muted-foreground hover:text-primary transition-colors"
-              onClick={(e) => handleCopy(post.url)}
+              onClick={(_) => handleCopy(post.url)}
             >
-              <Link2 className="size-4" />
+              <Link2 className="size-5" />
             </button>
 
-            {/* <div className="h-[18px] w-[1px] rounded-full bg-muted-foreground/50" /> */}
+            {/* <div className="h-[18px] w-[1px] rounded-full bg-muted-foreground/50 ml-1.5" /> */}
 
             <Link
               to="/dashboard"
-              className="flex items-center justify-center rounded-sm text-muted-foreground hover:text-primary transition-colors"
+              className="flex items-center justify-center rounded-sm text-muted-foreground hover:text-primary transition-colors ml-[-2px]"
             >
               <X className="size-5" />
             </Link>
@@ -122,7 +122,7 @@ function PostComponent() {
           />
         )}
 
-        <div className="prose prose-sm dark:prose-invert">
+        <div className="prose prose-sm dark:prose-invert line-break-anywhere">
           {post.body ? <>{post.body}</> : <>{post.title}</>}
         </div>
 
