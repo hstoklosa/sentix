@@ -69,8 +69,8 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
   return (
     <Link
       to="/dashboard/$postId"
-      params={{ postId: news.id.toString() }}
-      className="group relative block p-2.5 border-b border-border hover:bg-muted/50 transition-colors"
+      params={{ postId: String(news.id) }}
+      className="group relative block p-2.5 border-b border-border transition-colors [&.active]:bg-muted hover:bg-muted/50"
     >
       <div className="flex items-start gap-3">
         <div className="inline-flex w-10">
@@ -132,12 +132,6 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
                     key={coin.id}
                     symbol={coin.symbol}
                   />
-                  // <span
-                  //   key={coin.id}
-                  //   className="px-2 py-1 bg-secondary text-xs rounded-full"
-                  // >
-                  //   {coin.symbol}
-                  // </span>
                 ))}
               </>
             )}
