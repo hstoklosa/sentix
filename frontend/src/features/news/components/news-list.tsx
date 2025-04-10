@@ -9,11 +9,36 @@ import NewsItem from "./news-item";
 import { useGetInfinitePosts, useUpdatePostsCache } from "../api";
 import { useNewsWebSocket } from "../hooks";
 import { NewsItem as NewsItemType, NewsFeedResponse } from "../types";
-import { useTokenPrice } from "@/features/coins/hooks/use-token-price";
+import useCoinSubscriptionManager from "@/features/coins/hooks/use-coin-subscription-manager";
+
+/**
+ * Helper function to check if two sets have the same elements
+ */
+const setsAreEqual = (a: Set<number>, b: Set<number>): boolean => {
+  if (a.size !== b.size) return false;
+  for (const item of a) {
+    if (!b.has(item)) return false;
+  }
+  return true;
+};
+
+/**
+ * Helper function to check if two arrays have the same elements
+ * regardless of order
+ */
+const arraysHaveSameElements = (a: string[], b: string[]): boolean => {
+  if (a.length !== b.length) return false;
+  const setA = new Set(a);
+  return b.every((item) => setA.has(item));
+};
 
 const NewsList = () => {
   const [refreshCounter, setRefreshCounter] = useState(0);
   const parentRef = useRef<HTMLDivElement>(null);
+  const visibleItemsRef = useRef(new Set<number>());
+  const lastSymbolsRef = useRef<string[]>([]);
+  const updateDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const { updateVisibleSymbols } = useCoinSubscriptionManager();
 
   const {
     data,
@@ -28,21 +53,37 @@ const NewsList = () => {
   });
   const updatePostsCache = useUpdatePostsCache();
 
-  // const btcPrice = useTokenPrice("BTC");
-  // const ethPrice = useTokenPrice("ETH");
-
-  // useEffect(() => {
-  //   console.log(`[NewsList] BTC price updated:`, btcPrice);
-  // }, [btcPrice]);
-
-  // useEffect(() => {
-  //   console.log(`[NewsList] ETH price updated:`, ethPrice);
-  // }, [ethPrice]);
-
   // Flatten all news items from all pages
   const allNewsItems = data
     ? data.pages.flatMap((page: NewsFeedResponse) => page.items)
     : [];
+
+  // Debounced function to update visible symbols
+  const debouncedUpdateVisibleSymbols = useCallback(
+    (visibleIndices: Set<number>) => {
+      if (updateDebounceRef.current) {
+        clearTimeout(updateDebounceRef.current);
+      }
+
+      updateDebounceRef.current = setTimeout(() => {
+        // Get all unique coin symbols from visible news items
+        const visibleSymbols = Array.from(visibleIndices)
+          .filter((idx) => idx < allNewsItems.length) // Filter out loader row
+          .flatMap(
+            (idx) => allNewsItems[idx].coins?.map((coin) => coin.symbol) || []
+          )
+          .filter((value, index, self) => self.indexOf(value) === index); // Unique symbols only
+
+        // Only update if the symbols have actually changed
+        if (!arraysHaveSameElements(visibleSymbols, lastSymbolsRef.current)) {
+          console.log(`[NewsList] Visible symbols:`, visibleSymbols);
+          lastSymbolsRef.current = visibleSymbols;
+          updateVisibleSymbols(visibleSymbols);
+        }
+      }, 200);
+    },
+    [allNewsItems, updateVisibleSymbols]
+  );
 
   // Set up virtualizer for rendering only visible items with dynamic measurement
   const rowVirtualizer = useVirtualizer({
@@ -56,7 +97,29 @@ const NewsList = () => {
       const rect = element.getBoundingClientRect();
       return rect.height;
     }, []),
+    // Update visible symbols when rendered items change
+    onChange: (instance) => {
+      const renderedIndices = new Set(
+        instance.getVirtualItems().map((item) => item.index)
+      );
+
+      // Only process if visible items have changed
+      if (!setsAreEqual(visibleItemsRef.current, renderedIndices)) {
+        visibleItemsRef.current = renderedIndices;
+        // Use debounced update to prevent frequent changes during scrolling
+        debouncedUpdateVisibleSymbols(renderedIndices);
+      }
+    },
   });
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (updateDebounceRef.current) {
+        clearTimeout(updateDebounceRef.current);
+      }
+    };
+  }, []);
 
   // Load more items when user scrolls to bottom
   useEffect(() => {
@@ -111,20 +174,6 @@ const NewsList = () => {
           />
           News Feed
         </h2>
-        {/* <div className="flex gap-4 mt-2 text-sm">
-          <span>
-            BTC:{" "}
-            {btcPrice
-              ? `$${btcPrice.price.toLocaleString()} (${btcPrice.changePercent > 0 ? "+" : ""}${btcPrice.changePercent.toFixed(2)}%)`
-              : "Loading..."}
-          </span>
-          <span>
-            ETH:{" "}
-            {ethPrice
-              ? `$${ethPrice.price.toLocaleString()} (${ethPrice.changePercent > 0 ? "+" : ""}${ethPrice.changePercent.toFixed(2)}%)`
-              : "Loading..."}
-          </span>
-        </div> */}
       </div>
 
       {isError || isWebsocketError ? (
