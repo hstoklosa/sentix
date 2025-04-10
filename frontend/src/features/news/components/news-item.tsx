@@ -7,6 +7,7 @@ import newsIcon from "@/assets/news.png";
 import { cn } from "@/lib/utils";
 import { formatRelativeTime } from "@/utils/format";
 
+import CoinTag from "@/features/news/components/coin-tag";
 import { NewsItem as NewsItemType } from "@/features/news/types";
 
 type NewsItemProps = {
@@ -127,12 +128,16 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
               <>
                 <span className="text-xs text-muted-foreground">|</span>
                 {news.coins.map((coin) => (
-                  <span
+                  <CoinTag
                     key={coin.id}
-                    className="px-2 py-1 bg-secondary text-xs rounded-full"
-                  >
-                    {coin.symbol}
-                  </span>
+                    symbol={coin.symbol}
+                  />
+                  // <span
+                  //   key={coin.id}
+                  //   className="px-2 py-1 bg-secondary text-xs rounded-full"
+                  // >
+                  //   {coin.symbol}
+                  // </span>
                 ))}
               </>
             )}
