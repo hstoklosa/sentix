@@ -1,7 +1,9 @@
+from typing import List, Tuple, Optional
 import logging
 
-from sqlmodel import Session, select
+from sqlmodel import Session, select, func
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload, selectinload
 from fastapi import HTTPException, status
 
 from app.models.bookmark import NewsBookmark
@@ -107,3 +109,60 @@ async def is_bookmarked(session: Session, user_id: int, news_item_id: int) -> bo
     )
     bookmark = session.exec(stmt).first()
     return bookmark is not None
+
+
+async def get_user_bookmarks(
+    session: Session, 
+    user_id: int, 
+    page: int = 1, 
+    page_size: int = 20
+) -> Tuple[List[dict], int]:
+    """
+    Get a paginated list of a user's bookmarked news items
+    
+    Args:
+        session: The database session
+        user_id: User ID to get bookmarks for
+        page: The page number (1-indexed)
+        page_size: Number of items per page
+    
+    Returns:
+        Tuple containing:
+            - List of news items with bookmark information
+            - Total count of bookmarked items
+    """
+    offset = (page - 1) * page_size
+    
+    # Get total count
+    count_stmt = (
+        select(func.count())
+        .select_from(NewsBookmark)
+        .where(NewsBookmark.user_id == user_id)
+    )
+    total_count = session.exec(count_stmt).one()
+    
+    # Get bookmarked items with news item data
+    stmt = (
+        select(NewsItem, NewsBookmark)
+        .join(NewsBookmark, NewsItem.id == NewsBookmark.news_item_id)
+        .where(NewsBookmark.user_id == user_id)
+        .options(selectinload(NewsItem.coins))
+        .order_by(NewsBookmark.created_at.desc())
+        .offset(offset)
+        .limit(page_size)
+    )
+    
+    results = session.exec(stmt).all()
+    
+    # Combine news items with bookmark information
+    items = []
+    for news_item, bookmark in results:
+        # Convert to dict and add bookmark info
+        item_dict = {
+            **news_item.dict(),
+            "bookmark_id": bookmark.id,
+            "bookmarked_at": bookmark.created_at
+        }
+        items.append(item_dict)
+    
+    return items, total_count 

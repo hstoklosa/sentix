@@ -1,6 +1,9 @@
 from datetime import datetime
+from typing import List
 
 from pydantic import BaseModel
+
+from app.schemas.news import NewsItem, PaginatedResponse
 
 
 class BookmarkCreate(BaseModel):
@@ -17,3 +20,17 @@ class BookmarkResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+class BookmarkedNewsItem(NewsItem):
+    """News item with bookmark information"""
+    bookmark_id: int
+    bookmarked_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class BookmarkedNewsResponse(PaginatedResponse):
+    """Paginated response containing bookmarked news items"""
+    items: List[BookmarkedNewsItem] 
