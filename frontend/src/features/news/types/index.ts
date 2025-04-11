@@ -15,6 +15,7 @@ export type NewsItem = Entity<{
   }[];
   feed: string;
   _type: string;
+  is_bookmarked: boolean;
 }>;
 
 export type NewsMessage = { type: "news"; data: NewsItem };

@@ -1,5 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Info, ExternalLink, X, Copy, Link2 } from "lucide-react";
+import {
+  Info,
+  ExternalLink,
+  X,
+  Copy,
+  Link as LinkIcon,
+  Bookmark,
+} from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import xIcon from "@/assets/x.png";
@@ -12,12 +19,16 @@ import { cn } from "@/lib/utils";
 import { useGetPost } from "@/features/news/api";
 import CoinTag from "@/features/news/components/coin-tag";
 import useCoinSubscription from "@/features/coins/hooks/use-coin-subscription";
+import { useCreateBookmark } from "@/features/bookmarks/api/create-bookmark";
+import { useDeleteBookmark } from "@/features/bookmarks/api/delete-bookmark";
 
 function PostComponent() {
   const { postId } = Route.useParams() as { postId: string };
   const { data: post, isLoading, error } = useGetPost(parseInt(postId, 10));
   const { subscribeToSymbols, unsubscribeFromSymbols } = useCoinSubscription();
   const previousSymbolsRef = useRef<string[]>([]);
+  const createBookmark = useCreateBookmark();
+  const deleteBookmark = useDeleteBookmark();
 
   // Subscribe to all coin prices in this post
   useEffect(() => {
@@ -66,6 +77,16 @@ function PostComponent() {
 
     // Cleanup handled automatically by useCoinSubscription
   }, [post, subscribeToSymbols, unsubscribeFromSymbols]);
+
+  const handleBookmarkToggle = () => {
+    if (!post) return;
+
+    if (post.is_bookmarked) {
+      deleteBookmark.mutate(post.id);
+    } else {
+      createBookmark.mutate({ news_item_id: post.id });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -139,6 +160,20 @@ function PostComponent() {
 
           <div className="ml-auto flex items-center gap-3">
             <button
+              aria-label={post.is_bookmarked ? "Remove bookmark" : "Add bookmark"}
+              title={post.is_bookmarked ? "Remove bookmark" : "Add bookmark"}
+              className={cn(
+                "flex items-center justify-center rounded-sm text-muted-foreground hover:text-primary transition-colors",
+                post.is_bookmarked && "text-primary"
+              )}
+              onClick={handleBookmarkToggle}
+            >
+              <Bookmark
+                className="size-4"
+                fill={post.is_bookmarked ? "currentColor" : "none"}
+              />
+            </button>
+            <button
               aria-label="Copy Title"
               className="flex items-center justify-center rounded-sm text-muted-foreground hover:text-primary transition-colors"
               onClick={(_) => handleCopy(post.title)}
@@ -150,14 +185,14 @@ function PostComponent() {
               className="flex items-center justify-center rounded-sm text-muted-foreground hover:text-primary transition-colors"
               onClick={(_) => handleCopy(post.url)}
             >
-              <Link2 className="size-5" />
+              <LinkIcon className="size-4" />
             </button>
 
             {/* <div className="h-[18px] w-[1px] rounded-full bg-muted-foreground/50 ml-1.5" /> */}
 
             <Link
               to="/dashboard"
-              className="flex items-center justify-center rounded-sm text-muted-foreground hover:text-primary transition-colors ml-[-2px]"
+              className="flex items-center justify-center rounded-sm text-muted-foreground hover:text-primary transition-colors ml-[-4px]"
             >
               <X className="size-5" />
             </Link>

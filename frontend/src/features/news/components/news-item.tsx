@@ -1,6 +1,6 @@
 import { useMemo, useRef } from "react";
 import { Link } from "@tanstack/react-router";
-import { ExternalLink, Link as LinkIcon, Copy } from "lucide-react";
+import { ExternalLink, Link as LinkIcon, Copy, Bookmark } from "lucide-react";
 
 import xIcon from "@/assets/x.png";
 import newsIcon from "@/assets/news.png";
@@ -9,6 +9,8 @@ import { formatRelativeTime } from "@/utils/format";
 
 import CoinTag from "@/features/news/components/coin-tag";
 import { NewsItem as NewsItemType } from "@/features/news/types";
+import { useCreateBookmark } from "@/features/bookmarks/api/create-bookmark";
+import { useDeleteBookmark } from "@/features/bookmarks/api/delete-bookmark";
 
 type NewsItemProps = {
   news: NewsItemType;
@@ -44,6 +46,9 @@ const shouldRecalculateTime = (timestamp: string, counter: number = 0): boolean 
 
 const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
   const lastTimeRef = useRef<string | null>(null);
+  const createBookmark = useCreateBookmark();
+  const deleteBookmark = useDeleteBookmark();
+
   const relativeTime = useMemo(() => {
     if (!lastTimeRef.current || shouldRecalculateTime(news.time, refreshCounter)) {
       const newTime = formatRelativeTime(news.time);
@@ -60,6 +65,17 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
     navigator.clipboard.writeText(text).catch((error) => {
       console.error(`Failed to copy: ${error}`);
     });
+  };
+
+  const handleBookmarkToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (news.is_bookmarked) {
+      deleteBookmark.mutate(news.id);
+    } else {
+      createBookmark.mutate({ news_item_id: news.id });
+    }
   };
 
   // Common button class for action buttons
@@ -144,7 +160,20 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
         onClick={(e) => e.stopPropagation()}
       >
         <button
+          aria-label={news.is_bookmarked ? "Remove bookmark" : "Add bookmark"}
+          title={news.is_bookmarked ? "Remove bookmark" : "Add bookmark"}
+          className={cn(actionButtonClass, news.is_bookmarked && "text-primary")}
+          onClick={handleBookmarkToggle}
+          // disabled={isLoading}
+        >
+          <Bookmark
+            className="size-3.5"
+            fill={news.is_bookmarked ? "currentColor" : "none"}
+          />
+        </button>
+        <button
           aria-label="Copy Title"
+          title="Copy Title"
           className={actionButtonClass}
           onClick={(e) => handleCopy(news.title, e)}
         >
@@ -152,6 +181,7 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
         </button>
         <button
           aria-label="Copy URL"
+          title="Copy URL"
           className={actionButtonClass}
           onClick={(e) => handleCopy(news.url, e)}
         >
@@ -159,6 +189,7 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
         </button>
         <a
           aria-label="Read more"
+          title="Visit original source"
           href={news.url}
           target="_blank"
           className={actionButtonClass}
