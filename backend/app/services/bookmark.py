@@ -84,3 +84,26 @@ async def delete_bookmark(session: Session, user_id: int, news_item_id: int) -> 
         return True
     
     return False
+
+
+async def is_bookmarked(session: Session, user_id: int, news_item_id: int) -> bool:
+    """
+    Check if a news item is bookmarked by a user
+    
+    Args:
+        session: The database session
+        user_id: User ID to check
+        news_item_id: News item ID to check
+    
+    Returns:
+        True if bookmarked, False otherwise
+    """
+    stmt = (
+        select(NewsBookmark)
+        .where(
+            NewsBookmark.user_id == user_id,
+            NewsBookmark.news_item_id == news_item_id
+        )
+    )
+    bookmark = session.exec(stmt).first()
+    return bookmark is not None

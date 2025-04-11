@@ -45,6 +45,7 @@ class NewsItem(BaseModel):
     created_at: datetime
     updated_at: datetime
     coins: List[CoinResponse] = []
+    is_bookmarked: bool = False
 
     class Config:
         from_attributes = True
