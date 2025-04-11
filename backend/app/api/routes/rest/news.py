@@ -3,13 +3,15 @@ import math
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
-from app.deps import get_session
+from app.deps import get_session, CurrentUserDep
 from app.services.news import get_news_feed, get_post_by_id
+from app.services.bookmark import is_bookmarked
 from app.schemas.news import (
     PaginationParams, 
     NewsFeedResponse, 
     NewsItem as NewsItemSchema
 )
+from app.models.user import User
 
 router = APIRouter(
     prefix="/news",
@@ -20,7 +22,8 @@ router = APIRouter(
 @router.get("/", response_model=NewsFeedResponse)
 async def get_posts(
     pagination: PaginationParams = Depends(),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    current_user: User = CurrentUserDep
 ) -> NewsFeedResponse:
     """
     Get a paginated list of posts ordered by published date
@@ -28,6 +31,7 @@ async def get_posts(
     Args:
         pagination: Pagination parameters
         session: Database session
+        current_user: Currently authenticated user
     
     Returns:
         Paginated response containing posts from the feed
@@ -62,6 +66,14 @@ async def get_posts(
         
         # Replace the coins relationship with the transformed list
         item_dict["coins"] = coin_list
+        
+        # Add bookmark status
+        item_dict["is_bookmarked"] = await is_bookmarked(
+            session=session,
+            user_id=current_user.id,
+            news_item_id=item.id
+        )
+        
         news_items.append(NewsItemSchema.model_validate(item_dict))
 
     return NewsFeedResponse(
@@ -78,7 +90,8 @@ async def get_posts(
 @router.get("/{post_id}", response_model=NewsItemSchema)
 async def get_post(
     post_id: int,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    current_user: User = CurrentUserDep
 ) -> NewsItemSchema:
     """
     Get a post by its ID
@@ -86,6 +99,7 @@ async def get_post(
     Args:
         post_id: The news item ID
         session: Database session
+        current_user: Currently authenticated user
     
     Returns:
         The news item
@@ -111,4 +125,12 @@ async def get_post(
     
     # Replace the coins relationship with the transformed list
     post_dict["coins"] = coin_list
+    
+    # Add bookmark status
+    post_dict["is_bookmarked"] = await is_bookmarked(
+        session=session,
+        user_id=current_user.id,
+        news_item_id=post.id
+    )
+    
     return NewsItemSchema.model_validate(post_dict)

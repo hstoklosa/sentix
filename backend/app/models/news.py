@@ -33,6 +33,8 @@ class NewsItem(Base, table=True):
     time: datetime = Field(index=True)
 
     coins: List["NewsCoin"] = Relationship(back_populates="news_item")
+    # Add relationship to bookmarks
+    bookmarks: List["NewsBookmark"] = Relationship(back_populates="news_item")
     
     @property
     def is_article(self) -> bool:
