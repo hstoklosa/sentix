@@ -12,6 +12,7 @@ from app.schemas.news import (
     NewsItem as NewsItemSchema
 )
 from app.models.user import User
+from app.utils import format_datetime_iso
 
 router = APIRouter(
     prefix="/news",
@@ -74,6 +75,11 @@ async def get_posts(
             news_item_id=item.id
         )
         
+        # Format datetime fields with consistent ISO 8601 format
+        item_dict["time"] = format_datetime_iso(item.time)
+        item_dict["created_at"] = format_datetime_iso(item.created_at)
+        item_dict["updated_at"] = format_datetime_iso(item.updated_at)
+        
         news_items.append(NewsItemSchema.model_validate(item_dict))
 
     return NewsFeedResponse(
@@ -132,5 +138,10 @@ async def get_post(
         user_id=current_user.id,
         news_item_id=post.id
     )
+    
+    # Format datetime fields with consistent ISO 8601 format
+    post_dict["time"] = format_datetime_iso(post.time)
+    post_dict["created_at"] = format_datetime_iso(post.created_at)
+    post_dict["updated_at"] = format_datetime_iso(post.updated_at)
     
     return NewsItemSchema.model_validate(post_dict)

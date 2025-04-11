@@ -11,6 +11,7 @@ from app.core.news.tree_news import TreeNews
 from app.core.news.types import NewsData
 from app.models.news import NewsItem
 from app.services.news import save_news_item
+from app.utils import format_datetime_iso
 
 logger = logging.getLogger(__name__)
 
@@ -167,9 +168,9 @@ class NewsWebSocketManager:
             "icon_url": post.icon_url,
             "image_url": post.image_url,
             "feed": post.feed,
-            "time": post.time.isoformat(),
-            "created_at": post.created_at.isoformat(),
-            "updated_at": post.updated_at.isoformat(),
+            "time": format_datetime_iso(post.time),
+            "created_at": format_datetime_iso(post.created_at),
+            "updated_at": format_datetime_iso(post.updated_at),
             "coins": coins
         }
 

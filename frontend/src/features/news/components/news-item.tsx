@@ -5,7 +5,7 @@ import { ExternalLink, Link as LinkIcon, Copy, Bookmark } from "lucide-react";
 import xIcon from "@/assets/x.png";
 import newsIcon from "@/assets/news.png";
 import { cn } from "@/lib/utils";
-import { formatRelativeTime } from "@/utils/format";
+import { formatRelativeTime, formatDateTime } from "@/utils/format";
 
 import CoinTag from "@/features/news/components/coin-tag";
 import { NewsItem as NewsItemType } from "@/features/news/types";
@@ -59,6 +59,11 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
     return lastTimeRef.current;
   }, [news.time, refreshCounter]);
 
+  // Format the absolute time for tooltip display
+  const formattedDateTime = useMemo(() => {
+    return formatDateTime(news.time);
+  }, [news.time]);
+
   const handleCopy = (text: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -91,8 +96,9 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
       <div className="flex items-start gap-3">
         <div className="inline-flex w-10">
           <span
-            className="text-xs pt-[1px] text-muted-foreground whitespace-nowrap"
-            title={news.time}
+            className="text-xs pt-[1px] text-muted-foreground whitespace-nowrap cursor-help"
+            title={formattedDateTime}
+            aria-label={`Posted ${formattedDateTime}`}
           >
             {relativeTime}
           </span>
