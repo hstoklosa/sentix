@@ -1,14 +1,14 @@
 from typing import Dict, Any, Optional
 from datetime import datetime
+
 import logging
 import asyncio
-
 from fastapi import WebSocket
 
 from app.core.db import get_session
-from app.models.user import User
 from app.core.news.tree_news import TreeNews
 from app.core.news.types import NewsData
+from app.models.user import User
 from app.models.news import NewsItem
 from app.services.news import save_news_item
 from app.utils import format_datetime_iso
@@ -16,17 +16,16 @@ from app.utils import format_datetime_iso
 logger = logging.getLogger(__name__)
 
 
-class WebSocketConnection:
-    """
-    Class to store WebSocket connection information
-    """
+class Connection:
+    """Class to store information about a WebSocket connection"""
     def __init__(self, websocket: WebSocket, user: Optional[User] = None):
         self.websocket = websocket
         self.user = user
         self.connected_at = datetime.now()
-        self.send_lock = asyncio.Lock()  # dedicated lock for sending messages
+        self.send_lock = asyncio.Lock()
 
-class NewsWebSocketManager:
+
+class NewsManager:
     """
     A singleton manager that handles WebSocket connections between clients and TreeNews, 
     acting as a middleman to broadcast TreeNews data to all connected clients. 
@@ -35,7 +34,7 @@ class NewsWebSocketManager:
     
     def __init__(self):
         self.tree_news = TreeNews()
-        self.active_connections: Dict[WebSocket, WebSocketConnection] = {}
+        self.active_connections: Dict[WebSocket, Connection] = {}
         self.connection_lock = asyncio.Lock()
         self.is_connected = False
     
@@ -43,21 +42,21 @@ class NewsWebSocketManager:
     def get_instance(cls):
         """Get or create the singleton instance of the manager"""
         if cls._instance is None:
-            cls._instance = NewsWebSocketManager()
+            cls._instance = NewsManager()
 
         return cls._instance
     
     async def connect_tree_news(self):
-        """Connect to TreeNews if not already connected"""
-        
-        # Use lock to prevent multiple concurrent connection attempts
+        """
+        Connect to TreeNews if not already connected, using a 
+        lock to prevent multiple concurrent connection attempts.
+        """
         async with self.connection_lock:
             if self.is_connected:
                 return
                 
             await self.tree_news.connect(self.on_news_received)
             self.is_connected = True
-            logger.info("Connected to TreeNews service")
     
     async def on_news_received(self, news_data: NewsData):
         """
@@ -66,8 +65,6 @@ class NewsWebSocketManager:
         Args:
             news_data: The news data received from TreeNews
         """
-        logger.info(f"Received news: {news_data.title}")
-
         try:
             session = next(get_session())
             saved_post = await save_news_item(session, news_data)
@@ -86,8 +83,7 @@ class NewsWebSocketManager:
             websocket: The WebSocket connection to add
             user: The authenticated user (optional)
         """
-        self.active_connections[websocket] = WebSocketConnection(websocket, user)
-        logger.info(f"Client added. Total clients: {len(self.active_connections)}")
+        self.active_connections[websocket] = Connection(websocket, user)
 
         if len(self.active_connections) == 1:
             # Task to avoid blocking the client connection
@@ -95,40 +91,36 @@ class NewsWebSocketManager:
 
     async def remove_client(self, websocket: WebSocket):
         """
-        Remove a client WebSocket connection
+        Remove a client WebSocket connection and disconnect from provider if no clients are left
         
         Args:
             websocket: The WebSocket connection to remove
         """
         if websocket in self.active_connections:
             del self.active_connections[websocket]
-            logger.info(f"Client removed. Total clients: {len(self.active_connections)}")
         
-        # Disconnect from TreeNews if no clients left
         if len(self.active_connections) == 0 and self.is_connected:
             async with self.connection_lock:
                 # Checking again as conditions might have changed
                 if not self.is_connected:
                     return
                 
-                logger.info("No clients left, disconnecting from TreeNews")
                 await self.tree_news.disconnect()
                 self.is_connected = False
     
-    async def send_to_client(self, websocket: WebSocket, connection: WebSocketConnection, message: Dict[str, Any]) -> bool:
+    async def send_to_client(self, websocket: WebSocket, connection: Connection, message: Dict[str, Any]) -> bool:
         """
         Send a message to a specific client with proper locking
         
         Args:
             websocket: The WebSocket connection
-            connection: The WebSocketConnection object
+            connection: The Connection object
             message: The message to send
             
         Returns:
             True if the message was sent successfully, False otherwise
         """
         try:
-            # Use the connection's dedicated send lock
             async with connection.send_lock:
                 await websocket.send_json(message)
                 
