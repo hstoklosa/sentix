@@ -3,7 +3,7 @@ import asyncio
 from typing import Dict
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status, Depends
-from app.core.news.news_manager import NewsWebSocketManager
+from app.core.news.news_manager import NewsManager
 from app.deps_ws import authenticate_ws_connection
 from app.models.user import User
 
@@ -31,7 +31,7 @@ async def news_websocket(websocket: WebSocket, client_id: str):
     logger.info(f"Authenticated WebSocket connection from {user_info}, client ID: {client_id}")
     
     # Singleton manager instance
-    manager = NewsWebSocketManager.get_instance() 
+    manager = NewsManager.get_instance() 
     
     try:
         # Accept the connection and add to manager
