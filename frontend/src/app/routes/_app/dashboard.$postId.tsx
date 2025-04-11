@@ -1,18 +1,71 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Info, ExternalLink, X, Copy, Link2 } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 import xIcon from "@/assets/x.png";
 import newsIcon from "@/assets/news.png";
 
 import { Spinner } from "@/components/ui/spinner";
 import { formatDateTime } from "@/utils/format";
+import { cn } from "@/lib/utils";
 
 import { useGetPost } from "@/features/news/api";
-import { cn } from "@/lib/utils";
+import CoinTag from "@/features/news/components/coin-tag";
+import useCoinSubscription from "@/features/coins/hooks/use-coin-subscription";
 
 function PostComponent() {
   const { postId } = Route.useParams() as { postId: string };
   const { data: post, isLoading, error } = useGetPost(parseInt(postId, 10));
+  const { subscribeToSymbols, unsubscribeFromSymbols } = useCoinSubscription();
+  const previousSymbolsRef = useRef<string[]>([]);
+
+  // Subscribe to all coin prices in this post
+  useEffect(() => {
+    if (!post?.coins?.length) return;
+
+    // Get symbols from coins
+    const symbols = post.coins.map((coin) => coin.symbol);
+
+    // Check if symbols have changed before updating subscriptions
+    const symbolsChanged =
+      previousSymbolsRef.current.length !== symbols.length ||
+      symbols.some((symbol) => !previousSymbolsRef.current.includes(symbol));
+
+    if (symbolsChanged) {
+      console.log(
+        `[PostDetail] Updating coin subscriptions: ${symbols.join(", ")}`
+      );
+
+      // Unsubscribe from symbols that are no longer needed
+      const symbolsToRemove = previousSymbolsRef.current.filter(
+        (prevSymbol) => !symbols.includes(prevSymbol)
+      );
+
+      if (symbolsToRemove.length > 0) {
+        console.log(
+          `[PostDetail] Removing subscriptions: ${symbolsToRemove.join(", ")}`
+        );
+        unsubscribeFromSymbols(symbolsToRemove);
+      }
+
+      // Subscribe to new symbols
+      const symbolsToAdd = symbols.filter(
+        (symbol) => !previousSymbolsRef.current.includes(symbol)
+      );
+
+      if (symbolsToAdd.length > 0) {
+        console.log(
+          `[PostDetail] Adding subscriptions: ${symbolsToAdd.join(", ")}`
+        );
+        subscribeToSymbols(symbolsToAdd);
+      }
+
+      // Update ref with current symbols
+      previousSymbolsRef.current = [...symbols];
+    }
+
+    // Cleanup handled automatically by useCoinSubscription
+  }, [post, subscribeToSymbols, unsubscribeFromSymbols]);
 
   if (isLoading) {
     return (
@@ -88,23 +141,23 @@ function PostComponent() {
             <button
               aria-label="Copy Title"
               className="flex items-center justify-center rounded-sm text-muted-foreground hover:text-primary transition-colors"
-              onClick={(e) => handleCopy(post.title)}
+              onClick={(_) => handleCopy(post.title)}
             >
               <Copy className="size-4" />
             </button>
             <button
               aria-label="Copy URL"
               className="flex items-center justify-center rounded-sm text-muted-foreground hover:text-primary transition-colors"
-              onClick={(e) => handleCopy(post.url)}
+              onClick={(_) => handleCopy(post.url)}
             >
-              <Link2 className="size-4" />
+              <Link2 className="size-5" />
             </button>
 
-            {/* <div className="h-[18px] w-[1px] rounded-full bg-muted-foreground/50" /> */}
+            {/* <div className="h-[18px] w-[1px] rounded-full bg-muted-foreground/50 ml-1.5" /> */}
 
             <Link
               to="/dashboard"
-              className="flex items-center justify-center rounded-sm text-muted-foreground hover:text-primary transition-colors"
+              className="flex items-center justify-center rounded-sm text-muted-foreground hover:text-primary transition-colors ml-[-2px]"
             >
               <X className="size-5" />
             </Link>
@@ -122,7 +175,7 @@ function PostComponent() {
           />
         )}
 
-        <div className="prose prose-sm dark:prose-invert">
+        <div className="prose prose-sm dark:prose-invert line-break-anywhere">
           {post.body ? <>{post.body}</> : <>{post.title}</>}
         </div>
 
@@ -131,12 +184,10 @@ function PostComponent() {
             <h3 className="text-sm font-medium mb-2">Related Coins:</h3>
             <div className="flex flex-wrap gap-2">
               {post.coins.map((coin) => (
-                <span
+                <CoinTag
                   key={coin.id}
-                  className="px-2 py-1 bg-primary/10 text-primary rounded-full text-xs"
-                >
-                  {coin.name || coin.symbol}
-                </span>
+                  symbol={coin.symbol}
+                />
               ))}
             </div>
           </div>

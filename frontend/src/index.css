@@ -153,6 +153,10 @@
   bottom: 50px !important;
 }
 
+.line-break-anywhere {
+  line-break: anywhere;
+}
+
 /* [data-slot="scroll-area-scrollbar"] {
   @apply bg-accent rounded-full
 } */
