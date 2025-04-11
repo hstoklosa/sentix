@@ -9,7 +9,7 @@ import NewsItem from "./news-item";
 import { useGetInfinitePosts, useUpdatePostsCache } from "../api";
 import { useNewsWebSocket } from "../hooks";
 import { NewsItem as NewsItemType, NewsFeedResponse } from "../types";
-import useCoinSubscriptionManager from "@/features/coins/hooks/use-coin-subscription-manager";
+import useCoinSubscription from "@/features/coins/hooks/use-coin-subscription";
 
 /**
  * Helper function to check if two sets have the same elements
@@ -38,7 +38,7 @@ const NewsList = () => {
   const visibleItemsRef = useRef(new Set<number>());
   const lastSymbolsRef = useRef<string[]>([]);
   const updateDebounceRef = useRef<NodeJS.Timeout | null>(null);
-  const { updateVisibleSymbols } = useCoinSubscriptionManager();
+  const { subscribeToSymbols, unsubscribeFromSymbols } = useCoinSubscription();
 
   const {
     data,
@@ -76,13 +76,37 @@ const NewsList = () => {
 
         // Only update if the symbols have actually changed
         if (!arraysHaveSameElements(visibleSymbols, lastSymbolsRef.current)) {
-          console.log(`[NewsList] Visible symbols:`, visibleSymbols);
+          console.log(`[NewsList] Visible symbols changed:`, visibleSymbols);
+
+          // Unsubscribe from symbols no longer visible
+          const symbolsToRemove = lastSymbolsRef.current.filter(
+            (symbol) => !visibleSymbols.includes(symbol)
+          );
+
+          if (symbolsToRemove.length > 0) {
+            console.log(
+              `[NewsList] Removing subscriptions: ${symbolsToRemove.join(", ")}`
+            );
+            unsubscribeFromSymbols(symbolsToRemove);
+          }
+
+          // Subscribe to newly visible symbols
+          const symbolsToAdd = visibleSymbols.filter(
+            (symbol) => !lastSymbolsRef.current.includes(symbol)
+          );
+
+          if (symbolsToAdd.length > 0) {
+            console.log(
+              `[NewsList] Adding subscriptions: ${symbolsToAdd.join(", ")}`
+            );
+            subscribeToSymbols(symbolsToAdd);
+          }
+
           lastSymbolsRef.current = visibleSymbols;
-          updateVisibleSymbols(visibleSymbols);
         }
       }, 200);
     },
-    [allNewsItems, updateVisibleSymbols]
+    [allNewsItems, subscribeToSymbols, unsubscribeFromSymbols]
   );
 
   // Set up virtualizer for rendering only visible items with dynamic measurement
