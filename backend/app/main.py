@@ -1,6 +1,5 @@
-import logging
-
 from fastapi import FastAPI
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from starlette.middleware.cors import CORSMiddleware
@@ -9,8 +8,9 @@ from app.api.main import api_router
 from app.core.db import create_db_and_tables
 from app.services.token import cleanup_expired_tokens
 from app.core.config import settings
+from app.utils import setup_logger
 
-logger = logging.getLogger(__name__)
+logger = setup_logger()
 scheduler = AsyncIOScheduler()
 
 app = FastAPI(
