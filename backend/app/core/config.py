@@ -67,5 +67,6 @@ class Settings(BaseSettings):
 
     # APIs
     TREENEWS_API_KEY: str
+    COINGECKO_API_KEY: str
     
 settings = Settings()
