@@ -1,6 +1,6 @@
 from datetime import datetime
-from typing import Optional
-from sqlmodel import Field, SQLModel, Relationship
+
+from sqlmodel import Field, Relationship
 from sqlalchemy import UniqueConstraint
 
 from app.models.base import Base

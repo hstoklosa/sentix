@@ -1,7 +1,21 @@
 from typing import Any
 from datetime import datetime, timezone
 
+import sys
+import logging
 import json
+
+
+def setup_logger():
+    """
+    Configure logging for the application
+    """
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[logging.StreamHandler(sys.stdout)]
+    )
+    return logging.getLogger(__name__)
 
 
 def parse_cors(v: Any) -> list[str] | str:
