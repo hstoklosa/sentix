@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING, Dict, Any
 
 from sqlmodel import Field, SQLModel, Relationship
 from sqlalchemy import UniqueConstraint
@@ -34,6 +34,21 @@ class NewsItem(Base, table=True):
     @property
     def is_post(self) -> bool:
         return self.item_type == "post"
+        
+    def get_formatted_coins(self) -> List[Dict[str, Any]]:
+        """Return a formatted list of coins directly usable in API responses"""
+        coin_list = []
+        for news_coin in self.coins:
+            if not news_coin.coin:
+                continue
+                
+            coin_list.append({
+                "id": news_coin.coin.id,
+                "symbol": news_coin.coin.symbol,
+                "name": news_coin.coin.name,
+                "image_url": news_coin.coin.image_url
+            })
+        return coin_list
 
 
 class NewsCoin(SQLModel, table=True):

@@ -25,6 +25,7 @@ class CoinResponse(BaseModel):
     id: int
     symbol: str
     name: Optional[str] = None
+    image_url: Optional[str] = None
     
     class Config:
         from_attributes = True

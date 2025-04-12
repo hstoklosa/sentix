@@ -10,7 +10,8 @@ if TYPE_CHECKING:
 class Coin(Base, table=True):
     __tablename__ = "coins"
     
+    name: str = Field(unique=True, index=True)
     symbol: str = Field(unique=True, index=True)
-    name: Optional[str] = None
+    image_url: Optional[str] = Field(default=None)
 
     news_items: List["NewsCoin"] = Relationship(back_populates="coin")

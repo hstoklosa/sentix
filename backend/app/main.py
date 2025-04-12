@@ -1,12 +1,13 @@
 from fastapi import FastAPI
 
+from starlette.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
-from starlette.middleware.cors import CORSMiddleware
 
 from app.api.main import api_router
 from app.core.db import create_db_and_tables
 from app.services.token import cleanup_expired_tokens
+from app.services.coin import sync_coins_from_coingecko
 from app.core.config import settings
 from app.utils import setup_logger
 
@@ -22,6 +23,7 @@ app = FastAPI(
 @app.on_event("startup")
 def on_startup():
     create_db_and_tables()
+    sync_coins_from_coingecko()
     
     # Schedule token cleanup task
     scheduler.add_job(
@@ -31,6 +33,16 @@ def on_startup():
         trigger=IntervalTrigger(hours=24),  # run once a day
         replace_existing=True,
     )
+    
+    # Schedule regular coin synchronisation task
+    scheduler.add_job(
+        id="sync_coins",
+        name="Synchronise coins from CoinGecko",
+        func=sync_coins_from_coingecko,
+        trigger=IntervalTrigger(hours=12),  # run twice a day
+        replace_existing=True,
+    )
+    
     scheduler.start()
 
 

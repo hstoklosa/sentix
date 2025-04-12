@@ -139,17 +139,6 @@ class NewsManager:
         connections = list(self.active_connections.items())
         disconnected_websockets = []
         
-        # Format the response structure including coins data 
-        # and datetime serialization
-        coins = []
-        for news_coin in post.coins:
-            coin = news_coin.coin
-            coins.append({
-                "id": coin.id,
-                "symbol": coin.symbol,
-                "name": coin.name
-            })
-
         formatted_post = {
             "id": post.id,
             "_type": post.item_type,
@@ -163,7 +152,7 @@ class NewsManager:
             "time": format_datetime_iso(post.time),
             "created_at": format_datetime_iso(post.created_at),
             "updated_at": format_datetime_iso(post.updated_at),
-            "coins": coins
+            "coins": post.get_formatted_coins()
         }
 
         for websocket, connection in connections:

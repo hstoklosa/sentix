@@ -27,26 +27,18 @@ class Settings(BaseSettings):
     API_BASE_PATH: str = "/api/v1"
     ENVIRONMENT: str = "development"
 
-    # AUTH
-    SECRET_KEY: str = secrets.token_urlsafe(32)
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15            # 15 minutes
-    REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
-
-    SUPERUSER_EMAIL: EmailStr
-    SUPERUSER_USERNAME: str = "admin"
-    SUPERUSER_PASSWORD: str = "pass"
-
     # SECURITY
     BACKEND_CORS_ORIGINS: Annotated[
-        list[AnyUrl] | str, BeforeValidator(parse_cors)] = []
+        list[AnyUrl] | str, 
+        BeforeValidator(parse_cors)
+    ] = []
 
     @computed_field
     @property
     def all_cors_origins(self) -> list[str]:
         return [str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS] + [self.FRONTEND_URL]
 
-    # DATABASE
+   # DATABASE
     POSTGRES_HOST: str
     POSTGRES_PORT: int
     POSTGRES_USER: str
@@ -65,7 +57,18 @@ class Settings(BaseSettings):
             path=self.POSTGRES_DB,
         )
 
+    # AUTH
+    SECRET_KEY: str = secrets.token_urlsafe(32)
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15            # 15 minutes
+    REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
+
+    SUPERUSER_EMAIL: EmailStr
+    SUPERUSER_USERNAME: str = "admin"
+    SUPERUSER_PASSWORD: str = "pass"
+
     # APIs
     TREENEWS_API_KEY: str
-    
+    COINGECKO_API_KEY: str
+
 settings = Settings()
