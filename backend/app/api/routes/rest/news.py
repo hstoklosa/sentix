@@ -48,34 +48,16 @@ async def get_posts(
     has_next = pagination.page < total_pages
     has_prev = pagination.page > 1
     
-    # Properly transform the SQLModel instances to dict 
-    # with properly structured relationships
+    # Transform SQLModel instances to schema objects with properly formatted data
     news_items = []
     for item in items:
         item_dict = item.model_dump()
-        coin_list = []
-
-        for news_coin in item.coins:
-            if not news_coin.coin:
-                continue
-
-            coin_list.append({
-                "id": news_coin.coin.id,
-                "symbol": news_coin.coin.symbol,
-                "name": news_coin.coin.name
-            })
-        
-        # Replace the coins relationship with the transformed list
-        item_dict["coins"] = coin_list
-        
-        # Add bookmark status
+        item_dict["coins"] = item.get_formatted_coins()
         item_dict["is_bookmarked"] = await is_bookmarked(
             session=session,
             user_id=current_user.id,
             news_item_id=item.id
         )
-        
-        # Format datetime fields with consistent ISO 8601 format
         item_dict["time"] = format_datetime_iso(item.time)
         item_dict["created_at"] = format_datetime_iso(item.created_at)
         item_dict["updated_at"] = format_datetime_iso(item.updated_at)
@@ -115,31 +97,14 @@ async def get_post(
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
     
-    # Transform the SQLModel instance to dict with properly structured relationships
+    # Transform SQLModel instances to schema objects with properly formatted data
     post_dict = post.model_dump()
-    coin_list = []
-    
-    for news_coin in post.coins:
-        if not news_coin.coin:
-            continue
-            
-        coin_list.append({
-            "id": news_coin.coin.id,
-            "symbol": news_coin.coin.symbol,
-            "name": news_coin.coin.name
-        })
-    
-    # Replace the coins relationship with the transformed list
-    post_dict["coins"] = coin_list
-    
-    # Add bookmark status
+    post_dict["coins"] = post.get_formatted_coins()
     post_dict["is_bookmarked"] = await is_bookmarked(
         session=session,
         user_id=current_user.id,
         news_item_id=post.id
     )
-    
-    # Format datetime fields with consistent ISO 8601 format
     post_dict["time"] = format_datetime_iso(post.time)
     post_dict["created_at"] = format_datetime_iso(post.created_at)
     post_dict["updated_at"] = format_datetime_iso(post.updated_at)
