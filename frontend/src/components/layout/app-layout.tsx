@@ -58,13 +58,14 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           <DropdownMenuContent
             align="end"
             side="bottom"
-            sideOffset={12}
+            sideOffset={10}
+            className="w-[250px]"
           >
             <DropdownMenuLabel className="cursor-default">
-              <p className="text-sm font-normal text-foreground">
+              <p className="text-sm font-normal text-foreground truncate">
                 {user?.username}
               </p>
-              <p className="text-sm font-normal text-muted-foreground">
+              <p className="text-sm font-normal text-muted-foreground truncate">
                 {user?.email}
               </p>
             </DropdownMenuLabel>
