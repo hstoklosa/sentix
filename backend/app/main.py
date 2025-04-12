@@ -34,6 +34,15 @@ def on_startup():
         replace_existing=True,
     )
     
+    # Schedule regular coin synchronisation task
+    scheduler.add_job(
+        id="sync_coins",
+        name="Synchronise coins from CoinGecko",
+        func=sync_coins_from_coingecko,
+        trigger=IntervalTrigger(hours=12),  # run twice a day
+        replace_existing=True,
+    )
+    
     scheduler.start()
 
 
