@@ -45,7 +45,8 @@ class NewsItem(Base, table=True):
             coin_list.append({
                 "id": news_coin.coin.id,
                 "symbol": news_coin.coin.symbol,
-                "name": news_coin.coin.name
+                "name": news_coin.coin.name,
+                "image_url": news_coin.coin.image_url
             })
         return coin_list
 
