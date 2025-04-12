@@ -1,6 +1,8 @@
 from typing import Annotated
 import secrets
 
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_core import MultiHostUrl
 from pydantic import (
     AnyUrl,
     BeforeValidator,
@@ -8,8 +10,6 @@ from pydantic import (
     PostgresDsn,
     computed_field,
 )
-from pydantic_core import MultiHostUrl
-from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.utils import parse_cors
 
@@ -21,34 +21,36 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
+    # GENERAL
     PROJECT_NAME: str = "SentiX: Full-Stack Web Application"
-
     FRONTEND_URL: str = "http://localhost:5173"
     API_BASE_PATH: str = "/api/v1"
+    ENVIRONMENT: str = "development"
 
-    # Security
+    # AUTH
     SECRET_KEY: str = secrets.token_urlsafe(32)
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15            # 15 minutes
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
-    ENVIRONMENT: str = "development"
 
-    BACKEND_CORS_ORIGINS: Annotated[list[AnyUrl] | str, BeforeValidator(parse_cors)] = []
+    SUPERUSER_EMAIL: EmailStr
+    SUPERUSER_USERNAME: str = "admin"
+    SUPERUSER_PASSWORD: str = "pass"
+
+    # SECURITY
+    BACKEND_CORS_ORIGINS: Annotated[
+        list[AnyUrl] | str, BeforeValidator(parse_cors)] = []
 
     @computed_field
     @property
     def all_cors_origins(self) -> list[str]:
         return [str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS] + [self.FRONTEND_URL]
-    
-    SUPERUSER_USERNAME: str = "admin"
-    SUPERUSER_EMAIL: EmailStr
-    SUPERUSER_PASSWORD: str
 
-    # Database
-    POSTGRES_SERVER: str
-    POSTGRES_PORT: int = 5432
+    # DATABASE
+    POSTGRES_HOST: str
+    POSTGRES_PORT: int
     POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
+    POSTGRES_PASS: str
     POSTGRES_DB: str
 
     @computed_field
@@ -57,12 +59,13 @@ class Settings(BaseSettings):
         return MultiHostUrl.build(
             scheme="postgresql+psycopg",
             username=self.POSTGRES_USER,
-            password=self.POSTGRES_PASSWORD,
-            host=self.POSTGRES_SERVER,
+            password=self.POSTGRES_PASS,
+            host=self.POSTGRES_HOST,
             port=self.POSTGRES_PORT,
             path=self.POSTGRES_DB,
         )
 
+    # APIs
     TREENEWS_API_KEY: str
     
 settings = Settings()
