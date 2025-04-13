@@ -10,3 +10,5 @@ pyjwt
 tenacity
 apscheduler
 requests
+transformers
+torch
