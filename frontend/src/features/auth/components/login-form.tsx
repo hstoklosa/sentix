@@ -1,5 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 
 import { Button, Input } from "@/components/ui";
 import {
@@ -11,10 +12,10 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { cn } from "@/lib/utils";
+import { AuthResponse } from "@/types/api";
 
 import { LoginFormValues, loginFormSchema } from "../types";
 import { useLogin } from "../api/login";
-import { AuthResponse } from "@/types/api";
 
 type LoginFormProps = {
   onSuccess?: (data: AuthResponse) => void;
@@ -33,9 +34,10 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const loginMutation = useLogin({
     onSuccess: (data) => {
       onSuccess?.(data);
+      toast.success("You have been signed in successfully");
     },
     onError: (error) => {
-      console.error("Login failed:", error);
+      toast.error(error.detail);
     },
   });
 
