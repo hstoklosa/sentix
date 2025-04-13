@@ -3,7 +3,7 @@ from typing import Annotated
 from sqlmodel import Session
 from fastapi import Depends, Cookie, status, HTTPException
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError
+import jwt
 
 from app.core.db import get_session
 from app.services.token import is_token_blacklisted
@@ -25,7 +25,7 @@ async def verify_access_token(
         payload = decode_token(token)
         verify_token_type(payload, "access")
         return payload
-    except JWTError:
+    except jwt.exceptions.PyJWTError:
         raise InvalidTokenException()
 
 
@@ -41,13 +41,12 @@ async def verify_refresh_token(
         payload = decode_token(refresh_token)
         verify_token_type(payload, "refresh")
         
-        # Check if token is blacklisted
         jti = get_token_jti(payload)
         if jti and is_token_blacklisted(session=session, jti=jti):
             raise InvalidTokenException()
             
         return payload
-    except JWTError:
+    except jwt.exceptions.PyJWTError:
         raise InvalidTokenException()
     
 async def get_current_user(
