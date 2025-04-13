@@ -15,7 +15,11 @@ const DashboardContainer = ({
 }: DashboardContainerProps) => {
   return (
     <div
-      className={`grid grid-cols-[repeat(${columns},1fr)] grid-rows-[repeat(${rows},1fr)] gap-x-2 gap-y-2 h-[calc(100vh-4.5rem)] overflow-hidden`}
+      className="grid gap-2 h-[calc(100vh-4.5rem)] overflow-hidden"
+      style={{
+        gridTemplateColumns: `repeat(${columns}, 1fr)`,
+        gridTemplateRows: `repeat(${rows}, 1fr)`,
+      }}
     >
       {children}
     </div>
@@ -39,15 +43,19 @@ const DashboardPanel = ({
   children: React.ReactNode;
 }) => {
   const { rowStart, rowEnd, colStart, colEnd } = position;
-  const positionClasses = `row-start-${rowStart} ${rowEnd ? `row-end-${rowEnd}` : ""} col-start-${colStart} ${colEnd ? `col-end-${colEnd}` : ""}`;
 
   return (
     <div
       className={cn(
         "flex flex-col h-full bg-card border-1 border-border rounded-md",
-        positionClasses,
         className
       )}
+      style={{
+        gridRowStart: rowStart,
+        gridRowEnd: rowEnd,
+        gridColumnStart: colStart,
+        gridColumnEnd: colEnd,
+      }}
     >
       {children}
     </div>
