@@ -34,7 +34,7 @@ async def get_or_create_coin(session: Session, symbol: str) -> Coin:
     return coin
 
 
-async def create_news_item(session: Session, news_data: NewsData) -> NewsItem:
+async def create_news_item(session: Session, news_data: NewsData, sentiment: dict) -> NewsItem:
     """
     Create a news item (article or social post)
     
@@ -58,7 +58,9 @@ async def create_news_item(session: Session, news_data: NewsData) -> NewsItem:
         url=news_data.url,
         icon_url=news_data.icon,
         feed=news_data.feed,
-        item_type=item_type
+        item_type=item_type,
+        sentiment=sentiment["label"],
+        score=sentiment["score"]
     )
     
     session.add(item)
@@ -85,7 +87,7 @@ async def create_news_item(session: Session, news_data: NewsData) -> NewsItem:
     return item
 
 
-async def save_news_item(session: Session, news_data: NewsData) -> NewsItem:
+async def save_news_item(session: Session, news_data: NewsData, sentiment: dict) -> NewsItem:
     """
     Save a news item (article or social post) based on its source
     
@@ -113,7 +115,7 @@ async def save_news_item(session: Session, news_data: NewsData) -> NewsItem:
             
             return existing_item
         
-        return await create_news_item(session, news_data)
+        return await create_news_item(session, news_data, sentiment)
     except Exception as e:
         logger.error(f"Error saving news item: {str(e)}")
         raise

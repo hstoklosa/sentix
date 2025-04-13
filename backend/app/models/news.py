@@ -23,6 +23,8 @@ class NewsItem(Base, table=True):
     body: Optional[str] = None
     image_url: Optional[str] = None
     time: datetime = Field(index=True)
+    sentiment: str = Field(index=True)
+    score: float = Field(index=True)
 
     coins: List["NewsCoin"] = Relationship(back_populates="news_item")
     bookmarks: List["NewsBookmark"] = Relationship(back_populates="news_item")

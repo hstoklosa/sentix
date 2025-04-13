@@ -10,6 +10,7 @@ from app.core.news.tree_news import TreeNews
 from app.core.news.types import NewsData
 from app.models.user import User
 from app.models.news import NewsItem
+from app.ml_models import cryptobert
 from app.services.news import save_news_item
 from app.utils import format_datetime_iso
 
@@ -67,10 +68,8 @@ class NewsManager:
         """
         try:
             session = next(get_session())
-            saved_post = await save_news_item(session, news_data)
-            
-            # TODO: Compute sentiment score, price forecast, filter, etc
-
+            sentiment = cryptobert.predict_sentiment(news_data.body)
+            saved_post = await save_news_item(session, news_data, sentiment)
             await self.broadcast_to_clients(saved_post)
         except Exception as e:
             logger.error(f"Error saving news to database: {str(e)}")
@@ -85,8 +84,8 @@ class NewsManager:
         """
         self.active_connections[websocket] = Connection(websocket, user)
 
+        # Task to avoid blocking the client connection
         if len(self.active_connections) == 1:
-            # Task to avoid blocking the client connection
             asyncio.create_task(self.connect_tree_news())
 
     async def remove_client(self, websocket: WebSocket):
