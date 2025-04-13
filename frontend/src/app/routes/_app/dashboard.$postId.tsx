@@ -25,19 +25,17 @@ import { useDeleteBookmark } from "@/features/bookmarks/api/delete-bookmark";
 function PostComponent() {
   const { postId } = Route.useParams() as { postId: string };
   const { data: post, isLoading, error } = useGetPost(parseInt(postId, 10));
-  const { subscribeToSymbols, unsubscribeFromSymbols } = useCoinSubscription();
   const previousSymbolsRef = useRef<string[]>([]);
+  const { subscribeToSymbols, unsubscribeFromSymbols } = useCoinSubscription();
   const createBookmark = useCreateBookmark();
   const deleteBookmark = useDeleteBookmark();
 
-  // Subscribe to all coin prices in this post
+  // Subscribe to all coin prices in this post where cleanup
+  // is handled automatically by useCoinSubscription hook.
   useEffect(() => {
     if (!post?.coins?.length) return;
 
-    // Get symbols from coins
     const symbols = post.coins.map((coin) => coin.symbol);
-
-    // Check if symbols have changed before updating subscriptions
     const symbolsChanged =
       previousSymbolsRef.current.length !== symbols.length ||
       symbols.some((symbol) => !previousSymbolsRef.current.includes(symbol));
@@ -71,21 +69,16 @@ function PostComponent() {
         subscribeToSymbols(symbolsToAdd);
       }
 
-      // Update ref with current symbols
       previousSymbolsRef.current = [...symbols];
     }
-
-    // Cleanup handled automatically by useCoinSubscription
   }, [post, subscribeToSymbols, unsubscribeFromSymbols]);
 
   const handleBookmarkToggle = () => {
     if (!post) return;
 
-    if (post.is_bookmarked) {
-      deleteBookmark.mutate(post.id);
-    } else {
-      createBookmark.mutate({ news_item_id: post.id });
-    }
+    post.is_bookmarked
+      ? deleteBookmark.mutate(post.id)
+      : createBookmark.mutate({ news_item_id: post.id });
   };
 
   if (isLoading) {
@@ -117,29 +110,21 @@ function PostComponent() {
   return (
     <div className="flex flex-col">
       <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2 p-2.5 border-b border-border">
+        <div className="flex items-center gap-2 px-2.5 py-2 border-b border-border">
           <div
             className={cn(
               "flex justify-center items-center min-w-8 min-h-8 rounded-full bg-primary/10",
               post.source === "Twitter" ? "bg-black" : "bg-[#7233F7]"
             )}
           >
-            {post.source === "Twitter" ? (
-              <img
-                src={xIcon}
-                alt="X"
-                className="size-4"
-              />
-            ) : (
-              <img
-                src={newsIcon}
-                alt="News"
-                className="w-4"
-              />
-            )}
+            <img
+              src={post.source === "Twitter" ? xIcon : newsIcon}
+              alt="X"
+              className="size-4"
+            />
           </div>
           <div className="flex flex-col text-xs">
-            <div className="flex items-center gap-1 mb-0.5">
+            <div className="flex items-center gap-1">
               <span className="text-sm text-foreground capitalize">
                 {post.source}
               </span>
@@ -169,7 +154,7 @@ function PostComponent() {
               onClick={handleBookmarkToggle}
             >
               <Bookmark
-                className="size-4"
+                className="size-3.5"
                 fill={post.is_bookmarked ? "currentColor" : "none"}
               />
             </button>
@@ -178,14 +163,14 @@ function PostComponent() {
               className="flex items-center justify-center rounded-sm text-muted-foreground hover:text-primary transition-colors"
               onClick={(_) => handleCopy(post.title)}
             >
-              <Copy className="size-4" />
+              <Copy className="size-3.5" />
             </button>
             <button
               aria-label="Copy URL"
               className="flex items-center justify-center rounded-sm text-muted-foreground hover:text-primary transition-colors"
               onClick={(_) => handleCopy(post.url)}
             >
-              <LinkIcon className="size-4" />
+              <LinkIcon className="size-3.5" />
             </button>
 
             {/* <div className="h-[18px] w-[1px] rounded-full bg-muted-foreground/50 ml-1.5" /> */}
@@ -194,13 +179,13 @@ function PostComponent() {
               to="/dashboard"
               className="flex items-center justify-center rounded-sm text-muted-foreground hover:text-primary transition-colors ml-[-4px]"
             >
-              <X className="size-5" />
+              <X className="size-4.5" />
             </Link>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-col gap-2 p-2.5">
+      <div className="flex flex-col gap-2 p-2.5 ">
         <h2 className="text-xl font-bold">{post.title}</h2>
         {post.image_url && (
           <img
@@ -211,7 +196,7 @@ function PostComponent() {
         )}
 
         <div className="prose prose-sm dark:prose-invert line-break-anywhere">
-          {post.body ? <>{post.body}</> : <>{post.title}</>}
+          {post.body ? post.body : post.title}
         </div>
 
         {post.coins.length > 0 && (
