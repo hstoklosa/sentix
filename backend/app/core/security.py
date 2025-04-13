@@ -79,9 +79,7 @@ def create_refresh_token(subject: str | int) -> str:
 
 
 def decode_token(token: str) -> Optional[dict]:
-    """
-    Decode JWT token and return the payload, or None if token is invalid.
-    """
+    """Decode JWT token and return the payload, or None if token is invalid."""
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         return payload
@@ -90,12 +88,5 @@ def decode_token(token: str) -> Optional[dict]:
 
 
 def verify_token_type(token_data: dict, expected_type: str) -> bool:
-    """
-    Verify token type, return True if valid, False otherwise.
-    """
+    """Verify token type, return True if valid, False otherwise."""
     return token_data.get("type") == expected_type
-
-
-def get_token_jti(token_data: dict) -> Optional[str]:
-    """Extract JTI from token data"""
-    return token_data.get("jti")

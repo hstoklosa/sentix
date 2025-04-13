@@ -16,7 +16,6 @@ from app.core.security import (
     create_refresh_token,
     decode_token,
     verify_token_type,
-    get_token_jti
 )
 from app.deps import get_session, SessionDep, CurrentUserDep
 from app.schemas.user import UserCreate, UserLogin, UserPublic

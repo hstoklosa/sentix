@@ -6,7 +6,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 from app.api.main import api_router
 from app.core.db import create_db_and_tables
-from app.services.token import cleanup_expired_tokens
+from app.services.token import purge_expired_tokens
 from app.services.coin import sync_coins_from_coingecko
 from app.core.config import settings
 from app.utils import setup_logger
@@ -29,7 +29,7 @@ def on_startup():
     scheduler.add_job(
         id="cleanup_expired_tokens",
         name="Remove expired tokens from database",
-        func=cleanup_expired_tokens,
+        func=purge_expired_tokens,
         trigger=IntervalTrigger(hours=24),  # run once a day
         replace_existing=True,
     )

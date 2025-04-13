@@ -4,44 +4,31 @@ from typing import Optional
 
 from sqlmodel import Session, select
 
-from app.models.token import Token
-from app.core.security import decode_token
 from app.core.db import engine
+from app.models.token import Token
+from app.core.security import decode_token, verify_token_type
 
 logger = logging.getLogger(__name__)
 
 
 def blacklist_token(*, session: Session, token: str) -> None:
     """Add a refresh token to the blacklist"""
-    # Decode the token to get its payload
     payload = decode_token(token)
-    
-    # If token is invalid or not a refresh token, don't blacklist
-    if not payload or payload.get("type") != "refresh":
+    if not payload or not verify_token_type(payload, "refresh"):
         return
     
-    # Extract token data
-    jti = payload.get("jti")
-    exp = payload.get("exp")
-    
+    jti, exp = payload.get("jti"), payload.get("exp")
     if not jti or not exp:
         return
     
-    # Convert exp timestamp to datetime
-    expires_at = datetime.fromtimestamp(exp)
-    
-    # Check if token is already blacklisted
-    stmt = select(Token).where(Token.jti == jti)
-    existing = session.exec(stmt).first()
-    
-    if existing:
+    if is_token_blacklisted(session=session, jti=jti):
         return
     
-    # Create blacklist entry
+    # Create blacklisted entry
     token_entry = Token(
         jti=jti,
-        expires_at=expires_at,
-        is_blacklisted=True
+        is_blacklisted=True,
+        expires_at=datetime.fromtimestamp(exp),
     )
     
     session.add(token_entry)
@@ -61,32 +48,27 @@ def get_token_by_jti(*, session: Session, jti: str) -> Optional[Token]:
     return session.exec(stmt).first()
 
 
-def purge_expired_tokens(*, session: Session) -> int:
-    """Remove expired tokens from the database to keep the table size manageable
-    
-    Returns:
-        int: Number of tokens removed
-    """
+def get_expired_tokens(*, session: Session) -> list[Token]:
+    """Get expired tokens from the database"""
     now = datetime.utcnow()
     stmt = select(Token).where(Token.expires_at < now)
-    expired_tokens = session.exec(stmt).all()
-    
-    count = 0
-    for token in expired_tokens:
-        session.delete(token)
-        count += 1
-    
-    if count > 0:
-        session.commit()
-    
-    return count
+    return session.exec(stmt).all() or []
 
 
-async def cleanup_expired_tokens():
-    """Scheduled task to remove expired tokens from the database"""
+def purge_expired_tokens() -> int:
+    """Remove expired tokens from the database to prevent table size buildup"""
     try:
-        with Session(engine) as session:
-            removed_count = purge_expired_tokens(session=session)
-            logger.info(f"Removed {removed_count} expired tokens from database")
+        with Session(engine) as session: 
+            expired_tokens = get_expired_tokens(session=session)
+            
+            count = 0
+            for token in expired_tokens:
+                session.delete(token)
+                count += 1
+            
+            if count > 0:
+                session.commit()
+            
+            logger.info(f"Removed {count} expired tokens from database")
     except Exception as e:
         logger.error(f"Error cleaning up expired tokens: {e}") 
