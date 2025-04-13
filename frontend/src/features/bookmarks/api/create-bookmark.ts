@@ -2,19 +2,24 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 
 import { api } from "@/lib/api-client";
-import { BookmarkCreate, BookmarkResponse } from "../types";
+import { MutationConfig } from "@/lib/react-query";
 import { NewsItem } from "@/features/news/types";
+
+import { BookmarkCreate, BookmarkResponse } from "../types";
 
 const createBookmark = async (data: BookmarkCreate): Promise<BookmarkResponse> => {
   return api.post("/bookmarks", data);
 };
 
-export const useCreateBookmark = () => {
+export const useCreateBookmark = ({
+  onSuccess,
+  onError,
+}: Omit<MutationConfig<typeof createBookmark>, "mutationFn">) => {
   const queryClient = useQueryClient();
 
-  return useMutation<BookmarkResponse, AxiosError, BookmarkCreate>({
+  return useMutation({
     mutationFn: createBookmark,
-    onSuccess: (_, variables) => {
+    onSuccess: (data, variables, context) => {
       // Update the news list cache (infinite query)
       queryClient.setQueriesData({ queryKey: ["news", "list"] }, (oldData: any) => {
         if (!oldData || !oldData.pages) return oldData;
@@ -41,6 +46,11 @@ export const useCreateBookmark = () => {
           return { ...oldData, is_bookmarked: true };
         }
       );
+
+      onSuccess?.(data, variables, context);
+    },
+    onError: (error, variables, context) => {
+      onError?.(error as AxiosError, variables, context);
     },
   });
 };
