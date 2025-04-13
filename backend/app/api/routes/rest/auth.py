@@ -78,8 +78,8 @@ async def register(
             raise DuplicateUsernameException()
         
         user = user_service.create_user(session=session, user=user_data)
-        access_token = create_access_token(data={"sub": str(user.id)})
-        refresh_token = create_refresh_token(data={"sub": str(user.id)})
+        access_token = create_access_token(user.id)
+        refresh_token = create_refresh_token(user.id)
         
         set_refresh_token_cookie(response, refresh_token)
         token = Token(access_token=access_token)
@@ -108,8 +108,8 @@ async def login(
     if not user:
         raise InvalidCredentialsException()
     
-    access_token = create_access_token(data={"sub": str(user.id)})
-    refresh_token = create_refresh_token(data={"sub": str(user.id)})
+    access_token = create_access_token(user.id)
+    refresh_token = create_refresh_token(user.id)
 
     set_refresh_token_cookie(response, refresh_token)
     token = Token(access_token=access_token)
@@ -144,8 +144,8 @@ async def refresh_token(
     if not user:
         raise InvalidTokenException()
     
-    access_token = create_access_token(data={"sub": user_id})
-    new_refresh_token = create_refresh_token(data={"sub": user_id})
+    access_token = create_access_token(user.id)
+    new_refresh_token = create_refresh_token(user.id)
     
     # Blacklist the old refresh token
     token_service.blacklist_token(session=session, token=refresh_token)

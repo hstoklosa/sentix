@@ -11,22 +11,12 @@ from app.core.config import settings
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-"""
-PASSWORDS
-"""
 def validate_password(password: str) -> tuple[bool, Optional[str]]:
     """
-    Validate that a password meets the security requirements:
-    - At least 8 characters long
-    - Contains at least one uppercase letter
-    - Contains at least one lowercase letter
-    - Contains at least one digit
-    - Contains at least one special character
+    Validate that a password meets the security requirements specified by regex.
     
     Returns:
         tuple: (is_valid, error_message)
-        - is_valid: True if password is valid, False otherwise
-        - error_message: None if valid, error message if invalid
     """
     # Check if password is at least 8 characters
     if len(password) < 8:
@@ -50,47 +40,43 @@ def validate_password(password: str) -> tuple[bool, Optional[str]]:
     
     return True, None
 
+
 def get_password_hash(password: str) -> str:
-    # Password validation is handled by the schemas before this function is called
+    """Hash the provided password after validation is handled by the schema."""
     return pwd_context.hash(password)
+
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
-"""
-AUTH TOKENS (JWT)
-"""
+
 def create_token(
-        data: dict, 
-        expires_delta: Optional[timedelta] = None, 
-        token_type: str = "access"
+    subject: str | int, 
+    token_type: str = "access"
 ) -> str:
-    raw_data = data.copy()
-    
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    elif token_type == "access":
+    if token_type == "access":
         expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    else:  # token_type == "refresh"
+    else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
     
-    # Add JWT ID for token identification (useful for blacklisting)
-    jti = str(uuid.uuid4())
-    
-    raw_data.update({
-        "exp": expire, 
+    raw_data = {
         "type": token_type,
-        "jti": jti,
-        "iat": datetime.now(timezone.utc)
-    })
+        "jti": str(uuid.uuid4()), # add id for blacklisting
+        "sub": str(subject),
+        "iat": datetime.now(timezone.utc),
+        "exp": expire
+    }
     
     return jwt.encode(raw_data, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    return create_token(data, expires_delta, token_type="access")
 
-def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    return create_token(data, expires_delta, token_type="refresh")
+def create_access_token(subject: str | int) -> str:
+    return create_token(subject, token_type="access")
+
+
+def create_refresh_token(subject: str | int) -> str:
+    return create_token(subject, token_type="refresh")
+
 
 def decode_token(token: str) -> Optional[dict]:
     """
@@ -102,11 +88,13 @@ def decode_token(token: str) -> Optional[dict]:
     except JWTError:
         return None 
 
+
 def verify_token_type(token_data: dict, expected_type: str) -> bool:
     """
     Verify token type, return True if valid, False otherwise.
     """
     return token_data.get("type") == expected_type
+
 
 def get_token_jti(token_data: dict) -> Optional[str]:
     """Extract JTI from token data"""
