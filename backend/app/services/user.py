@@ -44,11 +44,8 @@ def authenticate_user(*, session: Session, email: Optional[str] = None, username
         user = get_user_by_email(session=session, email=email)
     elif username:
         user = get_user_by_username(session=session, username=username)
-
-    if not user:
-        raise InvalidCredentialsException()
     
-    if not verify_password(plain_password=password, hashed_password=user.password):
-        raise InvalidCredentialsException()
+    if not user or not verify_password(password, user.password):
+        return None
     
     return user

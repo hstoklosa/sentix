@@ -50,3 +50,16 @@ class InvalidTokenException(AuthenticationException):
 # Input validation exceptions
 class InvalidPasswordException(BadRequestException):
     detail = "Password does not meet security requirements"
+
+
+class ResourceExistsException(BadRequestException):
+    """Exception for when a resource already exists."""
+    detail = "Resource already exists"
+
+
+class DuplicateEmailException(ResourceExistsException):
+    detail = "The provided email address is already registered"
+
+
+class DuplicateUsernameException(ResourceExistsException):
+    detail = "The provided username is already taken"

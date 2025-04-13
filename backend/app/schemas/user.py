@@ -15,16 +15,10 @@ class UserCreate(UserBase):
     
     @validator('password')
     def validate_password_field(cls, v):
-        # Use the centralized password validation function
-        try:
-            validate_password(v)
-            return v
-        except Exception as e:
-            # Extract the detail from the exception if it's an InvalidPasswordException
-            if hasattr(e, 'detail'):
-                raise ValueError(str(e.detail))
-            # Otherwise, just use the string representation of the exception
-            raise ValueError(str(e))
+        is_valid, error_message = validate_password(v)
+        if not is_valid:
+            raise ValueError(error_message)
+        return v
 
 class UserLogin(BaseModel):
     email: Optional[EmailStr] = None
@@ -33,16 +27,10 @@ class UserLogin(BaseModel):
     
     @validator('password')
     def validate_password_field(cls, v):
-        # Use the centralized password validation function
-        try:
-            validate_password(v)
-            return v
-        except Exception as e:
-            # Extract the detail from the exception if it's an InvalidPasswordException
-            if hasattr(e, 'detail'):
-                raise ValueError(str(e.detail))
-            # Otherwise, just use the string representation of the exception
-            raise ValueError(str(e))
+        is_valid, error_message = validate_password(v)
+        if not is_valid:
+            raise ValueError(error_message)
+        return v
     
     @validator('username')
     def validate_login_fields(cls, v, values):

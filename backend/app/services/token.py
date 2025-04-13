@@ -13,43 +13,39 @@ logger = logging.getLogger(__name__)
 
 def blacklist_token(*, session: Session, token: str) -> None:
     """Add a refresh token to the blacklist"""
-    try:
-        # Decode the token to get its payload
-        payload = decode_token(token)
-        
-        # Only blacklist refresh tokens
-        if payload.get("type") != "refresh":
-            return
-        
-        # Extract token data
-        jti = payload.get("jti")
-        exp = payload.get("exp")
-        
-        if not jti or not exp:
-            return
-        
-        # Convert exp timestamp to datetime
-        expires_at = datetime.fromtimestamp(exp)
-        
-        # Check if token is already blacklisted
-        stmt = select(Token).where(Token.jti == jti)
-        existing = session.exec(stmt).first()
-        
-        if existing:
-            return
-        
-        # Create blacklist entry
-        token_entry = Token(
-            jti=jti,
-            expires_at=expires_at,
-            is_blacklisted=True
-        )
-        
-        session.add(token_entry)
-        session.commit()
-    except Exception:
-        # If token is invalid or any other error occurs, no need to blacklist
-        pass
+    # Decode the token to get its payload
+    payload = decode_token(token)
+    
+    # If token is invalid or not a refresh token, don't blacklist
+    if not payload or payload.get("type") != "refresh":
+        return
+    
+    # Extract token data
+    jti = payload.get("jti")
+    exp = payload.get("exp")
+    
+    if not jti or not exp:
+        return
+    
+    # Convert exp timestamp to datetime
+    expires_at = datetime.fromtimestamp(exp)
+    
+    # Check if token is already blacklisted
+    stmt = select(Token).where(Token.jti == jti)
+    existing = session.exec(stmt).first()
+    
+    if existing:
+        return
+    
+    # Create blacklist entry
+    token_entry = Token(
+        jti=jti,
+        expires_at=expires_at,
+        is_blacklisted=True
+    )
+    
+    session.add(token_entry)
+    session.commit()
 
 
 def is_token_blacklisted(*, session: Session, jti: str) -> bool:
