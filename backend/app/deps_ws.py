@@ -2,9 +2,9 @@ from typing import Tuple, Optional
 from urllib.parse import parse_qs
 
 from fastapi import WebSocket, status
-from sqlmodel import Session
-from jose import JWTError
 from fastapi.concurrency import run_in_threadpool
+from sqlmodel import Session
+import jwt
 
 from app.core.db import get_session
 from app.core.security import decode_token, verify_token_type
@@ -49,9 +49,8 @@ async def verify_ws_token(websocket: WebSocket) -> Tuple[bool, Optional[dict]]:
     try:
         payload = decode_token(token)
         verify_token_type(payload, "access")
-        
         return True, payload
-    except JWTError:
+    except jwt.exceptions.PyJWTError:
         return False, None
 
 

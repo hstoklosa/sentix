@@ -3,19 +3,20 @@ from typing import Annotated
 from sqlmodel import Session
 from fastapi import Depends, Cookie, status, HTTPException
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError
+import jwt
 
 from app.core.db import get_session
 from app.services.token import is_token_blacklisted
 from app.services.user import get_user_by_id
 from app.models.user import User
 from app.core.config import settings
-from app.core.security import decode_token, verify_token_type, get_token_jti
+from app.core.security import decode_token, verify_token_type
 from app.core.exceptions import InvalidTokenException
 
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_BASE_PATH}/auth/login"
 )
+
 
 async def verify_access_token(
     token: Annotated[str, Depends(oauth2_scheme)],
@@ -25,7 +26,7 @@ async def verify_access_token(
         payload = decode_token(token)
         verify_token_type(payload, "access")
         return payload
-    except JWTError:
+    except jwt.exceptions.PyJWTError:
         raise InvalidTokenException()
 
 
@@ -39,20 +40,21 @@ async def verify_refresh_token(
     
     try:
         payload = decode_token(refresh_token)
-        verify_token_type(payload, "refresh")
+        if not payload or not verify_token_type(payload, "refresh"):
+            raise InvalidTokenException()
         
-        # Check if token is blacklisted
-        jti = get_token_jti(payload)
+        jti = payload.get("jti")
         if jti and is_token_blacklisted(session=session, jti=jti):
             raise InvalidTokenException()
             
         return payload
-    except JWTError:
+    except jwt.exceptions.PyJWTError:
         raise InvalidTokenException()
-    
+
+
 async def get_current_user(
-    session: Annotated[Session, Depends(get_session)],
-    token_payload: Annotated[dict, Depends(verify_access_token)]
+    token_payload: Annotated[dict, Depends(verify_access_token)],
+    session: Annotated[Session, Depends(get_session)]
 ) -> User:
     """Get the current authenticated user"""
     user_id = token_payload.get("sub")
@@ -72,6 +74,7 @@ async def get_current_user(
         )
     
     return user
+
 
 SessionDep = Annotated[Session, Depends(get_session)]
 TokenDep = Annotated[str, Depends(oauth2_scheme)]
