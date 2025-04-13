@@ -1,5 +1,6 @@
 import { useMemo, useRef } from "react";
 import { Link } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { ExternalLink, Link as LinkIcon, Copy, Bookmark } from "lucide-react";
 
 import xIcon from "@/assets/x.png";
@@ -46,8 +47,15 @@ const shouldRecalculateTime = (timestamp: string, counter: number = 0): boolean 
 
 const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
   const lastTimeRef = useRef<string | null>(null);
-  const createBookmark = useCreateBookmark();
-  const deleteBookmark = useDeleteBookmark();
+
+  const createBookmark = useCreateBookmark({
+    onSuccess: () => toast.success("The post has been added to bookmarks"),
+    onError: () => toast.error("Failed to bookmark this post"),
+  });
+  const deleteBookmark = useDeleteBookmark({
+    onSuccess: () => toast.success("The post has been removed from bookmarks"),
+    onError: () => toast.error("Failed to remove this post from bookmarks"),
+  });
 
   const relativeTime = useMemo(() => {
     if (!lastTimeRef.current || shouldRecalculateTime(news.time, refreshCounter)) {
@@ -64,28 +72,35 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
     return formatDateTime(news.time);
   }, [news.time]);
 
-  const handleCopy = (text: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    navigator.clipboard.writeText(text).catch((error) => {
-      console.error(`Failed to copy: ${error}`);
-    });
-  };
-
   const handleBookmarkToggle = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (news.is_bookmarked) {
-      deleteBookmark.mutate(news.id);
-    } else {
-      createBookmark.mutate({ news_item_id: news.id });
-    }
+    news.is_bookmarked
+      ? deleteBookmark.mutate(news.id)
+      : createBookmark.mutate({ news_item_id: news.id });
   };
 
-  // Common button class for action buttons
   const actionButtonClass =
     "size-4 flex items-center justify-center rounded-sm text-muted-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
+
+  const handleCopyTitle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigator.clipboard
+      .writeText(news.title)
+      .then(() => toast.success("The title has been copied to clipboard"))
+      .catch(() => toast.error("Failed to copy title to clipboard"));
+  };
+
+  const handleCopyUrl = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigator.clipboard
+      .writeText(news.url)
+      .then(() => toast.success("The URL has been copied to clipboard"))
+      .catch(() => toast.error("Failed to copy URL to clipboard"));
+  };
 
   return (
     <Link
@@ -181,7 +196,7 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
           aria-label="Copy Title"
           title="Copy Title"
           className={actionButtonClass}
-          onClick={(e) => handleCopy(news.title, e)}
+          onClick={handleCopyTitle}
         >
           <Copy className="size-3.5" />
         </button>
@@ -189,7 +204,7 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
           aria-label="Copy URL"
           title="Copy URL"
           className={actionButtonClass}
-          onClick={(e) => handleCopy(news.url, e)}
+          onClick={handleCopyUrl}
         >
           <LinkIcon className="size-3.5" />
         </button>

@@ -1,4 +1,6 @@
+import { useEffect, useRef } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { toast } from "sonner";
 import {
   Info,
   ExternalLink,
@@ -7,7 +9,6 @@ import {
   Link as LinkIcon,
   Bookmark,
 } from "lucide-react";
-import { useEffect, useRef } from "react";
 
 import xIcon from "@/assets/x.png";
 import newsIcon from "@/assets/news.png";
@@ -24,11 +25,18 @@ import { useDeleteBookmark } from "@/features/bookmarks/api/delete-bookmark";
 
 function PostComponent() {
   const { postId } = Route.useParams() as { postId: string };
-  const { data: post, isLoading, error } = useGetPost(parseInt(postId, 10));
   const previousSymbolsRef = useRef<string[]>([]);
+  const { data: post, isLoading, error } = useGetPost(parseInt(postId, 10));
   const { subscribeToSymbols, unsubscribeFromSymbols } = useCoinSubscription();
-  const createBookmark = useCreateBookmark();
-  const deleteBookmark = useDeleteBookmark();
+
+  const createBookmark = useCreateBookmark({
+    onSuccess: () => toast.success("The post has been added to bookmarks"),
+    onError: () => toast.error("Failed to bookmark this post"),
+  });
+  const deleteBookmark = useDeleteBookmark({
+    onSuccess: () => toast.success("The post has been removed from bookmarks"),
+    onError: () => toast.error("Failed to remove this post from bookmarks"),
+  });
 
   // Subscribe to all coin prices in this post where cleanup
   // is handled automatically by useCoinSubscription hook.
@@ -73,14 +81,6 @@ function PostComponent() {
     }
   }, [post, subscribeToSymbols, unsubscribeFromSymbols]);
 
-  const handleBookmarkToggle = () => {
-    if (!post) return;
-
-    post.is_bookmarked
-      ? deleteBookmark.mutate(post.id)
-      : createBookmark.mutate({ news_item_id: post.id });
-  };
-
   if (isLoading) {
     return (
       <Spinner
@@ -101,10 +101,26 @@ function PostComponent() {
     );
   }
 
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text).catch((error) => {
-      console.error(`Failed to copy: ${error}`);
-    });
+  const handleBookmarkToggle = () => {
+    if (!post) return;
+
+    post.is_bookmarked
+      ? deleteBookmark.mutate(post.id)
+      : createBookmark.mutate({ news_item_id: post.id });
+  };
+
+  const handleCopyTitle = () => {
+    navigator.clipboard
+      .writeText(post.title)
+      .then(() => toast.success("The title has been copied to clipboard"))
+      .catch(() => toast.error("Failed to copy title to clipboard"));
+  };
+
+  const handleCopyUrl = () => {
+    navigator.clipboard
+      .writeText(post.url)
+      .then(() => toast.success("The URL has been copied to clipboard"))
+      .catch(() => toast.error("Failed to copy URL to clipboard"));
   };
 
   return (
@@ -158,14 +174,14 @@ function PostComponent() {
           <button
             aria-label="Copy Title"
             className="flex items-center justify-center rounded-sm text-muted-foreground hover:text-primary transition-colors"
-            onClick={(_) => handleCopy(post.title)}
+            onClick={handleCopyTitle}
           >
             <Copy className="size-3.5" />
           </button>
           <button
             aria-label="Copy URL"
             className="flex items-center justify-center rounded-sm text-muted-foreground hover:text-primary transition-colors"
-            onClick={(_) => handleCopy(post.url)}
+            onClick={handleCopyUrl}
           >
             <LinkIcon className="size-3.5" />
           </button>

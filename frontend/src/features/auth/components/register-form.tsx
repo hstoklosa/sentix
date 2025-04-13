@@ -1,5 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 
 import { Button, Input } from "@/components/ui";
 import {
@@ -35,9 +36,10 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
   const registerMutation = useRegister({
     onSuccess: (data) => {
       onSuccess?.(data);
+      toast.success("You have been signed up successfully");
     },
     onError: (error) => {
-      console.error("Registration failed:", error);
+      toast.error(error.detail);
     },
   });
 
