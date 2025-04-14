@@ -11,3 +11,4 @@ class MarketStats(BaseModel):
     btc_dominance_24h_change: float
     eth_dominance_24h_change: float
     fear_and_greed_index: int
+    market_sentiment: str = "Neutral"

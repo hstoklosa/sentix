@@ -8,4 +8,5 @@ export type MarketStats = {
   btc_dominance_24h_change: number;
   eth_dominance_24h_change: number;
   fear_and_greed_index: number;
+  market_sentiment: string;
 };

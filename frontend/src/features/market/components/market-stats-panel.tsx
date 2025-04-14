@@ -2,6 +2,7 @@ import { AlertCircle } from "lucide-react";
 
 import { Spinner } from "@/components/ui/spinner";
 import { formatCompactNumber } from "@/utils/format";
+import { SentimentTag } from "@/features/news/components";
 
 import { useGetStats } from "../api";
 import PriceChangeTag from "./price-change-tag";
@@ -94,7 +95,7 @@ const MarketStatsPanel = () => {
             </p>
             <div className="flex items-center gap-2">
               <FearAndGreedMeter value={marketStats.fear_and_greed_index} />
-              <p className="text-xl">{marketStats.fear_and_greed_index}</p>
+              <p className="text-lg">{marketStats.fear_and_greed_index}</p>
               <FearAndGreedIndicator value={marketStats.fear_and_greed_index} />
             </div>
           </div>
@@ -103,9 +104,11 @@ const MarketStatsPanel = () => {
           <div className="flex flex-col gap-1 w-[25%]">
             <p className="text-sm font-medium text-muted-foreground">Sentiment</p>
             <div className="flex items-center gap-2">
-              <FearAndGreedMeter value={marketStats.fear_and_greed_index} />
-              <p className="text-xl">{marketStats.fear_and_greed_index}</p>
-              <FearAndGreedIndicator value={marketStats.fear_and_greed_index} />
+              <SentimentTag
+                iconSize={12}
+                sentiment={marketStats.market_sentiment}
+              />
+              <p className="text-lg">{marketStats.market_sentiment}</p>
             </div>
           </div>
         </div>
