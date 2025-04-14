@@ -82,3 +82,50 @@ export const formatDateTime = (dateString: string) => {
     return "-";
   }
 };
+
+/**
+ * Formats a number into a compact representation with optional currency symbol and decimal places.
+ * Converts numbers to compact form like 1k, 1m, 1b, 1t (or 1K, 1M, 1B, 1T if uppercase is true)
+ *
+ * @param value - Number to format
+ * @param decimals - Number of decimal places (default: 1)
+ * @param currency - Currency symbol to prepend (default: '')
+ * @param uppercase - Whether to use uppercase unit symbols (default: false)
+ * @returns Formatted compact number string
+ * @example
+ * formatCompactNumber(1234) // Returns "1.2k"
+ * formatCompactNumber(1234567, 2) // Returns "1.23m"
+ * formatCompactNumber(1234567, 1, "$") // Returns "$1.2m"
+ * formatCompactNumber(1234567, 1, "$", true) // Returns "$1.2M"
+ */
+export const formatCompactNumber = (
+  value: number,
+  decimals: number = 1,
+  currency: string = "",
+  uppercase: boolean = false
+): string => {
+  try {
+    if (!Number.isFinite(value)) return "-";
+
+    const units = [
+      { value: 1e12, symbol: "t" },
+      { value: 1e9, symbol: "b" },
+      { value: 1e6, symbol: "m" },
+      { value: 1e3, symbol: "k" },
+    ];
+
+    const unit = units.find((unit) => Math.abs(value) >= unit.value);
+    if (!unit) {
+      // Format values < 1000 with the specified decimals
+      const formatted = value.toFixed(decimals).replace(/\.?0+$/, "");
+      return `${currency}${formatted}`;
+    }
+
+    const formatted = (value / unit.value).toFixed(decimals).replace(/\.?0+$/, "");
+    const symbol = uppercase ? unit.symbol.toUpperCase() : unit.symbol;
+    return `${currency}${formatted}${symbol}`;
+  } catch (error) {
+    console.error("Error formatting compact number:", error);
+    return "-";
+  }
+};

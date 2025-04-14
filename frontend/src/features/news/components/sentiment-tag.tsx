@@ -5,21 +5,25 @@ import { cn } from "@/lib/utils";
 
 type SentimentTagProps = {
   className?: string;
+  iconSize?: number;
   sentiment: string;
-  score: number;
 };
 
-const SentimentTag = ({ sentiment, score, className }: SentimentTagProps) => {
+const SentimentTag = ({
+  sentiment,
+  className,
+  iconSize = 4,
+}: SentimentTagProps) => {
   const icon = useMemo(() => {
     const normalisedSentiment = sentiment?.toLowerCase() || "";
 
     switch (true) {
       case normalisedSentiment.includes("bullish"):
-        return <Smile className="size-4 text-chart-2" />;
+        return <Smile className={cn("text-chart-2", `size-${iconSize}`)} />;
       case normalisedSentiment.includes("bearish"):
-        return <Frown className="size-4 text-destructive" />;
+        return <Frown className={cn("text-destructive", `size-${iconSize}`)} />;
       default:
-        return <Meh className="size-4 text-muted-foreground" />;
+        return <Meh className={cn("text-muted-foreground", `size-${iconSize}`)} />;
     }
   }, [sentiment]);
 
