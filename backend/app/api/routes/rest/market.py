@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlmodel import Session, select, func
 from datetime import datetime, time, date
+from typing import Annotated
 
 from app.core.market.coinmarketcap import cmc_client
-from app.schemas.market import MarketStats
+from app.core.market.coingecko import coingecko_client
+from app.schemas.market import MarketStats, CoinResponse, PaginationParams, PaginatedResponse
 from app.models.news import NewsItem
 from app.core.db import get_session
 
@@ -61,4 +63,48 @@ async def get_market_stats(session: Session = Depends(get_session)):
         eth_dominance_24h_change=stats.get("data", {}).get("eth_dominance_24h_percentage_change", 0.0),
         fear_and_greed_index=fear_greed_index.get("data", {}).get("value", 50),
         market_sentiment=market_sentiment
+    )
+
+@router.get("/coins", response_model=PaginatedResponse[CoinResponse])
+async def get_coins(
+    pagination: Annotated[PaginationParams, Depends()],
+    session: Session = Depends(get_session)
+):
+    # Get coins with pagination parameters
+    coins = coingecko_client.get_coins_markets(
+        page=pagination.page,
+        limit=pagination.page_size
+    )
+    
+    # Total count is not directly available from the API
+    # We'll have to estimate based on the assumption that the total is at least 
+    # the number of items returned, and likely more
+    items_count = len(coins)
+    total_items = max(items_count, 5000)  # Assuming CoinGecko has ~5000 coins
+    total_pages = (total_items + pagination.page_size - 1) // pagination.page_size
+    
+    # Map the response to CoinResponse objects
+    coin_responses = [
+        CoinResponse(
+            id=coin.get("id", ""),
+            symbol=coin.get("symbol", ""),
+            name=coin.get("name", ""),
+            image=coin.get("image", ""),
+            current_price=coin.get("current_price", 0.0),
+            market_cap=coin.get("market_cap", 0.0),
+            market_cap_rank=coin.get("market_cap_rank", 0),
+            price_change_percentage_24h=coin.get("price_change_percentage_24h"),
+            volume_24h=coin.get("total_volume", 0.0)
+        )
+        for coin in coins
+    ]
+    
+    return PaginatedResponse(
+        page=pagination.page,
+        page_size=pagination.page_size,
+        total=total_items,
+        total_pages=total_pages,
+        has_next=pagination.page < total_pages,
+        has_prev=pagination.page > 1,
+        items=coin_responses
     )

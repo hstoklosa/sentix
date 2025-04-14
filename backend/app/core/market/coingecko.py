@@ -41,3 +41,5 @@ class CoinGeckoClient:
             "sparkline": "false",
         }
         return self._send_request(url, params) or []
+
+coingecko_client = CoinGeckoClient()
