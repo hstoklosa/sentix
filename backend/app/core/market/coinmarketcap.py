@@ -6,6 +6,7 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+
 class CoinMarketCapClient:
     _API_BASE_URL = "https://pro-api.coinmarketcap.com"
     _API_KEY = settings.COINMARKETCAP_API_KEY
@@ -32,3 +33,5 @@ class CoinMarketCapClient:
     def get_fear_greed_index(self) -> Dict[str, Any]:
         url = f"{self._API_BASE_URL}/v3/fear-and-greed/latest"
         return self._send_request(url)
+
+cmc_client = CoinMarketCapClient()
