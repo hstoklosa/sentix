@@ -1,6 +1,8 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
+
 import { NewsList } from "@/features/news/components";
+import { MarketStatsPanel } from "@/features/market/components";
 
 type DashboardContainerProps = {
   rows?: number;
@@ -78,7 +80,7 @@ function RouteComponent() {
         Charts
       </DashboardPanel>
       <DashboardPanel position={{ rowStart: 1, rowEnd: 2, colStart: 3, colEnd: 4 }}>
-        Market stats
+        <MarketStatsPanel />
       </DashboardPanel>
       <DashboardPanel position={{ rowStart: 2, rowEnd: 5, colStart: 3, colEnd: 4 }}>
         Screeners
