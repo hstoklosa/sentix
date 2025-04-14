@@ -3,7 +3,7 @@ import logging
 from sqlmodel import select, Session
 
 from app.core.db import engine
-from app.core.coingecko.client import CoinGeckoClient
+from app.core.market.coingecko import CoinGeckoClient
 from app.models.coin import Coin
 
 logger = logging.getLogger(__name__)
