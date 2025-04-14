@@ -181,7 +181,6 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
                 <SentimentTag
                   className="ml-auto"
                   sentiment={news.sentiment}
-                  score={news.score}
                 />
               )}
           </div>
