@@ -16,6 +16,8 @@ export type NewsItem = Entity<{
   feed: string;
   _type: string;
   is_bookmarked: boolean;
+  sentiment: string;
+  score: number;
 }>;
 
 export type NewsMessage = { type: "news"; data: NewsItem };

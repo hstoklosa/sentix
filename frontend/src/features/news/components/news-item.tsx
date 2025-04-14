@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { formatRelativeTime, formatDateTime } from "@/utils/format";
 
 import CoinTag from "@/features/news/components/coin-tag";
+import SentimentTag from "@/features/news/components/sentiment-tag";
 import { NewsItem as NewsItemType } from "@/features/news/types";
 import { useCreateBookmark } from "@/features/bookmarks/api/create-bookmark";
 import { useDeleteBookmark } from "@/features/bookmarks/api/delete-bookmark";
@@ -172,6 +173,17 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
                 ))}
               </>
             )}
+
+            {/* TODO: Do not compute sentiment for news without related coins */}
+            {news.coins.length > 0 &&
+              news.sentiment &&
+              news.score !== undefined && (
+                <SentimentTag
+                  className="ml-auto"
+                  sentiment={news.sentiment}
+                  score={news.score}
+                />
+              )}
           </div>
         </div>
       </div>
