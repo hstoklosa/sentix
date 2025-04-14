@@ -151,7 +151,9 @@ class NewsManager:
             "time": format_datetime_iso(post.time),
             "created_at": format_datetime_iso(post.created_at),
             "updated_at": format_datetime_iso(post.updated_at),
-            "coins": post.get_formatted_coins()
+            "coins": post.get_formatted_coins(),
+            "sentiment": post.sentiment,
+            "score": post.score
         }
 
         for websocket, connection in connections:
