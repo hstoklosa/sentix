@@ -7,19 +7,6 @@ import { Spinner } from "@/components/ui/spinner";
 import { useGetInfiniteCoins } from "../api/get-coins";
 import WatchlistItem from "./watchlist-item";
 
-const WatchlistListHeader = () => {
-  return (
-    <div className="px-4 py-2 text-[10px] text-muted-foreground border-b border-border sticky top-0 bg-background z-10">
-      <div className="flex items-center">
-        <div className="w-[45%]">ASSET</div>
-        <div className="w-[27%]">LAST</div>
-        <div className="w-[18%]">CHNG%</div>
-        <div className="w-[10%]">MCAP</div>
-      </div>
-    </div>
-  );
-};
-
 const WatchlistList = () => {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -70,8 +57,9 @@ const WatchlistList = () => {
   ]);
 
   return (
-    <div className="flex flex-col h-full border border-border rounded-md overflow-hidden">
-      <div className="p-3 border-b h-[50px] border-border bg-muted/30">
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* bg-muted/30 */}
+      <div className="px-2.5 py-2 border-b border-border">
         <h2 className="text-lg font-semibold">Watchlist</h2>
       </div>
 
@@ -89,7 +77,15 @@ const WatchlistList = () => {
         </div>
       ) : (
         <div className="flex flex-col flex-1 overflow-hidden">
-          <WatchlistListHeader />
+          {/* bg-background */}
+          <div className="px-3 py-2 text-[10px] text-muted-foreground border-b border-border sticky top-0 z-10">
+            <div className="flex items-center">
+              <div className="w-[49.5%]">ASSET</div>
+              <div className="w-[20%]">PRICE</div>
+              <div className="w-[19.5%]">CHANGE %</div>
+              <div className="w-[10%]">MCAP</div>
+            </div>
+          </div>
 
           <div
             ref={parentRef}

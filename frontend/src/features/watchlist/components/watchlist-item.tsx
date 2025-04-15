@@ -22,18 +22,18 @@ const WatchlistItem = ({ coin }: { coin: WatchlistCoin }) => {
   };
 
   return (
-    <div className="px-4 py-2.5 border-b border-border hover:bg-muted/30 transition-colors">
+    <div className="px-3 py-2 border-b border-border hover:bg-muted/30 transition-colors">
       <div className="flex items-center">
         {/* Coin info */}
-        <div className="flex items-center gap-2.5 w-[45%]">
+        <div className="flex items-center gap-2.5 w-[50%]">
           <img
             src={coin.image}
             alt={coin.name}
-            className="w-5 h-5 rounded-full"
+            className="size-4.5 rounded-full"
           />
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-medium text-sm">{coin.name}</span>
+              <span className="text-sm">{coin.name}</span>
               <span className="text-[10px] text-muted-foreground uppercase">
                 {coin.symbol}
               </span>
@@ -42,14 +42,12 @@ const WatchlistItem = ({ coin }: { coin: WatchlistCoin }) => {
         </div>
 
         {/* Price */}
-        <div className="w-[27%] font-medium text-sm">
-          ${formatPrice(coin.current_price)}
-        </div>
+        <div className="w-[20%] text-sm">${formatPrice(coin.current_price)}</div>
 
         {/* Change */}
         <div
           className={cn(
-            "w-[18%] flex items-center text-sm",
+            "w-[20%] flex items-center text-sm",
             priceChangeIsPositive
               ? "text-emerald-500"
               : priceChangeIsNegative
@@ -57,7 +55,7 @@ const WatchlistItem = ({ coin }: { coin: WatchlistCoin }) => {
                 : "text-muted-foreground"
           )}
         >
-          {priceChangeIsPositive && (
+          {/* {priceChangeIsPositive && (
             <TrendingUp
               size={12}
               className="mr-1"
@@ -68,14 +66,14 @@ const WatchlistItem = ({ coin }: { coin: WatchlistCoin }) => {
               size={12}
               className="mr-1"
             />
-          )}
+          )} */}
           {coin.price_change_percentage_24h
             ? `${priceChangeIsPositive ? "+" : ""}${coin.price_change_percentage_24h.toFixed(2)}%`
             : "0.00%"}
         </div>
 
         {/* Market Cap */}
-        <div className="w-[10%] text-muted-foreground text-xs">
+        <div className="w-[10%] text-muted-foreground text-sm">
           {formatMarketCap(coin.market_cap)}
         </div>
       </div>
