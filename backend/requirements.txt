@@ -12,3 +12,5 @@ apscheduler
 requests
 transformers
 torch
+aiocache
+aiohttp

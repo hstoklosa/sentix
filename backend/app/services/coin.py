@@ -1,4 +1,5 @@
 import logging
+import asyncio
 
 from sqlmodel import select, Session
 
@@ -9,10 +10,10 @@ from app.models.coin import Coin
 logger = logging.getLogger(__name__)
 
 
-def sync_coins_from_coingecko():
-    """Sync coins from CoinGecko API to database"""
+async def async_sync_coins_from_coingecko():
+    """Sync coins from CoinGecko API to database (async version)"""
     client = CoinGeckoClient()
-    coins_list = client.get_coins_markets()
+    coins_list = await client.get_coins_markets()
     
     if not coins_list:
         logger.error("Failed to fetch coins list from CoinGecko API")
@@ -53,4 +54,13 @@ def sync_coins_from_coingecko():
         
         session.commit()
     
-    logger.info("Coin synchronisation completed") 
+    logger.info("Coin synchronisation completed")
+
+
+def sync_coins_from_coingecko():
+    """
+    Sync coins from CoinGecko API to database (synchronous wrapper)
+    This function creates an event loop and runs the async function
+    """
+    # Run the async function in the event loop
+    asyncio.run(async_sync_coins_from_coingecko()) 
