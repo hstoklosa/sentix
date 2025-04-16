@@ -1,22 +1,22 @@
-from typing import Dict, Any, Optional, Callable
-import requests
+from typing import Dict, Any, Optional
 import logging
-from datetime import datetime
 import json
 
-from app.core.market.cache import api_cache
+from aiocache import Cache
+from aiocache.serializers import JsonSerializer
+import asyncio
+import aiohttp
 
 logger = logging.getLogger(__name__)
+api_cache = Cache.MEMORY(serializer=JsonSerializer())
 
 
 class BaseApiClient:
     def __init__(self, api_base_url: str, headers: Dict[str, str]):
         self.api_base_url = api_base_url
-        self.headers = headers
-        
-        # Default cache TTLs in seconds
-        self.default_ttl = 300  # 5 minutes default
-        self.endpoint_ttls = {}  # Override per endpoint
+        self.headers = headers        
+        self.default_ttl = 300   # 5 minutes default
+        self.endpoint_ttls = {}  # override per endpoint
 
     def set_cache_ttl(self, endpoint: str, ttl_seconds: int) -> None:
         """
@@ -44,10 +44,10 @@ class BaseApiClient:
         Returns:
             Seconds until next update or None if not available
         """
-        # Default implementation - override in child classes if provider gives this info
+        # Default implementation - can be overridden in subclasses if provider gives this info
         return None
 
-    def _send_request(self, endpoint: str, params: dict = None, force_refresh: bool = False) -> Dict[str, Any]:
+    async def _send_request(self, endpoint: str, params: dict = None, force_refresh: bool = False) -> Dict[str, Any]:
         """
         Send HTTP GET request to API endpoint with caching
         
@@ -64,16 +64,24 @@ class BaseApiClient:
         
         # If force refresh, delete from cache first
         if force_refresh:
-            api_cache.delete(cache_key)
+            await api_cache.delete(cache_key)
         
-        # Use get_or_set to implement the cache-or-fetch pattern
-        return api_cache.get_or_set(
-            key=cache_key,
-            ttl_seconds=ttl,
-            fetch_func=lambda: self._fetch_from_api(endpoint, params)
-        )
+        # Try to get from cache first
+        cached_data = await api_cache.get(cache_key)
+        if cached_data is not None:
+            logger.info(f"Cache hit for key '{cache_key}'")
+            return cached_data
+        
+        logger.info(f"Cache miss for key '{cache_key}', fetching data")
+        fresh_data = await self._fetch_from_api(endpoint, params)
+        
+        # Only cache if we got valid data
+        if fresh_data:
+            await api_cache.set(cache_key, fresh_data, ttl=ttl)
+        
+        return fresh_data
     
-    def _fetch_from_api(self, endpoint: str, params: dict = None) -> Dict[str, Any]:
+    async def _fetch_from_api(self, endpoint: str, params: dict = None) -> Dict[str, Any]:
         """
         Fetch data directly from API without caching
         
@@ -86,18 +94,19 @@ class BaseApiClient:
         """
         url = f"{self.api_base_url}{endpoint}"
         try:
-            response = requests.get(url, headers=self.headers, params=params, timeout=10)
-            response.raise_for_status()
-            result = response.json()
-            
-            # Check if response contains next update time info and update TTL
-            next_update_seconds = self._parse_next_update_time(result)
-            if next_update_seconds is not None:
-                cache_key = self._generate_cache_key(endpoint, params)
-                # We already have data in cache, but update TTL based on provider info
-                api_cache.set(cache_key, result, next_update_seconds)
-                
-            return result
-        except requests.RequestException as e:
+            async with aiohttp.ClientSession(headers=self.headers) as session:
+                async with session.get(url, params=params, timeout=10) as response:
+                    response.raise_for_status()
+                    result = await response.json()
+                    
+                    # Check if response contains next update time info and update TTL
+                    next_update_seconds = self._parse_next_update_time(result)
+                    if next_update_seconds is not None:
+                        cache_key = self._generate_cache_key(endpoint, params)
+                        # We already have data in cache, but update TTL based on provider info
+                        await api_cache.set(cache_key, result, ttl=next_update_seconds)
+                        
+                    return result
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             logger.error(f"API request failed: {str(e)}")
             return {} 

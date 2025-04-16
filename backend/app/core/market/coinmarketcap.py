@@ -57,11 +57,11 @@ class CoinMarketCapClient(BaseApiClient):
         
         return None
 
-    def get_market_stats(self, force_refresh: bool = False) -> Dict[str, Any]:
-        return self._send_request("/v1/global-metrics/quotes/latest", force_refresh=force_refresh)
+    async def get_market_stats(self, force_refresh: bool = False) -> Dict[str, Any]:
+        return await self._send_request("/v1/global-metrics/quotes/latest", force_refresh=force_refresh)
 
-    def get_fear_greed_index(self, force_refresh: bool = False) -> Dict[str, Any]:
-        return self._send_request("/v3/fear-and-greed/latest", force_refresh=force_refresh)
+    async def get_fear_greed_index(self, force_refresh: bool = False) -> Dict[str, Any]:
+        return await self._send_request("/v3/fear-and-greed/latest", force_refresh=force_refresh)
 
 
 cmc_client = CoinMarketCapClient()

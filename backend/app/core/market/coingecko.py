@@ -34,14 +34,14 @@ class CoinGeckoClient(BaseApiClient):
         # directly related to data freshness
         return None
 
-    def get_coins_markets(self,
+    async def get_coins_markets(self,
         vs: str = "usd",
         page: int = 1,
         limit: int = 250,
         force_refresh: bool = False
     ) -> List[Dict[str, Any]]:
         """Get list of coins with market data"""
-        return self._send_request("/coins/markets", params = {
+        return await self._send_request("/coins/markets", params = {
             "vs_currency": vs,
             "page": page,
             "per_page": limit,

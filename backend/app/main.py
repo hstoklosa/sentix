@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+import asyncio
 
 from starlette.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -7,7 +8,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from app.api.main import api_router
 from app.core.db import create_db_and_tables
 from app.services.token import purge_expired_tokens
-from app.services.coin import sync_coins_from_coingecko
+from app.services.coin import sync_coins_from_coingecko, async_sync_coins_from_coingecko
 from app.ml_models import cryptobert
 from app.core.config import settings
 from app.utils import setup_logger
@@ -22,9 +23,9 @@ app = FastAPI(
 
 
 @app.on_event("startup")
-def on_startup():
+async def on_startup():
     create_db_and_tables()
-    sync_coins_from_coingecko()
+    await async_sync_coins_from_coingecko()
 
     # Load the sentiment analyser
     cryptobert.load_model()
@@ -42,7 +43,7 @@ def on_startup():
     scheduler.add_job(
         id="sync_coins",
         name="Synchronise coins from CoinGecko",
-        func=sync_coins_from_coingecko,
+        func=sync_coins_from_coingecko,  # Using the synchronous wrapper
         trigger=IntervalTrigger(hours=12),  # run twice a day
         replace_existing=True,
     )
