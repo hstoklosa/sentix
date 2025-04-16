@@ -1,5 +1,3 @@
-import { TrendingUp, TrendingDown } from "lucide-react";
-
 import { cn } from "@/lib/utils";
 import { WatchlistCoin } from "../types";
 
@@ -31,10 +29,16 @@ const WatchlistItem = ({ coin }: { coin: WatchlistCoin }) => {
             alt={coin.name}
             className="size-4.5 rounded-full"
           />
-          <div>
+          <div className="flex-1 min-w-0 mr-10">
             <div className="flex items-center gap-1.5">
-              <span className="text-sm">{coin.name}</span>
-              <span className="text-[10px] text-muted-foreground uppercase">
+              {/* className="text-sm max-w-28 min-[640px]:max-w-32 min-[768px]:max-w-40 min-[1024px]:max-w-48 min-[1280px]:max-w-56 truncate" */}
+              <span
+                className="text-sm truncate"
+                title={coin.name}
+              >
+                {coin.name}
+              </span>
+              <span className="text-[10px] text-muted-foreground uppercase shrink-0">
                 {coin.symbol}
               </span>
             </div>
