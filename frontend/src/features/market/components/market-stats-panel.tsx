@@ -6,6 +6,7 @@ import { SentimentTag } from "@/features/news/components";
 
 import { useGetStats } from "../api";
 import PriceChangeTag from "./price-change-tag";
+import { FearGreedIndicator, FearGreedMeter } from "./fear-greed-index";
 
 const MarketStatsPanel = () => {
   const { data: marketStats, isLoading, isError } = useGetStats();
@@ -106,67 +107,13 @@ const MarketStatsPanel = () => {
               Fear & Greed Index
             </p>
             <div className="flex items-center gap-2">
-              <FearAndGreedMeter value={marketStats.fear_and_greed_index} />
+              <FearGreedMeter value={marketStats.fear_and_greed_index} />
               <p className="text-md">{marketStats.fear_and_greed_index}</p>
-              <FearAndGreedIndicator value={marketStats.fear_and_greed_index} />
+              <FearGreedIndicator value={marketStats.fear_and_greed_index} />
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
-};
-
-type FearAndGreedIndicatorProps = {
-  value: number;
-};
-
-const FearAndGreedIndicator = ({ value }: FearAndGreedIndicatorProps) => {
-  let label = "Neutral";
-  let color = "text-muted-foreground";
-
-  if (value >= 75) {
-    label = "Extreme Greed";
-    color = "text-chart-2";
-  } else if (value >= 55) {
-    label = "Greed";
-    color = "text-chart-2/80";
-  } else if (value >= 45) {
-    label = "Neutral";
-    color = "text-muted-foreground";
-  } else if (value >= 25) {
-    label = "Fear";
-    color = "text-destructive/80";
-  } else {
-    label = "Extreme Fear";
-    color = "text-destructive";
-  }
-
-  return <span className={`text-sm ${color}`}>{label}</span>;
-};
-
-// Add a visual meter for Fear & Greed Index
-const FearAndGreedMeter = ({ value }: { value: number }) => {
-  let bgColor = "bg-muted-foreground";
-
-  if (value >= 75) {
-    bgColor = "bg-chart-2";
-  } else if (value >= 55) {
-    bgColor = "bg-chart-2/80";
-  } else if (value >= 45) {
-    bgColor = "bg-muted";
-  } else if (value >= 25) {
-    bgColor = "bg-destructive/80";
-  } else {
-    bgColor = "bg-destructive";
-  }
-
-  return (
-    <div className="w-16 h-3 bg-secondary rounded-full overflow-hidden">
-      <div
-        className={`h-full ${bgColor} rounded-full`}
-        style={{ width: `${value}%` }}
-      />
     </div>
   );
 };
