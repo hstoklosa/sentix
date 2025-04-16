@@ -39,7 +39,7 @@ const MarketStatsPanel = () => {
                 Market Cap
               </p>
               <div className="flex flex-row items-center gap-2">
-                <p className="text-lg">
+                <p className="text-md">
                   {formatCompactNumber(marketStats.total_market_cap, 2, "$", true)}
                 </p>
                 <PriceChangeTag
@@ -54,7 +54,7 @@ const MarketStatsPanel = () => {
                 Volume 24h
               </p>
               <div className="flex flex-row items-center gap-2">
-                <p className="text-lg">
+                <p className="text-md">
                   {formatCompactNumber(marketStats.total_volume_24h, 2, "$", true)}
                 </p>
                 <PriceChangeTag
@@ -67,7 +67,7 @@ const MarketStatsPanel = () => {
             <div className="flex flex-col gap-1">
               <p className="text-sm font-medium text-muted-foreground">BTC Dom</p>
               <div className="flex flex-row items-center gap-2">
-                <p className="text-lg">{marketStats.btc_dominance.toFixed(1)}%</p>
+                <p className="text-md">{marketStats.btc_dominance.toFixed(1)}%</p>
                 <PriceChangeTag
                   changePercent={marketStats.btc_dominance_24h_change}
                 />
@@ -78,7 +78,7 @@ const MarketStatsPanel = () => {
             <div className="flex flex-col gap-1">
               <p className="text-sm font-medium text-muted-foreground">ETH Dom</p>
               <div className="flex flex-row items-center gap-2">
-                <p className="text-lg">{marketStats.eth_dominance.toFixed(1)}%</p>
+                <p className="text-md">{marketStats.eth_dominance.toFixed(1)}%</p>
                 <PriceChangeTag
                   changePercent={marketStats.eth_dominance_24h_change}
                 />
@@ -87,28 +87,28 @@ const MarketStatsPanel = () => {
           </div>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex items-center gap-21">
+          {/* Sentiment */}
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-medium text-muted-foreground">Sentiment</p>
+            <div className="flex items-center gap-2">
+              <SentimentTag
+                size="lg"
+                sentiment={marketStats.market_sentiment}
+              />
+              <p className="text-md">{marketStats.market_sentiment}</p>
+            </div>
+          </div>
+
           {/* Fear & Greed Index */}
-          <div className="flex flex-col gap-1 w-[25%]">
+          <div className="flex flex-col gap-1">
             <p className="text-sm font-medium text-muted-foreground">
               Fear & Greed Index
             </p>
             <div className="flex items-center gap-2">
               <FearAndGreedMeter value={marketStats.fear_and_greed_index} />
-              <p className="text-lg">{marketStats.fear_and_greed_index}</p>
+              <p className="text-md">{marketStats.fear_and_greed_index}</p>
               <FearAndGreedIndicator value={marketStats.fear_and_greed_index} />
-            </div>
-          </div>
-
-          {/* Sentiment */}
-          <div className="flex flex-col gap-1 w-[25%]">
-            <p className="text-sm font-medium text-muted-foreground">Sentiment</p>
-            <div className="flex items-center gap-2">
-              <SentimentTag
-                iconSize={12}
-                sentiment={marketStats.market_sentiment}
-              />
-              <p className="text-lg">{marketStats.market_sentiment}</p>
             </div>
           </div>
         </div>
