@@ -25,7 +25,7 @@ const WatchlistItem = ({ coin }: { coin: WatchlistCoin }) => {
     <div className="px-3 py-2 border-b border-border hover:bg-muted/30 transition-colors">
       <div className="flex items-center">
         {/* Coin info */}
-        <div className="flex items-center gap-2.5 w-[50%]">
+        <div className="flex items-center gap-2.5 w-[59%]">
           <img
             src={coin.image}
             alt={coin.name}
@@ -42,40 +42,27 @@ const WatchlistItem = ({ coin }: { coin: WatchlistCoin }) => {
         </div>
 
         {/* Price */}
-        <div className="w-[20%] text-sm">${formatPrice(coin.current_price)}</div>
+        <div className="w-[16%] text-sm">${formatPrice(coin.current_price)}</div>
 
         {/* Change */}
         <div
           className={cn(
-            "w-[20%] flex items-center text-sm",
+            "w-[15%] flex items-center text-sm",
             priceChangeIsPositive
-              ? "text-emerald-500"
+              ? "text-chart-2"
               : priceChangeIsNegative
-                ? "text-rose-500"
+                ? "text-destructive"
                 : "text-muted-foreground"
           )}
         >
-          {/* {priceChangeIsPositive && (
-            <TrendingUp
-              size={12}
-              className="mr-1"
-            />
-          )}
-          {priceChangeIsNegative && (
-            <TrendingDown
-              size={12}
-              className="mr-1"
-            />
-          )} */}
           {coin.price_change_percentage_24h
             ? `${priceChangeIsPositive ? "+" : ""}${coin.price_change_percentage_24h.toFixed(2)}%`
             : "0.00%"}
         </div>
 
         {/* Market Cap */}
-        <div className="w-[10%] text-muted-foreground text-sm">
-          {formatMarketCap(coin.market_cap)}
-        </div>
+        {/* text-muted-foreground */}
+        <div className="w-[10%] text-sm">{formatMarketCap(coin.market_cap)}</div>
       </div>
     </div>
   );
