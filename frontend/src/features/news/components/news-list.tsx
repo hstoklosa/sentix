@@ -4,33 +4,13 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 
 import { cn } from "@/lib/utils";
 import { Spinner } from "@/components/ui/spinner";
+import { arraysHaveSameElements, setsAreEqual } from "@/utils/list";
 
 import NewsItem from "./news-item";
 import { useGetInfinitePosts, useUpdatePostsCache } from "../api";
 import { useWebSocketContext } from "../context";
 import { NewsItem as NewsItemType, NewsFeedResponse } from "../types";
 import useCoinSubscription from "@/features/coins/hooks/use-coin-subscription";
-
-/**
- * Helper function to check if two sets have the same elements
- */
-const setsAreEqual = (a: Set<number>, b: Set<number>): boolean => {
-  if (a.size !== b.size) return false;
-  for (const item of a) {
-    if (!b.has(item)) return false;
-  }
-  return true;
-};
-
-/**
- * Helper function to check if two arrays have the same elements
- * regardless of order
- */
-const arraysHaveSameElements = (a: string[], b: string[]): boolean => {
-  if (a.length !== b.length) return false;
-  const setA = new Set(a);
-  return b.every((item) => setA.has(item));
-};
 
 const NewsList = () => {
   const [refreshCounter, setRefreshCounter] = useState(0);
