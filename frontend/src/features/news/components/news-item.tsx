@@ -130,6 +130,7 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
             )}
             <h3 className="font-medium text-sm line-clamp-2 overflow-hidden text-ellipsis">
               {news.title}
+              {news.source === "Twitter" && <span>: {news.body}</span>}
             </h3>
           </div>
 
