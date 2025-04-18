@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 
 import { usePriceStore } from "./use-price-store";
 
@@ -9,6 +9,13 @@ type PriceUpdateCallback = (
   price: number,
   changePercent: number
 ) => void;
+
+type ConnectionStatusCallback = (isConnected: boolean) => void;
+
+type UseBinanceWebSocketOptions = {
+  onConnectionChange?: ConnectionStatusCallback;
+  autoConnect?: boolean;
+};
 
 /**
  * Singleton WebSocket manager for Binance price data
@@ -24,6 +31,7 @@ class BinanceWebSocketManager {
   private pendingUnsubscriptions: Set<string>;
   private batchTimeoutId: number | null;
   private isConnecting: boolean;
+  private connectionStatusCallback: ConnectionStatusCallback | null;
 
   private constructor(updateFn: PriceUpdateCallback) {
     this.socket = null;
@@ -33,6 +41,7 @@ class BinanceWebSocketManager {
     this.pendingUnsubscriptions = new Set();
     this.batchTimeoutId = null;
     this.isConnecting = false;
+    this.connectionStatusCallback = null;
   }
 
   public static getInstance(
@@ -45,6 +54,19 @@ class BinanceWebSocketManager {
     return BinanceWebSocketManager.instance;
   }
 
+  public setConnectionStatusCallback(
+    callback: ConnectionStatusCallback | null
+  ): void {
+    this.connectionStatusCallback = callback;
+
+    // Update the callback with current connection status
+    if (callback && this.socket && this.socket.readyState === WebSocket.OPEN) {
+      callback(true);
+    } else if (callback) {
+      callback(false);
+    }
+  }
+
   public connect(): void {
     if (this.socket?.readyState === WebSocket.OPEN || this.isConnecting) return;
 
@@ -54,6 +76,11 @@ class BinanceWebSocketManager {
     this.socket.onopen = () => {
       console.log("Connected to Binance WebSocket");
       this.isConnecting = false;
+
+      // Notify connection status change
+      if (this.connectionStatusCallback) {
+        this.connectionStatusCallback(true);
+      }
 
       // Process any pending subscriptions that accumulated while connecting
       this.processBatchedSubscriptions();
@@ -80,12 +107,22 @@ class BinanceWebSocketManager {
       console.log("Binance WebSocket closed");
       this.isConnecting = false;
       this.socket = null;
+
+      // Notify connection status change
+      if (this.connectionStatusCallback) {
+        this.connectionStatusCallback(false);
+      }
     };
 
     this.socket.onerror = (error) => {
       console.error("Binance WebSocket error:", error);
       this.isConnecting = false;
       this.socket?.close();
+
+      // Notify connection status change
+      if (this.connectionStatusCallback) {
+        this.connectionStatusCallback(false);
+      }
     };
   }
 
@@ -285,7 +322,16 @@ class BinanceWebSocketManager {
     this.pendingUnsubscriptions.clear();
     this.isConnecting = false;
 
+    // Notify connection status change
+    if (this.connectionStatusCallback) {
+      this.connectionStatusCallback(false);
+    }
+
     console.log(`[BinanceWS] Disconnected and cleared all subscriptions`);
+  }
+
+  public isConnected(): boolean {
+    return this.socket !== null && this.socket.readyState === WebSocket.OPEN;
   }
 }
 
@@ -293,9 +339,10 @@ class BinanceWebSocketManager {
  * Hook for interacting with the BinanceWebSocketManager
  * Provides stable subscription methods for components
  */
-const useBinanceWebSocket = () => {
+const useBinanceWebSocket = (options: UseBinanceWebSocketOptions = {}) => {
   const { updatePrice } = usePriceStore();
   const managerRef = useRef<BinanceWebSocketManager | null>(null);
+  const { onConnectionChange, autoConnect = false } = options;
 
   const stableSubscribeToSymbol = useRef<(symbol: string) => void>(
     (_: string) => {}
@@ -304,6 +351,9 @@ const useBinanceWebSocket = () => {
   const stableUnsubscribeFromSymbol = useRef<(symbol: string) => void>(
     (_: string) => {}
   );
+
+  const stableConnect = useRef<() => void>(() => {});
+  const stableDisconnect = useRef<() => void>(() => {});
 
   useEffect(() => {
     // Initialise singleton manager on component mount
@@ -314,6 +364,11 @@ const useBinanceWebSocket = () => {
     );
 
     managerRef.current = manager;
+
+    // Set connection status callback if provided
+    if (onConnectionChange) {
+      manager.setConnectionStatusCallback(onConnectionChange);
+    }
 
     // Create stable reference to subscription functions
     stableSubscribeToSymbol.current = (symbol: string) => {
@@ -326,10 +381,26 @@ const useBinanceWebSocket = () => {
       managerRef.current?.unsubscribe(symbol);
     };
 
-    // Do not disconnect since other components might be using the manager
-    // The manager itself will handle cleanup when no more subscriptions
-    return () => {};
-  }, [updatePrice]);
+    stableConnect.current = () => {
+      managerRef.current?.connect();
+    };
+
+    stableDisconnect.current = () => {
+      managerRef.current?.disconnect();
+    };
+
+    // Auto-connect if specified
+    if (autoConnect) {
+      manager.connect();
+    }
+
+    // Cleanup
+    return () => {
+      if (onConnectionChange) {
+        manager.setConnectionStatusCallback(null);
+      }
+    };
+  }, [updatePrice, onConnectionChange, autoConnect]);
 
   // Wrap the ref access in stable function references
   const subscribeToSymbol = useCallback((symbol: string) => {
@@ -340,9 +411,19 @@ const useBinanceWebSocket = () => {
     stableUnsubscribeFromSymbol.current(symbol);
   }, []);
 
+  const connect = useCallback(() => {
+    stableConnect.current();
+  }, []);
+
+  const disconnect = useCallback(() => {
+    stableDisconnect.current();
+  }, []);
+
   return {
     subscribeToSymbol,
     unsubscribeFromSymbol,
+    connect,
+    disconnect,
   };
 };
 

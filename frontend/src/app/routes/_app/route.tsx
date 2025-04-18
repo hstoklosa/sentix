@@ -1,11 +1,17 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { AppLayout } from "@/components/layout";
+import { WebSocketProviderWrapper } from "@/features/news/context";
+import { BinanceWebSocketProviderWrapper } from "@/features/coins/context";
 
 const DashboardLayout = () => {
   return (
-    <AppLayout>
-      <Outlet />
-    </AppLayout>
+    <WebSocketProviderWrapper>
+      <BinanceWebSocketProviderWrapper>
+        <AppLayout>
+          <Outlet />
+        </AppLayout>
+      </BinanceWebSocketProviderWrapper>
+    </WebSocketProviderWrapper>
   );
 };
 

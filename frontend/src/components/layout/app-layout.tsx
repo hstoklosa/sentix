@@ -3,6 +3,9 @@ import { UserRound, ChevronDown, Settings, LogOut } from "lucide-react";
 
 import useAuth from "@/hooks/use-auth";
 import { useLogout } from "@/features/auth/api/logout";
+import { useWebSocketContext } from "@/features/news/context";
+import { useBinanceWebSocketContext } from "@/features/coins/context";
+import { cn } from "@/lib/utils";
 
 import Logo from "../logo";
 import ThemeToggle from "../theme-toggle";
@@ -19,6 +22,8 @@ import {
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
   const { user } = useAuth();
+  const { isConnected: isNewsConnected } = useWebSocketContext();
+  const { isConnected: isBinanceConnected } = useBinanceWebSocketContext();
   const logoutMutation = useLogout({
     onSuccess: () => {
       router.invalidate().finally(() => {
@@ -30,13 +35,49 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="">
       <header className="flex justify-between items-center h-[56px] px-1">
-        <Link
-          to="/dashboard"
-          className="flex items-center cursor-pointer"
-        >
-          <Logo className="size-8" />
-          <h1 className="text-md font-[Inter] ml-1">SENTIX</h1>
-        </Link>
+        <div className="flex items-center">
+          <Link
+            to="/dashboard"
+            className="flex items-center cursor-pointer"
+          >
+            <Logo className="size-8" />
+            <h1 className="text-md font-[Inter] ml-1">SENTIX</h1>
+          </Link>
+
+          <div className="ml-2 flex items-center space-x-2">
+            {/* News WebSocket indicator */}
+            <div className="flex items-center">
+              <span
+                className={cn(
+                  "inline-block w-2 h-2 rounded-full",
+                  isNewsConnected ? "bg-chart-2" : "bg-destructive"
+                )}
+                title={
+                  isNewsConnected
+                    ? "Connected to news feed"
+                    : "Disconnected from news feed"
+                }
+              />
+              <span className="text-xs ml-1 text-muted-foreground">News</span>
+            </div>
+
+            {/* Binance WebSocket indicator */}
+            <div className="flex items-center">
+              <span
+                className={cn(
+                  "inline-block w-2 h-2 rounded-full",
+                  isBinanceConnected ? "bg-chart-2" : "bg-destructive"
+                )}
+                title={
+                  isBinanceConnected
+                    ? "Connected to price feed"
+                    : "Disconnected from price feed"
+                }
+              />
+              <span className="text-xs ml-1 text-muted-foreground">Prices</span>
+            </div>
+          </div>
+        </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
