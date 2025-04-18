@@ -43,6 +43,62 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
             <Logo className="size-8" />
             <h1 className="text-md font-[Inter] ml-1">SENTIX</h1>
           </Link>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="flex items-center group">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="font-normal flex items-center gap-2.5 p-2! h-9"
+                >
+                  <div className="flex items-center justify-center p-1.5 bg-card text-foreground rounded group-hover:bg-muted transition-colors">
+                    <UserRound className="size-2.5 font-light" />
+                  </div>
+                  {user?.username}
+                  <ChevronDown className="size-3.5 text-foreground" />
+                </Button>
+              </div>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent
+              align="end"
+              side="bottom"
+              sideOffset={10}
+              className="w-[250px]"
+            >
+              <DropdownMenuLabel className="cursor-default">
+                <p className="text-sm font-normal text-foreground truncate">
+                  {user?.username}
+                </p>
+                <p className="text-sm font-normal text-muted-foreground truncate">
+                  {user?.email}
+                </p>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="flex justify-between items-center cursor-pointer"
+                disabled
+              >
+                <span>Settings</span>
+                <Settings className="size-4 ml-auto" />
+              </DropdownMenuItem>
+              <div className="flex justify-between items-center px-2 py-1.5 text-sm text-foreground cursor-default">
+                <span>Theme</span>
+                <ThemeToggle />
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="flex justify-between items-center cursor-pointer"
+                onClick={() => logoutMutation.mutate(undefined)}
+              >
+                <span>Logout</span>
+                <LogOut className="size-4 ml-auto" />
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <div className="ml-2 flex items-center space-x-2">
             {/* News WebSocket indicator */}
@@ -78,60 +134,6 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
             </div>
           </div>
         </div>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <div className="flex items-center group">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="font-normal flex items-center gap-2.5 p-2! h-9"
-              >
-                <div className="flex items-center justify-center p-1.5 bg-card text-foreground rounded group-hover:bg-muted transition-colors">
-                  <UserRound className="size-2.5 font-light" />
-                </div>
-                {user?.username}
-                <ChevronDown className="size-3.5 text-foreground" />
-              </Button>
-            </div>
-          </DropdownMenuTrigger>
-
-          <DropdownMenuContent
-            align="end"
-            side="bottom"
-            sideOffset={10}
-            className="w-[250px]"
-          >
-            <DropdownMenuLabel className="cursor-default">
-              <p className="text-sm font-normal text-foreground truncate">
-                {user?.username}
-              </p>
-              <p className="text-sm font-normal text-muted-foreground truncate">
-                {user?.email}
-              </p>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="flex justify-between items-center cursor-pointer"
-              disabled
-            >
-              <span>Settings</span>
-              <Settings className="size-4 ml-auto" />
-            </DropdownMenuItem>
-            <div className="flex justify-between items-center px-2 py-1.5 text-sm text-foreground cursor-default">
-              <span>Theme</span>
-              <ThemeToggle />
-            </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="flex justify-between items-center cursor-pointer"
-              onClick={() => logoutMutation.mutate(undefined)}
-            >
-              <span>Logout</span>
-              <LogOut className="size-4 ml-auto" />
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </header>
 
       <main>{children}</main>
