@@ -7,6 +7,7 @@ from fastapi import WebSocket
 
 from app.core.db import get_session
 from app.core.news.tree_news import TreeNews
+from app.core.news.coindesk_news import CoinDeskNews
 from app.core.news.types import NewsData, NewsProvider
 from app.models.user import User
 from app.models.news import NewsItem
@@ -37,7 +38,8 @@ class NewsManager:
     def __init__(self):
         # Dictionary of provider name to provider instance
         self.providers: Dict[str, NewsProvider] = {
-            "TreeNews": TreeNews()
+            "TreeNews": TreeNews(),
+            "CoinDesk": CoinDeskNews()
             # Add other providers here as they become available
         }
         
@@ -106,14 +108,14 @@ class NewsManager:
         connection = Connection(websocket, user)
         
         # By default, subscribe to the first available provider
-        if self.providers:
-            connection.current_subscription = next(iter(self.providers.keys()))
+        # if self.providers:
+        #     connection.current_subscription = next(iter(self.providers.keys()))
         
         self.active_connections[websocket] = connection
 
         # Connect to provider if this is the first client
-        if len(self.active_connections) == 1 and connection.current_subscription:
-            asyncio.create_task(self.connect_provider(connection.current_subscription))
+        # if len(self.active_connections) == 1 and connection.current_subscription:
+        #     asyncio.create_task(self.connect_provider(connection.current_subscription))
 
     async def remove_client(self, websocket: WebSocket):
         """

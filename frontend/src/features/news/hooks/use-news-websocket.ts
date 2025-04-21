@@ -30,7 +30,7 @@ export const useNewsWebSocket = ({
   autoConnect = true,
   authToken,
   baseUrl = "ws://localhost:8000",
-  defaultProvider = "TreeNews",
+  defaultProvider = "CoinDesk",
 }: UseNewsWebSocketOptions = {}): UseNewsWebSocketResult => {
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -140,6 +140,19 @@ export const useNewsWebSocket = ({
 
         // Get current subscription
         sendMessage({ type: "get_subscription" });
+
+        // After a short delay, explicitly subscribe to the default provider
+        // This ensures we always make the subscription request
+        setTimeout(() => {
+          console.log(
+            `Explicitly subscribing to default provider: ${defaultProvider}`
+          );
+          sendMessage({
+            type: "subscribe",
+            feed: defaultProvider,
+          });
+          isInitialConnectionRef.current = false;
+        }, 500);
       };
 
       ws.onclose = (event) => {
@@ -178,8 +191,8 @@ export const useNewsWebSocket = ({
               if (Array.isArray(message.feeds)) {
                 setAvailableProviders(message.feeds);
 
-                // If this is the initial connection and no subscription is set,
-                // subscribe to the default provider
+                // Check if we need to subscribe - no condition on currentProvider
+                // since it might not be updated yet due to React state batching
                 if (
                   isInitialConnectionRef.current &&
                   message.feeds.includes(defaultProvider)
@@ -192,6 +205,15 @@ export const useNewsWebSocket = ({
 
             case "subscription":
               setCurrentProvider(message.feed);
+
+              // If we receive a null subscription, check if we need to subscribe
+              if (message.feed === null && isInitialConnectionRef.current) {
+                // Don't check availableProviders here as it might not be updated yet
+                // We'll handle subscription in the available_feeds case
+                console.log(
+                  "No current subscription, will wait for available_feeds"
+                );
+              }
               break;
 
             case "subscribed":
