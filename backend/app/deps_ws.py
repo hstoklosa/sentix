@@ -48,7 +48,11 @@ async def verify_ws_token(websocket: WebSocket) -> Tuple[bool, Optional[dict]]:
     
     try:
         payload = decode_token(token)
-        verify_token_type(payload, "access")
+        if payload is None:
+            return False, None
+        if not verify_token_type(payload, "access"):
+            return False, None
+            
         return True, payload
     except jwt.exceptions.PyJWTError:
         return False, None

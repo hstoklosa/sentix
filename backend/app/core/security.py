@@ -81,8 +81,16 @@ def create_refresh_token(subject: str | int) -> str:
 def decode_token(token: str) -> Optional[dict]:
     """Decode JWT token and return the payload, or None if token is invalid."""
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(
+            token, 
+            settings.SECRET_KEY, 
+            algorithms=[settings.ALGORITHM],
+            options={"verify_exp": True}  # Explicitly verify expiration
+        )
         return payload
+    except jwt.exceptions.ExpiredSignatureError:
+        # Handle expired token explicitly
+        return None
     except jwt.exceptions.PyJWTError:
         return None 
 

@@ -45,6 +45,12 @@ class InvalidCredentialsException(AuthenticationException):
 
 class InvalidTokenException(AuthenticationException):
     detail = "Invalid token"
+    
+    def __init__(self, detail=None, headers=None):
+        super().__init__(
+            detail=detail or self.detail,
+            headers=headers
+        )
 
 
 # Input validation exceptions
