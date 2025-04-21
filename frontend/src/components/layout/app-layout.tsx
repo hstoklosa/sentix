@@ -1,5 +1,5 @@
 import { useRouter, Link } from "@tanstack/react-router";
-import { UserRound, ChevronDown, Settings, LogOut } from "lucide-react";
+import { UserRound, ChevronDown, Settings, LogOut, Newspaper } from "lucide-react";
 
 import useAuth from "@/hooks/use-auth";
 import { useLogout } from "@/features/auth/api/logout";
@@ -17,12 +17,19 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "../ui/dropdown-menu";
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
   const { user } = useAuth();
-  const { isConnected: isNewsConnected } = useWebSocketContext();
+  const {
+    isConnected: isNewsConnected,
+    currentProvider,
+    availableProviders,
+    subscribe,
+  } = useWebSocketContext();
   const { isConnected: isBinanceConnected } = useBinanceWebSocketContext();
   const logoutMutation = useLogout({
     onSuccess: () => {
@@ -45,7 +52,58 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           </Link>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          {/* News Feed Selector */}
+          {isNewsConnected && availableProviders.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div className="flex items-center group">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="font-normal flex items-center gap-2.5 p-2! h-9"
+                  >
+                    <div className="flex items-center justify-center p-1.5 bg-card text-foreground rounded group-hover:bg-muted transition-colors">
+                      <Newspaper className="size-2.5 font-light" />
+                    </div>
+                    <span className="truncate max-w-[100px] text-sm">
+                      {currentProvider || "News Feed"}
+                    </span>
+                    <ChevronDown className="size-3.5 text-foreground" />
+                  </Button>
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                side="bottom"
+                sideOffset={10}
+                className="w-[180px]"
+              >
+                <DropdownMenuLabel className="cursor-default">
+                  <p className="text-sm font-normal text-foreground">News Feed</p>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <div className="py-1">
+                  {availableProviders.map((provider) => (
+                    <DropdownMenuItem
+                      key={provider}
+                      className={cn(
+                        "flex justify-between items-center cursor-pointer my-0.5 text-sm",
+                        currentProvider === provider && "bg-accent"
+                      )}
+                      onClick={() => subscribe(provider)}
+                    >
+                      <span>{provider}</span>
+                      {currentProvider === provider && (
+                        <div className="size-2 rounded-full bg-chart-2 ml-auto" />
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div className="flex items-center group">
@@ -110,7 +168,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                 )}
                 title={
                   isNewsConnected
-                    ? "Connected to news feed"
+                    ? `Connected to ${currentProvider || "news"} feed`
                     : "Disconnected from news feed"
                 }
               />
