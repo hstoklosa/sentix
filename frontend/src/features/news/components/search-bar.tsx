@@ -11,7 +11,6 @@ interface SearchBarProps {
 
 const SearchBar = ({ onSearch, className }: SearchBarProps) => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [isActive, setIsActive] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -42,7 +41,7 @@ const SearchBar = ({ onSearch, className }: SearchBarProps) => {
 
   return (
     <div className={cn("relative flex items-center w-full", className)}>
-      <div className="absolute left-3 text-muted-foreground">
+      <div className="absolute left-1.5 text-muted-foreground">
         <Search className="h-4 w-4" />
       </div>
       <Input
@@ -50,13 +49,10 @@ const SearchBar = ({ onSearch, className }: SearchBarProps) => {
         type="text"
         placeholder="Search news..."
         className={cn(
-          "pl-9 pr-8 h-9 w-full transition-all duration-200",
-          isActive ? "rounded-lg" : "rounded-md"
+          "pl-8 pr-8 py-0 h-9 w-full transition-all duration-200 rounded-md bg-transparent! focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 border-0"
         )}
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        onFocus={() => setIsActive(true)}
-        onBlur={() => setIsActive(false)}
       />
       {searchTerm && (
         <button

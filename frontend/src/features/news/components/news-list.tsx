@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { AlertCircle, ChevronDown } from "lucide-react";
+import { AlertCircle, ChevronDown, Layers, BookMarked } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
-import { cn } from "@/lib/utils";
 import { Spinner } from "@/components/ui/spinner";
-import { arraysHaveSameElements, setsAreEqual } from "@/utils/list";
+import { setsAreEqual } from "@/utils/list";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,9 +20,8 @@ import {
 } from "../api";
 import { useGetInfiniteBookmarkedPosts } from "@/features/bookmarks/api/get-bookmarks";
 import { useWebSocketContext } from "../context";
-import { NewsItem as NewsItemType, NewsFeedResponse } from "../types";
-import { BookmarkedNewsResponse } from "@/features/bookmarks/types";
-import useCoinSubscription from "@/features/coins/hooks/use-coin-subscription";
+import useEfficientSymbolSubscription from "../hooks/use-efficient-symbol-subscription";
+import useBatchedPriceData from "../hooks/use-batched-price-data";
 
 type FeedType = "all" | "bookmarked";
 
@@ -33,12 +31,10 @@ const NewsList = () => {
   const [refreshCounter, setRefreshCounter] = useState(0);
   const parentRef = useRef<HTMLDivElement>(null);
   const visibleItemsRef = useRef(new Set<number>());
-  const lastSymbolsRef = useRef<string[]>([]);
-  const updateDebounceRef = useRef<NodeJS.Timeout | null>(null);
-  const { subscribeToSymbols, unsubscribeFromSymbols } = useCoinSubscription();
+  const loadingMoreRef = useRef(false);
+  const { updateVisibleSymbols } = useEfficientSymbolSubscription();
   const { isConnected, error: isWebsocketError } = useWebSocketContext();
 
-  // Query for all news posts
   const {
     data: allNewsData,
     isLoading: isAllNewsLoading,
@@ -48,7 +44,6 @@ const NewsList = () => {
     fetchNextPage: fetchAllNewsNextPage,
   } = useGetInfinitePosts();
 
-  // Query for bookmarked posts
   const {
     data: bookmarkedData,
     isLoading: isBookmarkedLoading,
@@ -58,7 +53,6 @@ const NewsList = () => {
     fetchNextPage: fetchBookmarkedNextPage,
   } = useGetInfiniteBookmarkedPosts();
 
-  // Query for search results
   const {
     data: searchData,
     isLoading: isSearchLoading,
@@ -70,10 +64,8 @@ const NewsList = () => {
 
   const updatePostsCache = useUpdatePostsCache();
 
-  // Determine what data to display based on search and feed type
   const isSearchActive = !!searchQuery;
 
-  // Select the appropriate data based on search and feed type
   const data = isSearchActive
     ? searchData
     : feedType === "all"
@@ -110,7 +102,6 @@ const NewsList = () => {
       ? fetchAllNewsNextPage
       : fetchBookmarkedNextPage;
 
-  // Flatten all news items from all pages
   const allNewsItems = data ? data.pages.flatMap((page) => page.items) : [];
 
   // When in bookmarked view, ensure all items have is_bookmarked=true
@@ -126,61 +117,33 @@ const NewsList = () => {
     return allNewsItems;
   }, [allNewsItems, feedType, isSearchActive]);
 
-  // Debounced function to update visible symbols
-  const debouncedUpdateVisibleSymbols = useCallback(
+  // Function to extract symbols from currently visible items
+  const extractVisibleSymbols = useCallback(
     (visibleIndices: Set<number>) => {
-      if (updateDebounceRef.current) {
-        clearTimeout(updateDebounceRef.current);
-      }
-
-      updateDebounceRef.current = setTimeout(() => {
-        // Get all unique coin symbols from visible news items
-        const visibleSymbols = Array.from(visibleIndices)
-          .filter((idx) => idx < newsItems.length) // Filter out loader row
-          .flatMap((idx) => newsItems[idx].coins?.map((coin) => coin.symbol) || [])
-          .filter((value, index, self) => self.indexOf(value) === index); // Unique symbols only
-
-        // Only update if the symbols have actually changed
-        if (!arraysHaveSameElements(visibleSymbols, lastSymbolsRef.current)) {
-          console.log(`[NewsList] Visible symbols changed:`, visibleSymbols);
-
-          // Unsubscribe from symbols no longer visible
-          const symbolsToRemove = lastSymbolsRef.current.filter(
-            (symbol) => !visibleSymbols.includes(symbol)
-          );
-
-          if (symbolsToRemove.length > 0) {
-            console.log(
-              `[NewsList] Removing subscriptions: ${symbolsToRemove.join(", ")}`
-            );
-            unsubscribeFromSymbols(symbolsToRemove);
-          }
-
-          // Subscribe to newly visible symbols
-          const symbolsToAdd = visibleSymbols.filter(
-            (symbol) => !lastSymbolsRef.current.includes(symbol)
-          );
-
-          if (symbolsToAdd.length > 0) {
-            console.log(
-              `[NewsList] Adding subscriptions: ${symbolsToAdd.join(", ")}`
-            );
-            subscribeToSymbols(symbolsToAdd);
-          }
-
-          lastSymbolsRef.current = visibleSymbols;
-        }
-      }, 200);
+      // Get all unique coin symbols from visible news items
+      return Array.from(visibleIndices)
+        .filter((idx) => idx < newsItems.length) // Filter out loader row
+        .flatMap((idx) => newsItems[idx].coins?.map((coin) => coin.symbol) || [])
+        .filter((value, index, self) => self.indexOf(value) === index); // Unique symbols only
     },
-    [newsItems, subscribeToSymbols, unsubscribeFromSymbols]
+    [newsItems]
   );
 
-  // Reset virtualizer and search when switching feed types
+  const visibleSymbols = useMemo(() => {
+    return extractVisibleSymbols(visibleItemsRef.current);
+  }, [extractVisibleSymbols, visibleItemsRef.current]);
+
+  const priceData = useBatchedPriceData(visibleSymbols);
+
   const resetVirtualizerOnFeedChange = useCallback(() => {
     if (rowVirtualizer) {
-      rowVirtualizer.scrollToIndex(0);
+      // Use a more stable way to scroll to top - do it after state updates
       visibleItemsRef.current = new Set();
-      lastSymbolsRef.current = [];
+      setTimeout(() => {
+        if (parentRef.current) {
+          parentRef.current.scrollTop = 0;
+        }
+      }, 0);
     }
 
     // Clear search when changing feed type
@@ -191,74 +154,106 @@ const NewsList = () => {
   const rowVirtualizer = useVirtualizer({
     count: hasNextPage ? newsItems.length + 1 : newsItems.length, // +1 for loading row
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 100, // Initial estimate, will be refined by actual measurements
+    estimateSize: () => 100,
     overscan: 5,
+    getItemKey: (index) => {
+      if (index === newsItems.length) return "loader";
+      return newsItems[index]?.id || index;
+    },
     measureElement: useCallback((element: Element | null) => {
-      // Get actual height of the element including margins
       if (!element) return 100;
       const rect = element.getBoundingClientRect();
       return rect.height;
     }, []),
-    // Update visible symbols when rendered items change
+    scrollToFn: (offset, options, instance) => {
+      const scrollElement = parentRef.current;
+      if (!scrollElement) return;
+
+      if (options && options.behavior === "smooth") {
+        scrollElement.scrollTo({
+          top: offset,
+          behavior: "smooth",
+        });
+      } else {
+        scrollElement.scrollTop = offset;
+      }
+    },
     onChange: (instance) => {
+      const scrollElement = parentRef.current;
       const renderedIndices = new Set(
         instance.getVirtualItems().map((item) => item.index)
       );
 
-      // Only process if visible items have changed
       if (!setsAreEqual(visibleItemsRef.current, renderedIndices)) {
         visibleItemsRef.current = renderedIndices;
-        // Use debounced update to prevent frequent changes during scrolling
-        debouncedUpdateVisibleSymbols(renderedIndices);
+
+        const visibleSymbols = extractVisibleSymbols(renderedIndices);
+        updateVisibleSymbols(visibleSymbols, scrollElement?.scrollTop);
       }
     },
   });
 
-  // Cleanup debounce timer on unmount
-  useEffect(() => {
-    return () => {
-      if (updateDebounceRef.current) {
-        clearTimeout(updateDebounceRef.current);
-      }
-    };
-  }, []);
-
-  // Update feed type and reset virtualizer
   const handleFeedTypeChange = (type: FeedType) => {
     setFeedType(type);
     resetVirtualizerOnFeedChange();
   };
 
-  // Handle search query changes
   const handleSearch = (query: string) => {
+    if (query === searchQuery) return;
+
+    // First reset tracking variables
+    visibleItemsRef.current = new Set();
     setSearchQuery(query);
-    if (rowVirtualizer) {
-      rowVirtualizer.scrollToIndex(0);
-    }
+
+    // Scroll to top after the state update and re-render
+    setTimeout(() => {
+      if (parentRef.current) {
+        parentRef.current.scrollTop = 0;
+      }
+    }, 0);
   };
 
-  // Load more items when user scrolls to bottom
+  // Handle infinite scrolling more reliably with a separate function
+  // that checks scroll position directly
+  const checkAndLoadMore = useCallback(() => {
+    if (loadingMoreRef.current || !hasNextPage || !parentRef.current) return;
+
+    const container = parentRef.current;
+    const { scrollTop, scrollHeight, clientHeight } = container;
+
+    const scrollFraction = scrollTop / (scrollHeight - clientHeight);
+    if (scrollFraction > 0.8) {
+      loadingMoreRef.current = true;
+      fetchNextPage().finally(() => {
+        loadingMoreRef.current = false;
+      });
+    }
+  }, [hasNextPage, fetchNextPage]);
+
   useEffect(() => {
-    const [lastItem] = [...rowVirtualizer.getVirtualItems()].reverse();
+    const scrollElement = parentRef.current;
+    if (!scrollElement) return;
 
-    if (!lastItem) {
-      return;
-    }
+    const handleScroll = () => {
+      checkAndLoadMore();
+    };
 
-    if (
-      lastItem.index >= newsItems.length - 1 &&
-      hasNextPage &&
-      !isFetchingNextPage
-    ) {
-      fetchNextPage();
-    }
-  }, [
-    hasNextPage,
-    fetchNextPage,
-    newsItems.length,
-    isFetchingNextPage,
-    rowVirtualizer.getVirtualItems(),
-  ]);
+    scrollElement.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      scrollElement.removeEventListener("scroll", handleScroll);
+    };
+  }, [checkAndLoadMore]);
+
+  // Initial check for loading more data when component mounts or
+  // data sources change (e.g., switching between all/bookmarked)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      checkAndLoadMore();
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [checkAndLoadMore, feedType, searchQuery]);
 
   // Update refresh counter every 5 seconds to trigger
   // relative time recalculation
@@ -286,29 +281,36 @@ const NewsList = () => {
 
   return (
     <>
-      <div className="p-2 border-b border-border">
-        <div className="flex items-center gap-2">
+      <div className="p-1.5 border-b border-border">
+        <div className="flex items-center gap-2 h-8">
           <SearchBar
             onSearch={handleSearch}
             className="flex-1"
           />
           <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center gap-1 px-3 py-1 h-9 text-sm rounded-md border border-input hover:bg-accent whitespace-nowrap">
-              {feedType === "all" ? "All News" : "Bookmarks"}
+            <DropdownMenuTrigger className="flex items-center gap-1 px-1.5 py-1 h-7 text-sm rounded-md border border-input hover:bg-accent whitespace-nowrap">
+              {feedType === "all" ? (
+                <Layers className="size-4" />
+              ) : (
+                <BookMarked className="size-4" />
+              )}
               <ChevronDown className="h-4 w-4" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent
+              align="end"
+              className="[&>*:not(:last-child)]:mb-1"
+            >
               <DropdownMenuItem
                 onClick={() => handleFeedTypeChange("all")}
                 className={feedType === "all" ? "bg-accent" : ""}
               >
-                All News
+                <Layers className="size-4" /> News
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => handleFeedTypeChange("bookmarked")}
                 className={feedType === "bookmarked" ? "bg-accent" : ""}
               >
-                Bookmarks
+                <BookMarked className="size-4" /> Bookmarks
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -335,6 +337,9 @@ const NewsList = () => {
         <div
           ref={parentRef}
           className="flex-1 overflow-y-auto"
+          style={{
+            overflowAnchor: "none",
+          }} /* Prevent browser from adjusting scroll position automatically */
         >
           <div
             style={{
@@ -362,12 +367,7 @@ const NewsList = () => {
                 >
                   {isLoaderRow ? (
                     hasNextPage ? (
-                      <div className="flex justify-center items-center py-4">
-                        <Spinner size="sm" />
-                        <span className="ml-2 text-muted-foreground">
-                          Loading more news...
-                        </span>
-                      </div>
+                      <Spinner size="sm" />
                     ) : (
                       <div className="text-center py-4 text-muted-foreground">
                         No more news to load
@@ -377,6 +377,7 @@ const NewsList = () => {
                     <NewsItem
                       news={item}
                       refreshCounter={refreshCounter}
+                      priceData={priceData}
                     />
                   )}
                 </div>

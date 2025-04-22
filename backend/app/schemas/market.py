@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Generic, TypeVar, List
 
+from app.schemas.pagination import PaginatedResponse
 
 class MarketStats(BaseModel):
     total_market_cap: float
@@ -15,25 +16,6 @@ class MarketStats(BaseModel):
     market_sentiment: str = "Neutral"
 
 
-class PaginationParams(BaseModel):
-    """Pagination parameters for API requests"""
-    page: int = Field(default=1, ge=1, description="Page number (1-indexed)")
-    page_size: int = Field(default=20, ge=1, le=100, description="Number of items per page")
-
-
-T = TypeVar('T')
-
-class PaginatedResponse(BaseModel, Generic[T]):
-    """Generic paginated response"""
-    page: int
-    page_size: int
-    total: int
-    total_pages: int
-    has_next: bool
-    has_prev: bool
-    items: List[T]
-
-
 class CoinResponse(BaseModel):
     id: str
     symbol: str
@@ -45,3 +27,15 @@ class CoinResponse(BaseModel):
     price_change_percentage_24h: float | None = None
     volume_24h: float
     
+
+class ChartDataPoint(BaseModel):
+    """Data point for price charts"""
+    timestamp: int  # Unix timestamp in milliseconds
+    value: float
+    
+    
+class MarketChartData(BaseModel):
+    """Historical market data for charts"""
+    prices: List[ChartDataPoint]
+    market_caps: List[ChartDataPoint] 
+    volumes: List[ChartDataPoint] 

@@ -1,14 +1,12 @@
 import logging
-import asyncio
-from typing import Dict, List, Optional
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status, Depends
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.core.news.news_manager import NewsManager
 from app.deps_ws import authenticate_ws_connection
-from app.models.user import User
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/news", tags=["news"])
+
 
 @router.websocket("/ws/{client_id}")
 async def news_websocket(websocket: WebSocket, client_id: str):
@@ -19,19 +17,14 @@ async def news_websocket(websocket: WebSocket, client_id: str):
         websocket: The WebSocket connection
         client_id: A unique identifier for the client
     """
-    # Authenticate the WebSocket connection
     is_authenticated, user = await authenticate_ws_connection(websocket)
     
     if not is_authenticated:
         logger.warning(f"Unauthorized WebSocket connection attempt from client {client_id}")
         return
     
-    # Log successful authentication
-    user_info = f"User {user.username} (ID: {user.id})" if user else "Anonymous"
-    logger.info(f"Authenticated WebSocket connection from {user_info}, client ID: {client_id}")
-    
     manager = NewsManager.get_instance() 
-    
+
     try:
         await websocket.accept()
         await manager.add_client(websocket, user)
@@ -85,6 +78,9 @@ async def news_websocket(websocket: WebSocket, client_id: str):
                         "type": "available_feeds",
                         "feeds": list(feeds)
                     })
+                    logger.info(f"Sent available feeds to client {client_id}: {feeds}")
+                else:
+                    logger.warning(f"Unknown message type from client {client_id}: {message_type}")
             except WebSocketDisconnect:
                 logger.info(f"Client {client_id} disconnected from news WebSocket")
                 break
@@ -92,5 +88,8 @@ async def news_websocket(websocket: WebSocket, client_id: str):
         logger.error(f"Error in WebSocket connection: {e}")
     finally:
         # Clean up by removing the client from the manager
-        await manager.remove_client(websocket)
-        logger.info(f"Client {client_id} removed from news WebSocket manager")
+        try:
+            await manager.remove_client(websocket)
+            logger.info(f"Client {client_id} removed from news WebSocket manager")
+        except Exception as e:
+            logger.error(f"Error removing client {client_id}: {str(e)}")

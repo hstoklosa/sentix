@@ -175,8 +175,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <div className="ml-2 flex flex-col items-start space-x-5">
-            {/* News WebSocket indicator */}
+          {/* <div className="ml-2 flex items-start space-x-2.5">
             <div className="flex items-center">
               <span
                 className={cn(
@@ -192,7 +191,6 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
               <span className="text-xs ml-1 text-muted-foreground">News</span>
             </div>
 
-            {/* Binance WebSocket indicator */}
             <div className="flex items-center">
               <span
                 className={cn(
@@ -209,7 +207,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                 Market Data
               </span>
             </div>
-          </div>
+          </div> */}
         </div>
       </header>
 

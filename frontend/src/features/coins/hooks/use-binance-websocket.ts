@@ -18,8 +18,8 @@ type UseBinanceWebSocketOptions = {
 };
 
 /**
- * Singleton WebSocket manager for Binance price data
- * Provides efficient handling of multiple symbol subscriptions
+ * Singleton WebSocket manager for Binance's pricing data, which
+ * provides efficient handling of multiple symbol subscriptions.
  */
 class BinanceWebSocketManager {
   private static instance: BinanceWebSocketManager;
@@ -74,10 +74,8 @@ class BinanceWebSocketManager {
     this.socket = new WebSocket(BINANCE_WS_URL);
 
     this.socket.onopen = () => {
-      console.log("Connected to Binance WebSocket");
-      this.isConnecting = false;
-
       // Notify connection status change
+      this.isConnecting = false;
       if (this.connectionStatusCallback) {
         this.connectionStatusCallback(true);
       }
@@ -93,9 +91,6 @@ class BinanceWebSocketManager {
           const symbol = data.s;
           const price = parseFloat(data.c);
           const changePercent = parseFloat(data.P);
-          // console.log(
-          //   `[BinanceWS] Received price update for ${symbol}: ${price} (${changePercent}%)`
-          // );
           this.updateTokenPrice(symbol, price, changePercent);
         }
       } catch (error) {
@@ -104,11 +99,9 @@ class BinanceWebSocketManager {
     };
 
     this.socket.onclose = () => {
-      console.log("Binance WebSocket closed");
+      // Notify connection status change
       this.isConnecting = false;
       this.socket = null;
-
-      // Notify connection status change
       if (this.connectionStatusCallback) {
         this.connectionStatusCallback(false);
       }
@@ -145,13 +138,10 @@ class BinanceWebSocketManager {
     // If in pending unsubscriptions, just remove it from there
     if (this.pendingUnsubscriptions.has(formattedSymbol)) {
       this.pendingUnsubscriptions.delete(formattedSymbol);
-      return; // No need to add to pending subscriptions if already subscribed
+      return;
     }
 
-    // Add to pending subscriptions
     this.pendingSubscriptions.add(formattedSymbol);
-
-    // Schedule batch processing
     this.scheduleBatch();
   }
 
@@ -171,16 +161,12 @@ class BinanceWebSocketManager {
       return;
     }
 
-    // Remove from pending subscriptions if it's there
     if (this.pendingSubscriptions.has(formattedSymbol)) {
       this.pendingSubscriptions.delete(formattedSymbol);
-      return; // No need to add to unsubscribe if not yet subscribed
+      return;
     }
 
-    // Otherwise add to pending unsubscriptions
     this.pendingUnsubscriptions.add(formattedSymbol);
-
-    // Schedule batch processing
     this.scheduleBatch();
   }
 
@@ -213,9 +199,9 @@ class BinanceWebSocketManager {
     // Ensure socket is connected
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
       if (!this.isConnecting) {
-        this.connect(); // Connect if we have pending operations
+        this.connect();
       }
-      return; // Wait for connection
+      return;
     }
 
     // Process subscriptions
@@ -234,11 +220,6 @@ class BinanceWebSocketManager {
       symbols.forEach((symbol) => {
         this.subscriptions.add(symbol);
       });
-
-      console.log(
-        `[BinanceWS] Batch subscribed to ${symbols.length} symbols: ${symbols.join(", ")}`
-      );
-
       this.pendingSubscriptions.clear();
     }
 
@@ -258,11 +239,6 @@ class BinanceWebSocketManager {
       symbols.forEach((symbol) => {
         this.subscriptions.delete(symbol);
       });
-
-      console.log(
-        `[BinanceWS] Batch unsubscribed from ${symbols.length} symbols: ${symbols.join(", ")}`
-      );
-
       this.pendingUnsubscriptions.clear();
     }
 

@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
 import { NewsList } from "@/features/news/components";
@@ -36,7 +36,7 @@ type PanelPosition = {
   colEnd?: number;
 };
 
-const DashboardPanel = ({
+export const DashboardPanel = ({
   position,
   className,
   children,
@@ -66,24 +66,32 @@ const DashboardPanel = ({
 };
 
 function RouteComponent() {
+  const { location } = useRouterState();
+  const isViewingPost =
+    location.pathname.includes("/dashboard/") &&
+    !location.pathname.endsWith("/dashboard/");
+
   return (
     <DashboardContainer
-      rows={4}
+      rows={5}
       columns={3}
     >
-      <DashboardPanel position={{ rowStart: 1, rowEnd: 5, colStart: 1, colEnd: 2 }}>
+      <DashboardPanel position={{ rowStart: 1, rowEnd: 6, colStart: 1, colEnd: 2 }}>
         <NewsList />
       </DashboardPanel>
-      <DashboardPanel position={{ rowStart: 1, rowEnd: 3, colStart: 2, colEnd: 3 }}>
+
+      <DashboardPanel
+        position={{ rowStart: 1, rowEnd: 6, colStart: 2, colEnd: 3 }}
+        className={isViewingPost ? "p-0 bg-transparent border-0" : undefined}
+      >
         <Outlet />
       </DashboardPanel>
-      <DashboardPanel position={{ rowStart: 3, rowEnd: 5, colStart: 2, colEnd: 3 }}>
-        Charts
-      </DashboardPanel>
+
       <DashboardPanel position={{ rowStart: 1, rowEnd: 2, colStart: 3, colEnd: 4 }}>
         <MarketStatsPanel />
       </DashboardPanel>
-      <DashboardPanel position={{ rowStart: 2, rowEnd: 5, colStart: 3, colEnd: 4 }}>
+
+      <DashboardPanel position={{ rowStart: 2, rowEnd: 6, colStart: 3, colEnd: 4 }}>
         <WatchlistList />
       </DashboardPanel>
     </DashboardContainer>

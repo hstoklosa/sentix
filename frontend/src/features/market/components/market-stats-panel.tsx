@@ -28,10 +28,10 @@ const MarketStatsPanel = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-2 h-[53px] px-2.5 py-2 border-b border-border">
+      <div className="flex items-center h-[55px] px-2.5 py-2 border-b border-border">
         <h2 className="text-md font-semibold">Market Stats</h2>
       </div>
-      <div className="flex flex-col justify-center h-full gap-7.5 p-2.5">
+      <div className="flex flex-col justify-center h-full gap-5 p-2.5">
         <div className="flex flex-col gap-1">
           <div className="flex justify-between gap-1">
             {/* Total Market Cap */}

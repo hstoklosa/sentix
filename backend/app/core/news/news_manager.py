@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional, Set, Callable
+from typing import Dict, Any, Optional, Set
 from datetime import datetime
 
 import logging
@@ -11,7 +11,7 @@ from app.core.news.coindesk_news import CoinDeskNews
 from app.core.news.types import NewsData, NewsProvider
 from app.models.user import User
 from app.models.news import NewsItem
-from app.ml_models import cryptobert
+from app.ml_models.sentiment_analysis import predict_sentiment
 from app.services.news import save_news_item
 from app.utils import format_datetime_iso
 
@@ -25,28 +25,23 @@ class Connection:
         self.user = user
         self.connected_at = datetime.now()
         self.send_lock = asyncio.Lock()
-        self.current_subscription: Optional[str] = None  # Single provider subscription
+        self.current_subscription: Optional[str] = None
 
 
 class NewsManager:
     """
-    A singleton manager that handles WebSocket connections between clients and news providers, 
-    acting as a middleman to broadcast news data to subscribed clients. 
+    A class responsible for managing WebSocket connections between clients and 
+    news providers, acting as a middleman to broadcast news data.
     """
     _instance = None
     
     def __init__(self):
-        # Dictionary of provider name to provider instance
         self.providers: Dict[str, NewsProvider] = {
             "TreeNews": TreeNews(),
             "CoinDesk": CoinDeskNews()
-            # Add other providers here as they become available
         }
-        
-        # Track which providers are connected
-        self.connected_providers: Set[str] = set()
-        
         self.active_connections: Dict[WebSocket, Connection] = {}
+        self.is_initialized = False
         self.connection_lock = asyncio.Lock()
     
     @classmethod
@@ -57,25 +52,59 @@ class NewsManager:
 
         return cls._instance
     
-    async def connect_provider(self, provider_name: str):
-        """
-        Connect to a specific news provider if not already connected.
-        
-        Args:
-            provider_name: The name of the provider to connect to
-        """
-        if provider_name not in self.providers:
-            logger.warning(f"Unknown provider: {provider_name}")
+    async def initialize(self):
+        """Initialize connections to all news providers"""
+        if self.is_initialized:
             return
             
         async with self.connection_lock:
-            if provider_name in self.connected_providers:
+            if self.is_initialized:  # Double-check after acquiring lock
+                return
+            
+            for provider_name, provider in self.providers.items():
+                # Create a callback that captures provider_name in a closure
+                # Each provider calls callback with just one argument (news_data)
+                async def make_callback(pname=provider_name):
+                    async def callback(news_data):
+                        await self.on_news_received(news_data, pname)
+                    return callback
+                
+                # Launch connection as a background task instead of waiting
+                callback_fn = await make_callback()
+                asyncio.create_task(self._connect_provider(provider, callback_fn, provider_name))
+            
+            self.is_initialized = True
+    
+    async def _connect_provider(self, provider: NewsProvider, callback_fn, provider_name: str):
+        """Connect to a provider in the background with proper error handling"""
+        try:
+            logger.info(f"Connecting to provider: {provider_name}")
+            await provider.connect(callback_fn)
+            logger.info(f"Successfully connected to provider: {provider_name}")
+        except Exception as e:
+            logger.error(f"Failed to connect to provider {provider_name}: {str(e)}")
+            # Don't re-raise the exception - we want to continue even if one provider fails
+    
+    async def shutdown(self):
+        """Shutdown and disconnect from all providers"""
+        if not self.is_initialized:
+            return
+            
+        async with self.connection_lock:
+            if not self.is_initialized:  # Double-check after acquiring lock
                 return
                 
-            provider = self.providers[provider_name]
-            await provider.connect(lambda news_data: self.on_news_received(news_data, provider_name))
-            self.connected_providers.add(provider_name)
-            logger.info(f"Connected to {provider_name}")
+            logger.info("Shutting down connections to all news providers")
+            disconnect_tasks = []
+            
+            for provider in self.providers.values():
+                disconnect_tasks.append(provider.disconnect())
+            
+            if disconnect_tasks:
+                await asyncio.gather(*disconnect_tasks)
+                
+            self.is_initialized = False
+            logger.info("Disconnected from all news providers")
     
     async def on_news_received(self, news_data: NewsData, provider_name: str):
         """
@@ -87,13 +116,9 @@ class NewsManager:
         """
         try:
             session = next(get_session())
-            
-            # Set the feed name to the provider name
             news_data.feed = provider_name
-            
-            sentiment = cryptobert.predict_sentiment(news_data.body)
+            sentiment = predict_sentiment(news_data.body)
             saved_post = await save_news_item(session, news_data, sentiment)
-            
             await self.broadcast_to_clients(saved_post)
         except Exception as e:
             logger.error(f"Error processing news item: {str(e)}")
@@ -106,37 +131,26 @@ class NewsManager:
             websocket: The WebSocket connection to add
             user: The authenticated user (optional)
         """
-        connection = Connection(websocket, user)
-        
-        # By default, subscribe to the first available provider
-        # if self.providers:
-        #     connection.current_subscription = next(iter(self.providers.keys()))
-        
-        self.active_connections[websocket] = connection
-
-        # Connect to provider if this is the first client
-        # if len(self.active_connections) == 1 and connection.current_subscription:
-        #     asyncio.create_task(self.connect_provider(connection.current_subscription))
+        try:
+            if not self.is_initialized:
+                logger.info("First client connecting, initializing providers")
+                await self.initialize()
+                
+            connection = Connection(websocket, user)
+            self.active_connections[websocket] = connection
+        except Exception as e:
+            logger.error(f"Error adding client: {str(e)}")
+            # Don't re-raise to avoid crashing the websocket handler
 
     async def remove_client(self, websocket: WebSocket):
         """
-        Remove a client WebSocket connection and disconnect from providers if no clients are left
+        Remove a client WebSocket connection
         
         Args:
             websocket: The WebSocket connection to remove
         """
         if websocket in self.active_connections:
             del self.active_connections[websocket]
-        
-        # If no more connections, disconnect from all providers
-        if not self.active_connections:
-            async with self.connection_lock:
-                for provider_name in list(self.connected_providers):
-                    if provider_name in self.providers:
-                        provider = self.providers[provider_name]
-                        await provider.disconnect()
-                self.connected_providers.clear()
-                logger.info("Disconnected from all providers")
     
     async def update_subscription(self, websocket: WebSocket, provider_name: str) -> Optional[str]:
         """
@@ -155,13 +169,7 @@ class NewsManager:
             
         # Only update if the provider exists
         if provider_name in self.providers:
-            old_subscription = connection.current_subscription
             connection.current_subscription = provider_name
-            
-            # Connect to the newly subscribed provider if not already connected
-            if provider_name not in self.connected_providers:
-                asyncio.create_task(self.connect_provider(provider_name))
-            
             return provider_name
         
         return connection.current_subscription
@@ -233,38 +241,79 @@ class NewsManager:
         Args:
             post: The news post to broadcast
         """
-        connections = list(self.active_connections.items())
-        disconnected_websockets = []
-        
-        formatted_post = {
-            "id": post.id,
-            "_type": post.item_type,
-            "title": post.title,
-            "body": post.body,
-            "source": post.source,
-            "url": post.url,
-            "icon_url": post.icon_url,
-            "image_url": post.image_url,
-            "feed": post.feed,
-            "time": format_datetime_iso(post.time),
-            "created_at": format_datetime_iso(post.created_at),
-            "updated_at": format_datetime_iso(post.updated_at),
-            "coins": post.get_formatted_coins(),
-            "sentiment": post.sentiment,
-            "score": post.score
-        }
+        try:
+            # Make a safe copy of connections to avoid mutation during iteration
+            connections = list(self.active_connections.items())
+            disconnected_websockets = []
+            
+            # logger.info(f"Broadcasting news item from {post.feed}: {post.title}")
+            # client_count = len(connections)
+            # logger.info(f"Number of active connections: {client_count}")
+            
+            # # Debug each connection and its subscription
+            # if client_count > 0:
+            #     for ws, conn in connections:
+            #         username = conn.user.username if conn.user else "Anonymous"
+            #         sub = conn.current_subscription or "None"
+            #         logger.debug(f"Client {username} (websocket ID: {id(ws)}) is subscribed to: {sub}")
+            
+            # formatted_post = {
+            #     "id": post.id,
+            #     "_type": post.item_type,
+            #     "title": post.title,
+            #     "body": post.body[:100] + "..." if len(post.body) > 100 else post.body,  # Truncate for logging
+            #     "source": post.source,
+            #     "url": post.url,
+            #     "icon_url": post.icon_url,
+            #     "image_url": post.image_url,
+            #     "feed": post.feed,
+            #     "time": format_datetime_iso(post.time),
+            #     "created_at": format_datetime_iso(post.created_at),
+            #     "updated_at": format_datetime_iso(post.updated_at),
+            #     "coins": post.get_formatted_coins(),
+            #     "sentiment": post.sentiment,
+            #     "score": post.score
+            # }
 
-        for websocket, connection in connections:
-            # Only send to clients subscribed to this feed
-            if connection.current_subscription == post.feed:
-                success = await self.send_to_client(websocket, connection, {
-                    "type": "news",
-                    "data": formatted_post
-                })
+            message = {
+                "type": "news",
+                "data": {
+                    "id": post.id,
+                    "_type": post.item_type,
+                    "title": post.title,
+                    "body": post.body,
+                    "source": post.source,
+                    "url": post.url,
+                    "icon_url": post.icon_url,
+                    "image_url": post.image_url,
+                    "feed": post.feed,
+                    "time": format_datetime_iso(post.time),
+                    "created_at": format_datetime_iso(post.created_at),
+                    "updated_at": format_datetime_iso(post.updated_at),
+                    "coins": post.get_formatted_coins(),
+                    "sentiment": post.sentiment,
+                    "score": post.score
+                }
+            }
 
-                if not success:
-                    disconnected_websockets.append(websocket)
-        
-        # Clean up disconnected clients
-        for websocket in disconnected_websockets:
-            await self.remove_client(websocket)
+            subscribed_count = 0
+            for websocket, connection in connections:
+
+                if connection.current_subscription == post.feed:
+                    subscribed_count += 1
+                    username = connection.user.username if connection.user else "Anonymous"
+                    logger.info(f"Sending news to subscribed client {username} (feed: {post.feed})")
+                    
+                    try:
+                        success = await self.send_to_client(websocket, connection, message)
+                        if not success:
+                            logger.warning(f"Failed to send news to client, marking for disconnection")
+                            disconnected_websockets.append(websocket)
+                    except Exception as e:
+                        disconnected_websockets.append(websocket)
+            
+            for websocket in disconnected_websockets:
+                await self.remove_client(websocket)
+                
+        except Exception as e:
+            logger.error(f"Error in broadcast_to_clients: {str(e)}")

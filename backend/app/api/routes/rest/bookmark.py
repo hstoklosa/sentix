@@ -6,7 +6,7 @@ from app.schemas.bookmark import (
     BookmarkResponse, 
     BookmarkedNewsResponse
 )
-from app.schemas.news import PaginationParams
+from app.schemas.pagination import PaginationParams
 from app.services import bookmark as bookmark_service
 
 router = APIRouter(prefix="/bookmarks", tags=["bookmarks"])

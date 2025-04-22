@@ -9,9 +9,10 @@ from app.api.main import api_router
 from app.core.db import create_db_and_tables
 from app.services.token import purge_expired_tokens
 from app.services.coin import sync_coins_from_coingecko, async_sync_coins_from_coingecko
-from app.ml_models import cryptobert
+from app.ml_models.sentiment_analysis import load_model
 from app.core.config import settings
 from app.utils import setup_logger
+from app.core.news.news_manager import NewsManager
 
 logger = setup_logger()
 scheduler = AsyncIOScheduler()
@@ -28,7 +29,12 @@ async def on_startup():
     await async_sync_coins_from_coingecko()
 
     # Load the sentiment analyser
-    cryptobert.load_model()
+    load_model()
+
+    # Initialize news manager to connect to providers at startup
+    news_manager = NewsManager.get_instance()
+    asyncio.create_task(news_manager.initialize())
+    logger.info("Started news provider connections")
 
     # Schedule token cleanup task
     scheduler.add_job(
@@ -52,7 +58,12 @@ async def on_startup():
 
 
 @app.on_event("shutdown")
-def on_shutdown():
+async def on_shutdown():
+    # Shutdown news manager
+    news_manager = NewsManager.get_instance()
+    await news_manager.shutdown()
+    logger.info("News manager shut down")
+    
     if scheduler.running:
         scheduler.shutdown()
         logger.info("Scheduler shut down")

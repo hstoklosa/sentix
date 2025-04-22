@@ -3,11 +3,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-
-class PaginationParams(BaseModel):
-    """Pagination parameters for API requests"""
-    page: int = Field(default=1, ge=1, description="Page number (1-indexed)")
-    page_size: int = Field(default=20, ge=1, le=100, description="Number of items per page")
+from app.schemas.pagination import PaginatedResponse
 
 
 class SearchParams(BaseModel):
@@ -15,14 +11,14 @@ class SearchParams(BaseModel):
     query: str = Field(..., min_length=1, description="Search query string")
 
 
-class PaginatedResponse(BaseModel):
-    """Generic paginated response"""
-    page: int
-    page_size: int
-    total: int
-    total_pages: int
-    has_next: bool
-    has_prev: bool
+# class PaginatedResponse(BaseModel):
+#     """Generic paginated response"""
+#     page: int
+#     page_size: int
+#     total: int
+#     total_pages: int
+#     has_next: bool
+#     has_prev: bool
 
 
 class CoinResponse(BaseModel):

@@ -59,10 +59,6 @@ const WatchlistList = () => {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* bg-muted/30 */}
-      <div className="flex items-center h-[45px] px-2.5 py-2 border-b border-border">
-        <h2 className="text-md font-semibold">Watchlist</h2>
-      </div>
-
       {isError ? (
         <div className="flex items-center justify-center h-full">
           <p className="text-destructive flex items-center justify-center gap-2">
@@ -78,7 +74,7 @@ const WatchlistList = () => {
       ) : (
         <div className="flex flex-col flex-1 overflow-hidden">
           {/* bg-background */}
-          <div className="px-3 py-2 text-[10px] text-muted-foreground border-b border-border sticky top-0 z-10">
+          <div className="px-3 py-2 text-[12px] text-muted-foreground border-b border-border sticky top-0 z-10">
             <div className="flex items-center">
               <div className="w-[58.5%]">ASSET</div>
               <div className="w-[16%]">PRICE</div>

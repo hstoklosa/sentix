@@ -8,7 +8,8 @@ from sqlmodel import Session, select
 
 from app.core.market.coinmarketcap import cmc_client
 from app.core.market.coingecko import coingecko_client
-from app.schemas.market import MarketStats, CoinResponse, PaginationParams, PaginatedResponse
+from app.schemas.market import MarketStats, CoinResponse, MarketChartData, ChartDataPoint
+from app.schemas.pagination import PaginatedResponse, PaginationParams
 from app.models.news import NewsItem
 from app.core.db import get_session
 
@@ -123,4 +124,55 @@ async def get_coins(
         has_next=pagination.page < total_pages,
         has_prev=pagination.page > 1,
         items=coin_responses
+    )
+
+
+@router.get("/coins/{coin_id}/chart", response_model=MarketChartData)
+async def get_coin_chart_data(
+    coin_id: str,
+    days: int = 30,
+    interval: str = "daily",
+    force_refresh: bool = False
+):
+    """Get historical chart data for a specific coin"""
+    logger.debug(f"Fetching chart data for {coin_id} for {days} days with {interval} interval")
+    
+    # Validate interval parameter
+    valid_intervals = ["daily", "hourly"]
+    if interval not in valid_intervals:
+        interval = "daily"
+    
+    # Validate days parameter
+    valid_days = [1, 7, 14, 30, 90, 180, 365, "max"]
+    if days not in valid_days and days != "max":
+        days = 30
+    
+    # Get the chart data from CoinGecko
+    chart_data = await coingecko_client.get_coin_market_chart(
+        coin_id=coin_id,
+        days=days,
+        interval=interval,
+        force_refresh=force_refresh
+    )
+    
+    # Transform the data to our schema format
+    prices = [
+        ChartDataPoint(timestamp=item[0], value=item[1])
+        for item in chart_data.get("prices", [])
+    ]
+    
+    market_caps = [
+        ChartDataPoint(timestamp=item[0], value=item[1])
+        for item in chart_data.get("market_caps", [])
+    ]
+    
+    volumes = [
+        ChartDataPoint(timestamp=item[0], value=item[1])
+        for item in chart_data.get("total_volumes", [])
+    ]
+    
+    return MarketChartData(
+        prices=prices,
+        market_caps=market_caps,
+        volumes=volumes
     )

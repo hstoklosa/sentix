@@ -1,10 +1,10 @@
-from typing import List, Tuple, Dict, Any, Optional
+from typing import List, Tuple, Optional
 from datetime import datetime
 
 import logging
 
 from sqlmodel import Session, select, func, or_
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import selectinload
 
 from app.models.news import Coin, NewsItem, NewsCoin
 from app.core.news.types import NewsData
@@ -13,25 +13,54 @@ from app.core.market.coingecko import coingecko_client
 logger = logging.getLogger(__name__)
 
 
-async def get_or_create_coin(session: Session, symbol: str) -> Coin:
+async def get_or_create_coin(session: Session, symbol: str) -> Optional[Coin]:
     """
-    Get a coin by symbol or create it if it doesn't exist
+    Get a coin by symbol or create it if it doesn't exist.
+    If the coin doesn't exist in the database, attempt to fetch its data from CoinGecko.
+    Returns None if the coin can't be found in the database or CoinGecko.
     
     Args:
         session: The database session
         symbol: The coin symbol
     
     Returns:
-        The coin object
+        The coin object or None if not found
     """
-    stmt = select(Coin).where(Coin.symbol == symbol)
+    symbol_upper = symbol.upper()
+    stmt = select(Coin).where(Coin.symbol == symbol_upper)
     coin = session.exec(stmt).first()
     
     if not coin:
-        coin = Coin(symbol=symbol)
-        session.add(coin)
-        session.commit()
-        session.refresh(coin)
+        # Try to find the coin in CoinGecko data
+        try:
+            # Get all coin market data
+            market_data = await coingecko_client.get_coins_markets()
+            
+            # Find coin by symbol (case-insensitive)
+            coin_data = None
+            for data in market_data:
+                if data.get("symbol", "").upper() == symbol_upper:
+                    coin_data = data
+                    break
+            
+            if coin_data:
+                # Create coin with data from CoinGecko
+                coin = Coin(
+                    symbol=symbol_upper,
+                    name=coin_data.get("name"),
+                    image_url=coin_data.get("image")
+                )
+                logger.info(f"Created coin from CoinGecko data: {symbol_upper} - {coin.name}")
+                
+                session.add(coin)
+                session.commit()
+                session.refresh(coin)
+            else:
+                logger.warning(f"Coin {symbol_upper} not found in CoinGecko API")
+                return None
+        except Exception as e:
+            logger.error(f"Error fetching coin data from CoinGecko: {str(e)}")
+            return None
     
     return coin
 
@@ -86,7 +115,15 @@ async def create_news_item(session: Session, news_data: NewsData, sentiment: dic
     if news_data.coins:
         current_time = datetime.utcnow()
         for symbol in news_data.coins:
-            coin = await get_or_create_coin(session, symbol)
+            # Ensure symbol is uppercase for consistency
+            symbol_upper = symbol.upper()
+            coin = await get_or_create_coin(session, symbol_upper)
+            
+            # Skip coins that aren't found in database or CoinGecko
+            if not coin:
+                logger.warning(f"Skipping coin {symbol_upper} as it was not found in database or CoinGecko")
+                continue
+                
             news_coin = NewsCoin(news_item_id=item.id, coin_id=coin.id)
             
             # Add price data if available

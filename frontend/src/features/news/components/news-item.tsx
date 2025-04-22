@@ -17,6 +17,12 @@ import { useDeleteBookmark } from "@/features/bookmarks/api/delete-bookmark";
 type NewsItemProps = {
   news: NewsItemType;
   refreshCounter?: number;
+  priceData?: {
+    [symbol: string]: {
+      price?: number;
+      changePercent?: number;
+    };
+  };
 };
 
 /**
@@ -46,7 +52,7 @@ const shouldRecalculateTime = (timestamp: string, counter: number = 0): boolean 
   }
 };
 
-const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
+const NewsItem = ({ news, refreshCounter = 0, priceData = {} }: NewsItemProps) => {
   const lastTimeRef = useRef<string | null>(null);
 
   // Determine bookmark status - if the item has a bookmark_id property, it came from the bookmarks endpoint
@@ -167,7 +173,7 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
               </span>
             </div>
 
-            {news.coins && news.coins.length > 0 && (
+            {/* {news.coins && news.coins.length > 0 && (
               <>
                 <span className="text-xs text-muted-foreground">|</span>
                 {news.coins.map((coin) => (
@@ -176,10 +182,12 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
                     symbol={coin.symbol}
                     priceUsd={coin.price_usd}
                     priceTimestamp={coin.price_timestamp}
+                    currentPrice={priceData[coin.symbol]?.price}
+                    changePercent={priceData[coin.symbol]?.changePercent}
                   />
                 ))}
               </>
-            )}
+            )} */}
 
             {/* TODO: Do not compute sentiment for news without related coins */}
             {news.coins.length > 0 &&

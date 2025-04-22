@@ -7,11 +7,11 @@ from app.deps import get_session, CurrentUserDep
 from app.services.news import get_news_feed, get_post_by_id, search_news
 from app.services.bookmark import is_bookmarked
 from app.schemas.news import (
-    PaginationParams, 
     NewsFeedResponse, 
     NewsItem as NewsItemSchema,
     SearchParams
 )
+from app.schemas.pagination import PaginationParams
 from app.models.user import User
 from app.utils import format_datetime_iso
 

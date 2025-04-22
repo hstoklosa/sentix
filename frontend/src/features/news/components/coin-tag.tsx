@@ -1,19 +1,23 @@
 import { useMemo } from "react";
 
 import { cn } from "@/lib/utils";
-import { usePriceStore } from "@/features/coins/hooks/use-price-store";
 
 type CoinTagProps = {
   symbol: string;
   priceUsd?: number;
   priceTimestamp?: string;
+  // New props for parent-provided price data
+  currentPrice?: number;
+  changePercent?: number;
 };
 
-const CoinTag = ({ symbol, priceUsd, priceTimestamp }: CoinTagProps) => {
-  const storePrice = usePriceStore((state) => state.getPrice(symbol));
-  const currentPrice = storePrice?.price;
-  const changePercent = storePrice?.changePercent;
-
+const CoinTag = ({
+  symbol,
+  priceUsd,
+  priceTimestamp,
+  currentPrice,
+  changePercent,
+}: CoinTagProps) => {
   const hasProvidedPrice = typeof priceUsd === "number";
   const hasCurrentPrice = typeof currentPrice === "number";
 
