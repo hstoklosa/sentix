@@ -47,6 +47,9 @@ export const useCreateBookmark = ({
         }
       );
 
+      // Invalidate the bookmarkedPosts query to refresh the list when a new item is bookmarked
+      queryClient.invalidateQueries({ queryKey: ["bookmarkedPosts"] });
+
       onSuccess?.(data, variables, context);
     },
     onError: (error, variables, context) => {

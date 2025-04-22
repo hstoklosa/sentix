@@ -43,6 +43,10 @@ export const useDeleteBookmark = ({
         }
       );
 
+      // Invalidate the bookmarkedPosts query to refresh the list
+      // This is needed to remove the item from the bookmarked view
+      queryClient.invalidateQueries({ queryKey: ["bookmarkedPosts"] });
+
       onSuccess?.(data, newsItemId, context);
     },
     onError: (error, newsItemId, context) => {
