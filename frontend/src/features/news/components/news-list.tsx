@@ -7,7 +7,7 @@ import { Spinner } from "@/components/ui/spinner";
 
 import NewsItem from "./news-item";
 import { useGetInfinitePosts, useUpdatePostsCache } from "../api";
-import { useNewsWebSocket } from "../hooks";
+import { useWebSocketContext } from "../context";
 import { NewsItem as NewsItemType, NewsFeedResponse } from "../types";
 import useCoinSubscription from "@/features/coins/hooks/use-coin-subscription";
 
@@ -39,6 +39,7 @@ const NewsList = () => {
   const lastSymbolsRef = useRef<string[]>([]);
   const updateDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const { subscribeToSymbols, unsubscribeFromSymbols } = useCoinSubscription();
+  const { isConnected, error: isWebsocketError } = useWebSocketContext();
 
   const {
     data,
@@ -48,9 +49,6 @@ const NewsList = () => {
     hasNextPage,
     fetchNextPage,
   } = useGetInfinitePosts();
-  const { isConnected, error: isWebsocketError } = useNewsWebSocket({
-    onMessage: (news: NewsItemType) => updatePostsCache(news),
-  });
   const updatePostsCache = useUpdatePostsCache();
 
   // Flatten all news items from all pages
@@ -189,15 +187,7 @@ const NewsList = () => {
   return (
     <>
       <div className="p-2 border-b border-border">
-        <h2 className="text-lg font-semibold flex items-center">
-          <span
-            className={cn(
-              "inline-block w-2 h-2 rounded-full mr-2",
-              isConnected ? "bg-chart-2" : "bg-destructive"
-            )}
-          />
-          News Feed
-        </h2>
+        <h2 className="text-lg font-semibold">News Feed</h2>
       </div>
 
       {isError || isWebsocketError ? (

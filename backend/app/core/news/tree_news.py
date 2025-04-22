@@ -22,7 +22,7 @@ from app.utils import datetime_from_timestamp, pretty_print
 
 logger = logging.getLogger(__name__)
 
-class TreeNews():
+class TreeNews:
     """Fetch news from the TreeNews provider."""
 
     def __init__(self):

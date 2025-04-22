@@ -71,5 +71,7 @@ class Settings(BaseSettings):
     TREENEWS_API_KEY: str
     COINMARKETCAP_API_KEY: str
     COINGECKO_API_KEY: str
+    COINDESK_API_KEY: str = ""
+    COINDESK_API_POLL_INTERVAL: int = 300  # 5 minutes in seconds
 
 settings = Settings()

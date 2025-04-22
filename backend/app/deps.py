@@ -24,10 +24,12 @@ async def verify_access_token(
 ) -> dict:
     try:
         payload = decode_token(token)
+        if payload is None:
+            raise InvalidTokenException(detail="Token has expired or is invalid")
         verify_token_type(payload, "access")
         return payload
-    except jwt.exceptions.PyJWTError:
-        raise InvalidTokenException()
+    except jwt.exceptions.PyJWTError as e:
+        raise InvalidTokenException(detail=f"Invalid token: {str(e)}")
 
 
 async def verify_refresh_token(
