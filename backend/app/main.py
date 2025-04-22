@@ -9,7 +9,7 @@ from app.api.main import api_router
 from app.core.db import create_db_and_tables
 from app.services.token import purge_expired_tokens
 from app.services.coin import sync_coins_from_coingecko, async_sync_coins_from_coingecko
-from app.ml_models import cryptobert
+from app.ml_models.sentiment_analysis import load_model
 from app.core.config import settings
 from app.utils import setup_logger
 
@@ -28,7 +28,7 @@ async def on_startup():
     await async_sync_coins_from_coingecko()
 
     # Load the sentiment analyser
-    cryptobert.load_model()
+    load_model()
 
     # Schedule token cleanup task
     scheduler.add_job(

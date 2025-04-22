@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { AlertCircle, ChevronDown } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
-import { cn } from "@/lib/utils";
 import { Spinner } from "@/components/ui/spinner";
 import { arraysHaveSameElements, setsAreEqual } from "@/utils/list";
 import {
@@ -21,8 +20,6 @@ import {
 } from "../api";
 import { useGetInfiniteBookmarkedPosts } from "@/features/bookmarks/api/get-bookmarks";
 import { useWebSocketContext } from "../context";
-import { NewsItem as NewsItemType, NewsFeedResponse } from "../types";
-import { BookmarkedNewsResponse } from "@/features/bookmarks/types";
 import useCoinSubscription from "@/features/coins/hooks/use-coin-subscription";
 
 type FeedType = "all" | "bookmarked";
@@ -142,17 +139,12 @@ const NewsList = () => {
 
         // Only update if the symbols have actually changed
         if (!arraysHaveSameElements(visibleSymbols, lastSymbolsRef.current)) {
-          console.log(`[NewsList] Visible symbols changed:`, visibleSymbols);
-
           // Unsubscribe from symbols no longer visible
           const symbolsToRemove = lastSymbolsRef.current.filter(
             (symbol) => !visibleSymbols.includes(symbol)
           );
 
           if (symbolsToRemove.length > 0) {
-            console.log(
-              `[NewsList] Removing subscriptions: ${symbolsToRemove.join(", ")}`
-            );
             unsubscribeFromSymbols(symbolsToRemove);
           }
 
@@ -162,9 +154,6 @@ const NewsList = () => {
           );
 
           if (symbolsToAdd.length > 0) {
-            console.log(
-              `[NewsList] Adding subscriptions: ${symbolsToAdd.join(", ")}`
-            );
             subscribeToSymbols(symbolsToAdd);
           }
 
@@ -183,7 +172,6 @@ const NewsList = () => {
       lastSymbolsRef.current = [];
     }
 
-    // Clear search when changing feed type
     setSearchQuery("");
   }, []);
 
@@ -191,15 +179,13 @@ const NewsList = () => {
   const rowVirtualizer = useVirtualizer({
     count: hasNextPage ? newsItems.length + 1 : newsItems.length, // +1 for loading row
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 100, // Initial estimate, will be refined by actual measurements
+    estimateSize: () => 100,
     overscan: 5,
     measureElement: useCallback((element: Element | null) => {
-      // Get actual height of the element including margins
       if (!element) return 100;
       const rect = element.getBoundingClientRect();
       return rect.height;
     }, []),
-    // Update visible symbols when rendered items change
     onChange: (instance) => {
       const renderedIndices = new Set(
         instance.getVirtualItems().map((item) => item.index)
@@ -229,7 +215,6 @@ const NewsList = () => {
     resetVirtualizerOnFeedChange();
   };
 
-  // Handle search query changes
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     if (rowVirtualizer) {
@@ -237,7 +222,6 @@ const NewsList = () => {
     }
   };
 
-  // Load more items when user scrolls to bottom
   useEffect(() => {
     const [lastItem] = [...rowVirtualizer.getVirtualItems()].reverse();
 

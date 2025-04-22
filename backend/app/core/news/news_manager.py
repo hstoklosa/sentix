@@ -11,7 +11,7 @@ from app.core.news.coindesk_news import CoinDeskNews
 from app.core.news.types import NewsData, NewsProvider
 from app.models.user import User
 from app.models.news import NewsItem
-from app.ml_models import cryptobert
+from app.ml_models.sentiment_analysis import predict_sentiment
 from app.services.news import save_news_item
 from app.utils import format_datetime_iso
 
@@ -91,7 +91,7 @@ class NewsManager:
             # Set the feed name to the provider name
             news_data.feed = provider_name
             
-            sentiment = cryptobert.predict_sentiment(news_data.body)
+            sentiment = predict_sentiment(news_data.body)
             saved_post = await save_news_item(session, news_data, sentiment)
             
             await self.broadcast_to_clients(saved_post)
