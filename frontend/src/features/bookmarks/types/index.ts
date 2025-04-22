@@ -21,11 +21,11 @@ export interface BookmarkedNewsItem extends NewsItem {
 }
 
 export interface BookmarkedNewsResponse {
+  items: BookmarkedNewsItem[];
   page: number;
   page_size: number;
   total: number;
   total_pages: number;
   has_next: boolean;
   has_prev: boolean;
-  items: BookmarkedNewsItem[];
 }

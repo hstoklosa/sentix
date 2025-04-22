@@ -1,18 +1,29 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { AlertCircle } from "lucide-react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { AlertCircle, ChevronDown } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 import { cn } from "@/lib/utils";
 import { Spinner } from "@/components/ui/spinner";
 import { arraysHaveSameElements, setsAreEqual } from "@/utils/list";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import NewsItem from "./news-item";
 import { useGetInfinitePosts, useUpdatePostsCache } from "../api";
+import { useGetInfiniteBookmarkedPosts } from "@/features/bookmarks/api/get-bookmarks";
 import { useWebSocketContext } from "../context";
 import { NewsItem as NewsItemType, NewsFeedResponse } from "../types";
+import { BookmarkedNewsResponse } from "@/features/bookmarks/types";
 import useCoinSubscription from "@/features/coins/hooks/use-coin-subscription";
 
+type FeedType = "all" | "bookmarked";
+
 const NewsList = () => {
+  const [feedType, setFeedType] = useState<FeedType>("all");
   const [refreshCounter, setRefreshCounter] = useState(0);
   const parentRef = useRef<HTMLDivElement>(null);
   const visibleItemsRef = useRef(new Set<number>());
@@ -21,20 +32,54 @@ const NewsList = () => {
   const { subscribeToSymbols, unsubscribeFromSymbols } = useCoinSubscription();
   const { isConnected, error: isWebsocketError } = useWebSocketContext();
 
+  // Query for all news posts
   const {
-    data,
-    isLoading,
-    isError,
-    isFetchingNextPage,
-    hasNextPage,
-    fetchNextPage,
+    data: allNewsData,
+    isLoading: isAllNewsLoading,
+    isError: isAllNewsError,
+    isFetchingNextPage: isAllNewsFetchingNextPage,
+    hasNextPage: hasAllNewsNextPage,
+    fetchNextPage: fetchAllNewsNextPage,
   } = useGetInfinitePosts();
+
+  // Query for bookmarked posts
+  const {
+    data: bookmarkedData,
+    isLoading: isBookmarkedLoading,
+    isError: isBookmarkedError,
+    isFetchingNextPage: isBookmarkedFetchingNextPage,
+    hasNextPage: hasBookmarkedNextPage,
+    fetchNextPage: fetchBookmarkedNextPage,
+  } = useGetInfiniteBookmarkedPosts();
+
   const updatePostsCache = useUpdatePostsCache();
 
+  // Select the appropriate data based on feed type
+  const data = feedType === "all" ? allNewsData : bookmarkedData;
+  const isLoading = feedType === "all" ? isAllNewsLoading : isBookmarkedLoading;
+  const isError = feedType === "all" ? isAllNewsError : isBookmarkedError;
+  const isFetchingNextPage =
+    feedType === "all" ? isAllNewsFetchingNextPage : isBookmarkedFetchingNextPage;
+  const hasNextPage =
+    feedType === "all" ? hasAllNewsNextPage : hasBookmarkedNextPage;
+  const fetchNextPage =
+    feedType === "all" ? fetchAllNewsNextPage : fetchBookmarkedNextPage;
+
   // Flatten all news items from all pages
-  const allNewsItems = data
-    ? data.pages.flatMap((page: NewsFeedResponse) => page.items)
-    : [];
+  const allNewsItems = data ? data.pages.flatMap((page) => page.items) : [];
+
+  // When in bookmarked view, ensure all items have is_bookmarked=true
+  // This is needed because the backend doesn't explicitly set this flag
+  // in the /bookmarks endpoint
+  const newsItems = useMemo(() => {
+    if (feedType === "bookmarked" && allNewsItems.length > 0) {
+      return allNewsItems.map((item) => ({
+        ...item,
+        is_bookmarked: true,
+      }));
+    }
+    return allNewsItems;
+  }, [allNewsItems, feedType]);
 
   // Debounced function to update visible symbols
   const debouncedUpdateVisibleSymbols = useCallback(
@@ -46,10 +91,8 @@ const NewsList = () => {
       updateDebounceRef.current = setTimeout(() => {
         // Get all unique coin symbols from visible news items
         const visibleSymbols = Array.from(visibleIndices)
-          .filter((idx) => idx < allNewsItems.length) // Filter out loader row
-          .flatMap(
-            (idx) => allNewsItems[idx].coins?.map((coin) => coin.symbol) || []
-          )
+          .filter((idx) => idx < newsItems.length) // Filter out loader row
+          .flatMap((idx) => newsItems[idx].coins?.map((coin) => coin.symbol) || [])
           .filter((value, index, self) => self.indexOf(value) === index); // Unique symbols only
 
         // Only update if the symbols have actually changed
@@ -84,12 +127,21 @@ const NewsList = () => {
         }
       }, 200);
     },
-    [allNewsItems, subscribeToSymbols, unsubscribeFromSymbols]
+    [newsItems, subscribeToSymbols, unsubscribeFromSymbols]
   );
+
+  // Reset virtualizer when switching feed types
+  const resetVirtualizerOnFeedChange = useCallback(() => {
+    if (rowVirtualizer) {
+      rowVirtualizer.scrollToIndex(0);
+      visibleItemsRef.current = new Set();
+      lastSymbolsRef.current = [];
+    }
+  }, []);
 
   // Set up virtualizer for rendering only visible items with dynamic measurement
   const rowVirtualizer = useVirtualizer({
-    count: hasNextPage ? allNewsItems.length + 1 : allNewsItems.length, // +1 for loading row
+    count: hasNextPage ? newsItems.length + 1 : newsItems.length, // +1 for loading row
     getScrollElement: () => parentRef.current,
     estimateSize: () => 100, // Initial estimate, will be refined by actual measurements
     overscan: 5,
@@ -123,6 +175,12 @@ const NewsList = () => {
     };
   }, []);
 
+  // Update feed type and reset virtualizer
+  const handleFeedTypeChange = (type: FeedType) => {
+    setFeedType(type);
+    resetVirtualizerOnFeedChange();
+  };
+
   // Load more items when user scrolls to bottom
   useEffect(() => {
     const [lastItem] = [...rowVirtualizer.getVirtualItems()].reverse();
@@ -132,7 +190,7 @@ const NewsList = () => {
     }
 
     if (
-      lastItem.index >= allNewsItems.length - 1 &&
+      lastItem.index >= newsItems.length - 1 &&
       hasNextPage &&
       !isFetchingNextPage
     ) {
@@ -141,7 +199,7 @@ const NewsList = () => {
   }, [
     hasNextPage,
     fetchNextPage,
-    allNewsItems.length,
+    newsItems.length,
     isFetchingNextPage,
     rowVirtualizer.getVirtualItems(),
   ]);
@@ -162,12 +220,30 @@ const NewsList = () => {
       ? "Loading news..."
       : "Waiting for news updates...";
 
-  // console.log(data, isLoading, isError);
-
   return (
     <>
-      <div className="p-2 border-b border-border">
+      <div className="p-2 border-b border-border flex justify-between items-center">
         <h2 className="text-lg font-semibold">News Feed</h2>
+        <DropdownMenu>
+          <DropdownMenuTrigger className="flex items-center gap-1 px-3 py-1 text-sm rounded-md border border-input hover:bg-accent">
+            {feedType === "all" ? "All News" : "Bookmarks"}
+            <ChevronDown className="h-4 w-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={() => handleFeedTypeChange("all")}
+              className={feedType === "all" ? "bg-accent" : ""}
+            >
+              All News
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => handleFeedTypeChange("bookmarked")}
+              className={feedType === "bookmarked" ? "bg-accent" : ""}
+            >
+              Bookmarks
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {isError || isWebsocketError ? (
@@ -177,7 +253,7 @@ const NewsList = () => {
             {isError ? "Connection has failed" : "Failed to load news"}
           </p>
         </div>
-      ) : !isConnected || (isLoading && !allNewsItems.length) ? (
+      ) : !isConnected || (isLoading && !newsItems.length) ? (
         <div className="flex flex-row items-center justify-center h-full py-6 gap-3">
           <Spinner size="md" />
           <p className="text-muted-foreground">{loadingMessage}</p>
@@ -195,8 +271,8 @@ const NewsList = () => {
             }}
           >
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-              const isLoaderRow = virtualRow.index > allNewsItems.length - 1;
-              const item = allNewsItems[virtualRow.index];
+              const isLoaderRow = virtualRow.index > newsItems.length - 1;
+              const item = newsItems[virtualRow.index];
 
               return (
                 <div
