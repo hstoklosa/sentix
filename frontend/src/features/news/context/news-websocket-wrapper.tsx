@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { WebSocketProvider } from "./websocket-context";
+import { WebSocketProvider } from "./news-websocket-context";
 import { useUpdatePostsCache } from "../api";
 
 type WebSocketProviderWrapperProps = {

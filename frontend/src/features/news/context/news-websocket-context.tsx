@@ -1,8 +1,7 @@
-import { createContext, useContext, ReactNode, useState, useEffect } from "react";
+import { createContext, useContext, ReactNode } from "react";
 import { useNewsWebSocket } from "../hooks/use-news-websocket";
 import { NewsItem } from "../types";
 
-// Context type definition
 type WebSocketContextType = {
   isConnected: boolean;
   error: string | null;
@@ -15,7 +14,6 @@ type WebSocketContextType = {
   refreshProviders: () => void;
 };
 
-// Create context with default values
 const WebSocketContext = createContext<WebSocketContextType>({
   isConnected: false,
   error: null,
@@ -28,7 +26,6 @@ const WebSocketContext = createContext<WebSocketContextType>({
   refreshProviders: () => {},
 });
 
-// Props for the provider component
 type WebSocketProviderProps = {
   children: ReactNode;
   onMessage?: (news: NewsItem) => void;
@@ -37,7 +34,6 @@ type WebSocketProviderProps = {
   defaultProvider?: string;
 };
 
-// Provider component
 export const WebSocketProvider = ({
   children,
   onMessage,
@@ -45,7 +41,6 @@ export const WebSocketProvider = ({
   baseUrl,
   defaultProvider,
 }: WebSocketProviderProps) => {
-  // Use the hook internally
   const {
     isConnected,
     error,
@@ -64,7 +59,6 @@ export const WebSocketProvider = ({
     defaultProvider,
   });
 
-  // Provide the WebSocket state and functions to all children
   return (
     <WebSocketContext.Provider
       value={{
@@ -84,7 +78,6 @@ export const WebSocketProvider = ({
   );
 };
 
-// Custom hook to use the WebSocket context
 export const useWebSocketContext = () => {
   const context = useContext(WebSocketContext);
   if (context === undefined) {
