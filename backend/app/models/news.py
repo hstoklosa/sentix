@@ -44,12 +44,20 @@ class NewsItem(Base, table=True):
             if not news_coin.coin:
                 continue
                 
-            coin_list.append({
+            coin_data = {
                 "id": news_coin.coin.id,
                 "symbol": news_coin.coin.symbol,
                 "name": news_coin.coin.name,
                 "image_url": news_coin.coin.image_url
-            })
+            }
+            
+            # Add price information if available
+            if news_coin.price_usd is not None:
+                coin_data["price_usd"] = news_coin.price_usd
+                if news_coin.price_timestamp:
+                    coin_data["price_timestamp"] = news_coin.price_timestamp.isoformat()
+            
+            coin_list.append(coin_data)
         return coin_list
 
 
@@ -59,6 +67,8 @@ class NewsCoin(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     news_item_id: int = Field(foreign_key="news_items.id")
     coin_id: int = Field(foreign_key="coins.id")
+    price_usd: Optional[float] = Field(default=None)
+    price_timestamp: Optional[datetime] = Field(default=None)
     
     # Add constraint to enforce uniqueness between posts and coins
     __table_args__ = (

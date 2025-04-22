@@ -93,9 +93,10 @@ class NewsManager:
             
             sentiment = cryptobert.predict_sentiment(news_data.body)
             saved_post = await save_news_item(session, news_data, sentiment)
+            
             await self.broadcast_to_clients(saved_post)
         except Exception as e:
-            logger.error(f"Error saving news to database: {str(e)}")
+            logger.error(f"Error processing news item: {str(e)}")
     
     async def add_client(self, websocket: WebSocket, user: Optional[User] = None):
         """
