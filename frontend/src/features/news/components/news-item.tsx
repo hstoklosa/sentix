@@ -174,6 +174,8 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
                   <CoinTag
                     key={coin.id}
                     symbol={coin.symbol}
+                    priceUsd={coin.price_usd}
+                    priceTimestamp={coin.price_timestamp}
                   />
                 ))}
               </>

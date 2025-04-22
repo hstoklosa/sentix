@@ -5,39 +5,87 @@ import { usePriceStore } from "@/features/coins/hooks/use-price-store";
 
 type CoinTagProps = {
   symbol: string;
+  priceUsd?: number;
+  priceTimestamp?: string;
 };
 
-/**
- * Displays a cryptocurrency tag with live price information.
- *
- * Purely a presentational component that reads from the global
- * price store and uses useMemo to prevent unnecessary re-renders
- * when parent components change.
- */
-const CoinTag = ({ symbol }: CoinTagProps) => {
-  const tokenPrice = usePriceStore((state) => state.getPrice(symbol));
-  const changePercent = tokenPrice?.changePercent;
+const CoinTag = ({ symbol, priceUsd, priceTimestamp }: CoinTagProps) => {
+  const storePrice = usePriceStore((state) => state.getPrice(symbol));
+  const currentPrice = storePrice?.price;
+  const changePercent = storePrice?.changePercent;
 
-  // Memoize the rendered tag to prevent unnecessary re-renders
-  return useMemo(
-    () => (
-      <span
-        className={cn(
-          "px-1.5 py-0.5 bg-secondary text-xs rounded-full",
-          typeof changePercent === "number" &&
-            changePercent > 0 &&
-            "text-chart-2 bg-chart-2/10",
-          typeof changePercent === "number" &&
-            changePercent < 0 &&
-            "text-destructive bg-destructive/10"
-        )}
-      >
-        {symbol}
-        {typeof changePercent === "number" &&
-          ` (${changePercent > 0 ? "+" : ""}${changePercent.toFixed(2)}%)`}
-      </span>
-    ),
-    [symbol, changePercent]
+  const hasProvidedPrice = typeof priceUsd === "number";
+  const hasCurrentPrice = typeof currentPrice === "number";
+
+  // Calculate price delta between article time and current price
+  const viewData = useMemo(() => {
+    let priceDelta = null;
+    if (hasProvidedPrice && hasCurrentPrice && priceUsd !== 0) {
+      const absoluteDelta = currentPrice - priceUsd;
+      const percentDelta = (absoluteDelta / priceUsd) * 100;
+      priceDelta = {
+        percent: percentDelta,
+        increased: percentDelta > 0,
+      };
+    }
+
+    // Determine text content for the percentage display
+    let percentText = "";
+    if (priceDelta) {
+      percentText = ` (${priceDelta.increased ? "+" : ""}${priceDelta.percent.toFixed(2)}%)`;
+    } else if (typeof changePercent === "number") {
+      percentText = ` (${changePercent > 0 ? "+" : ""}${changePercent.toFixed(2)}%)`;
+    }
+
+    // Determine styling based on price movement
+    let colorClasses = "";
+    if (priceDelta) {
+      colorClasses = priceDelta.increased
+        ? "text-chart-2 bg-chart-2/10"
+        : "text-destructive bg-destructive/10";
+    } else if (typeof changePercent === "number") {
+      colorClasses =
+        changePercent > 0
+          ? "text-chart-2 bg-chart-2/10"
+          : "text-destructive bg-destructive/10";
+    }
+
+    // Format tooltip content
+    let tooltipContent;
+    if (hasProvidedPrice && priceTimestamp && hasCurrentPrice) {
+      const publishTime = new Date(priceTimestamp).toLocaleString();
+      const baseTooltip = `Price at article time: $${priceUsd!.toFixed(2)} (${publishTime})`;
+
+      if (priceDelta) {
+        const currentPriceText = `Current price: $${currentPrice.toFixed(2)}`;
+        const deltaText = `Delta: ${priceDelta.increased ? "+" : ""}${priceDelta.percent.toFixed(2)}%`;
+        tooltipContent = `${baseTooltip}\n${currentPriceText}\n${deltaText}`;
+      } else {
+        tooltipContent = baseTooltip;
+      }
+    }
+
+    return { priceDelta, percentText, colorClasses, tooltipContent };
+  }, [
+    hasProvidedPrice,
+    hasCurrentPrice,
+    priceUsd,
+    currentPrice,
+    priceTimestamp,
+    changePercent,
+  ]);
+
+  return (
+    <span
+      className={cn(
+        "px-1.5 py-0.5 bg-secondary text-xs rounded-full",
+        viewData.colorClasses
+      )}
+      title={viewData.tooltipContent}
+    >
+      {symbol}
+      {viewData.percentText}
+    </span>
   );
 };
 
