@@ -17,8 +17,6 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
 } from "../ui/dropdown-menu";
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
@@ -158,7 +156,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <div className="ml-2 flex items-center space-x-2">
+          <div className="ml-2 flex flex-col items-start space-x-5">
             {/* News WebSocket indicator */}
             <div className="flex items-center">
               <span
@@ -188,7 +186,9 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                     : "Disconnected from price feed"
                 }
               />
-              <span className="text-xs ml-1 text-muted-foreground">Prices</span>
+              <span className="text-xs ml-1 text-muted-foreground">
+                Market Data
+              </span>
             </div>
           </div>
         </div>
