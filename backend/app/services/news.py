@@ -1,4 +1,5 @@
 from typing import List, Tuple, Dict, Any, Optional
+from datetime import datetime
 
 import logging
 
@@ -7,6 +8,7 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from app.models.news import Coin, NewsItem, NewsCoin
 from app.core.news.types import NewsData
+from app.core.market.coingecko import coingecko_client
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +43,7 @@ async def create_news_item(session: Session, news_data: NewsData, sentiment: dic
     Args:
         session: The database session
         news_data: The news data from TreeNews
+        sentiment: The sentiment analysis result
     
     Returns:
         The created news item
@@ -67,11 +70,32 @@ async def create_news_item(session: Session, news_data: NewsData, sentiment: dic
     session.commit()
     session.refresh(item)
     
+    # Fetch current coin prices if we have coins mentioned
+    coin_prices = {}
+    if news_data.coins:
+        try:
+            # Get all coin market data
+            market_data = await coingecko_client.get_coins_markets()
+            # Create a lookup map by symbol (lowercase for case-insensitive matching)
+            coin_prices = {coin['symbol'].lower(): coin for coin in market_data}
+            logger.debug(f"Fetched prices for {len(coin_prices)} coins")
+        except Exception as e:
+            logger.error(f"Error fetching coin prices: {str(e)}")
+    
     # Add coins to the news item
     if news_data.coins:
+        current_time = datetime.utcnow()
         for symbol in news_data.coins:
             coin = await get_or_create_coin(session, symbol)
             news_coin = NewsCoin(news_item_id=item.id, coin_id=coin.id)
+            
+            # Add price data if available
+            lower_symbol = symbol.lower()
+            if lower_symbol in coin_prices:
+                coin_data = coin_prices[lower_symbol]
+                news_coin.price_usd = coin_data.get('current_price')
+                news_coin.price_timestamp = current_time
+            
             session.add(news_coin)
     
         session.commit()

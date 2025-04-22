@@ -12,6 +12,9 @@ export type NewsItem = Entity<{
     id: number;
     symbol: string;
     name: string;
+    image_url?: string;
+    price_usd?: number;
+    price_timestamp?: string;
   }[];
   feed: string;
   _type: string;

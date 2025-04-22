@@ -218,6 +218,8 @@ function PostComponent() {
                   <CoinTag
                     key={coin.id}
                     symbol={coin.symbol}
+                    priceUsd={coin.price_usd}
+                    priceTimestamp={coin.price_timestamp}
                   />
                 ))}
               </div>

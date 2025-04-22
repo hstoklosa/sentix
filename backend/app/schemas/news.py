@@ -26,6 +26,8 @@ class CoinResponse(BaseModel):
     symbol: str
     name: Optional[str] = None
     image_url: Optional[str] = None
+    price_usd: Optional[float] = None
+    price_timestamp: Optional[datetime] = None
     
     class Config:
         from_attributes = True

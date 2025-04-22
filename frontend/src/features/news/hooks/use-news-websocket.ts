@@ -30,7 +30,7 @@ export const useNewsWebSocket = ({
   autoConnect = true,
   authToken,
   baseUrl = "ws://localhost:8000",
-  defaultProvider = "CoinDesk",
+  defaultProvider = "TreeNews",
 }: UseNewsWebSocketOptions = {}): UseNewsWebSocketResult => {
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);

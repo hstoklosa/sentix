@@ -49,6 +49,10 @@ const shouldRecalculateTime = (timestamp: string, counter: number = 0): boolean 
 const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
   const lastTimeRef = useRef<string | null>(null);
 
+  // Determine bookmark status - if the item has a bookmark_id property, it came from the bookmarks endpoint
+  // and should be considered bookmarked regardless of is_bookmarked flag
+  const isBookmarked = "bookmark_id" in news || news.is_bookmarked;
+
   const createBookmark = useCreateBookmark({
     onSuccess: () => toast.success("The post has been added to bookmarks"),
     onError: () => toast.error("Failed to bookmark this post"),
@@ -77,7 +81,7 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
     e.preventDefault();
     e.stopPropagation();
 
-    news.is_bookmarked
+    isBookmarked
       ? deleteBookmark.mutate(news.id)
       : createBookmark.mutate({ news_item_id: news.id });
   };
@@ -170,6 +174,8 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
                   <CoinTag
                     key={coin.id}
                     symbol={coin.symbol}
+                    priceUsd={coin.price_usd}
+                    priceTimestamp={coin.price_timestamp}
                   />
                 ))}
               </>
@@ -193,15 +199,15 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
         onClick={(e) => e.stopPropagation()}
       >
         <button
-          aria-label={news.is_bookmarked ? "Remove bookmark" : "Add bookmark"}
-          title={news.is_bookmarked ? "Remove bookmark" : "Add bookmark"}
-          className={cn(actionButtonClass, news.is_bookmarked && "text-primary")}
+          aria-label={isBookmarked ? "Remove bookmark" : "Add bookmark"}
+          title={isBookmarked ? "Remove bookmark" : "Add bookmark"}
+          className={cn(actionButtonClass, isBookmarked && "text-primary")}
           onClick={handleBookmarkToggle}
           // disabled={isLoading}
         >
           <Bookmark
             className="size-3.5"
-            fill={news.is_bookmarked ? "currentColor" : "none"}
+            fill={isBookmarked ? "currentColor" : "none"}
           />
         </button>
         <button

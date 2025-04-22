@@ -38,9 +38,9 @@ export const usePriceStore = create<TokenPriceStore>((set, get) => ({
   updatePrice: (symbol, price, changePercent) => {
     const normalisedSymbol = normaliseSymbol(symbol);
 
-    console.log(
-      `[TokenPriceStore] Updating price for ${normalisedSymbol} (from ${symbol}): ${price} (${changePercent}%)`
-    );
+    // console.log(
+    //   `[TokenPriceStore] Updating price for ${normalisedSymbol} (from ${symbol}): ${price} (${changePercent}%)`
+    // );
 
     set((state) => ({
       prices: {
