@@ -1,6 +1,9 @@
 import { useRouter, Link } from "@tanstack/react-router";
 import { UserRound, ChevronDown, Settings, LogOut, Newspaper } from "lucide-react";
 
+import treeNewsLogo from "@/assets/treenews-logo.png";
+import coinDeskLogo from "@/assets/coindesk-logo.png";
+
 import useAuth from "@/hooks/use-auth";
 import { useLogout } from "@/features/auth/api/logout";
 import { useWebSocketContext } from "@/features/news/context";
@@ -75,13 +78,13 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                 align="end"
                 side="bottom"
                 sideOffset={10}
-                className="w-[180px]"
+                className="w-[135px]"
               >
                 <DropdownMenuLabel className="cursor-default">
-                  <p className="text-sm font-normal text-foreground">News Feed</p>
+                  <p className="text-sm font-normal text-foreground">Feed</p>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <div className="py-1">
+                <div className="flex flex-col gap-0.2">
                   {availableProviders.map((provider) => (
                     <DropdownMenuItem
                       key={provider}
@@ -91,7 +94,23 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                       )}
                       onClick={() => subscribe(provider)}
                     >
-                      <span>{provider}</span>
+                      <div className="flex items-center gap-1.5">
+                        {provider === "TreeNews" ? (
+                          <img
+                            src={treeNewsLogo}
+                            alt="TreeNews"
+                            className="size-4"
+                          />
+                        ) : (
+                          <img
+                            src={coinDeskLogo}
+                            alt="CoinDesk"
+                            className="size-4"
+                          />
+                        )}
+
+                        <span>{provider}</span>
+                      </div>
                       {currentProvider === provider && (
                         <div className="size-2 rounded-full bg-chart-2 ml-auto" />
                       )}
