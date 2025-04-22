@@ -25,28 +25,23 @@ class Connection:
         self.user = user
         self.connected_at = datetime.now()
         self.send_lock = asyncio.Lock()
-        self.current_subscription: Optional[str] = None  # Single provider subscription
+        self.current_subscription: Optional[str] = None
 
 
 class NewsManager:
     """
-    A singleton manager that handles WebSocket connections between clients and news providers, 
-    acting as a middleman to broadcast news data to subscribed clients. 
+    A class responsible for managing WebSocket connections between clients and 
+    news providers, acting as a middleman to broadcast news data to subscribed clients. 
     """
     _instance = None
     
     def __init__(self):
-        # Dictionary of provider name to provider instance
         self.providers: Dict[str, NewsProvider] = {
             "TreeNews": TreeNews(),
             "CoinDesk": CoinDeskNews()
-            # Add other providers here as they become available
         }
-        
-        # Track which providers are connected
-        self.connected_providers: Set[str] = set()
-        
         self.active_connections: Dict[WebSocket, Connection] = {}
+        self.connected_providers: Set[str] = set()
         self.connection_lock = asyncio.Lock()
     
     @classmethod
@@ -87,13 +82,9 @@ class NewsManager:
         """
         try:
             session = next(get_session())
-            
-            # Set the feed name to the provider name
             news_data.feed = provider_name
-            
             sentiment = predict_sentiment(news_data.body)
             saved_post = await save_news_item(session, news_data, sentiment)
-            
             await self.broadcast_to_clients(saved_post)
         except Exception as e:
             logger.error(f"Error processing news item: {str(e)}")
@@ -107,16 +98,7 @@ class NewsManager:
             user: The authenticated user (optional)
         """
         connection = Connection(websocket, user)
-        
-        # By default, subscribe to the first available provider
-        # if self.providers:
-        #     connection.current_subscription = next(iter(self.providers.keys()))
-        
         self.active_connections[websocket] = connection
-
-        # Connect to provider if this is the first client
-        # if len(self.active_connections) == 1 and connection.current_subscription:
-        #     asyncio.create_task(self.connect_provider(connection.current_subscription))
 
     async def remove_client(self, websocket: WebSocket):
         """
@@ -128,7 +110,6 @@ class NewsManager:
         if websocket in self.active_connections:
             del self.active_connections[websocket]
         
-        # If no more connections, disconnect from all providers
         if not self.active_connections:
             async with self.connection_lock:
                 for provider_name in list(self.connected_providers):
