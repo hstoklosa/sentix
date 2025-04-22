@@ -1,2 +1,2 @@
 export * from "./get-news";
-export { useGetPost } from "./get-post";
+export * from "./get-post";

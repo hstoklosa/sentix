@@ -23,6 +23,19 @@ export const getPosts = async (
   });
 };
 
+export const searchPosts = async (
+  query: string,
+  params: PaginationParams = INITIAL_PARAMS
+): Promise<NewsFeedResponse> => {
+  return await api.get("/news/search", {
+    params: {
+      query,
+      page: params.page,
+      page_size: params.page_size,
+    },
+  });
+};
+
 export const useGetInfinitePosts = (
   pageSize: number = DEFAULT_PAGE_SIZE,
   config?: QueryConfig<typeof getPosts>
@@ -34,6 +47,23 @@ export const useGetInfinitePosts = (
     getNextPageParam: (lastPage) =>
       lastPage.has_next ? lastPage.page + 1 : undefined,
     initialPageParam: 1,
+    ...config,
+  });
+};
+
+export const useSearchInfinitePosts = (
+  query: string,
+  pageSize: number = DEFAULT_PAGE_SIZE,
+  config?: QueryConfig<typeof searchPosts>
+) => {
+  return useInfiniteQuery({
+    queryKey: ["news", "search", query, { pageSize }],
+    queryFn: ({ pageParam = 1 }) =>
+      searchPosts(query, { page: pageParam, page_size: pageSize }),
+    getNextPageParam: (lastPage) =>
+      lastPage.has_next ? lastPage.page + 1 : undefined,
+    initialPageParam: 1,
+    enabled: !!query && query.length > 0,
     ...config,
   });
 };

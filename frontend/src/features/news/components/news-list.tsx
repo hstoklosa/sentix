@@ -13,7 +13,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import NewsItem from "./news-item";
-import { useGetInfinitePosts, useUpdatePostsCache } from "../api";
+import SearchBar from "./search-bar";
+import {
+  useGetInfinitePosts,
+  useSearchInfinitePosts,
+  useUpdatePostsCache,
+} from "../api";
 import { useGetInfiniteBookmarkedPosts } from "@/features/bookmarks/api/get-bookmarks";
 import { useWebSocketContext } from "../context";
 import { NewsItem as NewsItemType, NewsFeedResponse } from "../types";
@@ -24,6 +29,7 @@ type FeedType = "all" | "bookmarked";
 
 const NewsList = () => {
   const [feedType, setFeedType] = useState<FeedType>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [refreshCounter, setRefreshCounter] = useState(0);
   const parentRef = useRef<HTMLDivElement>(null);
   const visibleItemsRef = useRef(new Set<number>());
@@ -52,18 +58,57 @@ const NewsList = () => {
     fetchNextPage: fetchBookmarkedNextPage,
   } = useGetInfiniteBookmarkedPosts();
 
+  // Query for search results
+  const {
+    data: searchData,
+    isLoading: isSearchLoading,
+    isError: isSearchError,
+    isFetchingNextPage: isSearchFetchingNextPage,
+    hasNextPage: hasSearchNextPage,
+    fetchNextPage: fetchSearchNextPage,
+  } = useSearchInfinitePosts(searchQuery);
+
   const updatePostsCache = useUpdatePostsCache();
 
-  // Select the appropriate data based on feed type
-  const data = feedType === "all" ? allNewsData : bookmarkedData;
-  const isLoading = feedType === "all" ? isAllNewsLoading : isBookmarkedLoading;
-  const isError = feedType === "all" ? isAllNewsError : isBookmarkedError;
-  const isFetchingNextPage =
-    feedType === "all" ? isAllNewsFetchingNextPage : isBookmarkedFetchingNextPage;
-  const hasNextPage =
-    feedType === "all" ? hasAllNewsNextPage : hasBookmarkedNextPage;
-  const fetchNextPage =
-    feedType === "all" ? fetchAllNewsNextPage : fetchBookmarkedNextPage;
+  // Determine what data to display based on search and feed type
+  const isSearchActive = !!searchQuery;
+
+  // Select the appropriate data based on search and feed type
+  const data = isSearchActive
+    ? searchData
+    : feedType === "all"
+      ? allNewsData
+      : bookmarkedData;
+
+  const isLoading = isSearchActive
+    ? isSearchLoading
+    : feedType === "all"
+      ? isAllNewsLoading
+      : isBookmarkedLoading;
+
+  const isError = isSearchActive
+    ? isSearchError
+    : feedType === "all"
+      ? isAllNewsError
+      : isBookmarkedError;
+
+  const isFetchingNextPage = isSearchActive
+    ? isSearchFetchingNextPage
+    : feedType === "all"
+      ? isAllNewsFetchingNextPage
+      : isBookmarkedFetchingNextPage;
+
+  const hasNextPage = isSearchActive
+    ? hasSearchNextPage
+    : feedType === "all"
+      ? hasAllNewsNextPage
+      : hasBookmarkedNextPage;
+
+  const fetchNextPage = isSearchActive
+    ? fetchSearchNextPage
+    : feedType === "all"
+      ? fetchAllNewsNextPage
+      : fetchBookmarkedNextPage;
 
   // Flatten all news items from all pages
   const allNewsItems = data ? data.pages.flatMap((page) => page.items) : [];
@@ -72,14 +117,14 @@ const NewsList = () => {
   // This is needed because the backend doesn't explicitly set this flag
   // in the /bookmarks endpoint
   const newsItems = useMemo(() => {
-    if (feedType === "bookmarked" && allNewsItems.length > 0) {
+    if (feedType === "bookmarked" && !isSearchActive && allNewsItems.length > 0) {
       return allNewsItems.map((item) => ({
         ...item,
         is_bookmarked: true,
       }));
     }
     return allNewsItems;
-  }, [allNewsItems, feedType]);
+  }, [allNewsItems, feedType, isSearchActive]);
 
   // Debounced function to update visible symbols
   const debouncedUpdateVisibleSymbols = useCallback(
@@ -130,13 +175,16 @@ const NewsList = () => {
     [newsItems, subscribeToSymbols, unsubscribeFromSymbols]
   );
 
-  // Reset virtualizer when switching feed types
+  // Reset virtualizer and search when switching feed types
   const resetVirtualizerOnFeedChange = useCallback(() => {
     if (rowVirtualizer) {
       rowVirtualizer.scrollToIndex(0);
       visibleItemsRef.current = new Set();
       lastSymbolsRef.current = [];
     }
+
+    // Clear search when changing feed type
+    setSearchQuery("");
   }, []);
 
   // Set up virtualizer for rendering only visible items with dynamic measurement
@@ -181,6 +229,14 @@ const NewsList = () => {
     resetVirtualizerOnFeedChange();
   };
 
+  // Handle search query changes
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (rowVirtualizer) {
+      rowVirtualizer.scrollToIndex(0);
+    }
+  };
+
   // Load more items when user scrolls to bottom
   useEffect(() => {
     const [lastItem] = [...rowVirtualizer.getVirtualItems()].reverse();
@@ -214,36 +270,49 @@ const NewsList = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const loadingMessage = !isConnected
-    ? "Connecting to news feed..."
-    : isLoading
-      ? "Loading news..."
-      : "Waiting for news updates...";
+  // Get appropriate loading message based on current state
+  const getLoadingMessage = () => {
+    if (!isConnected) return "Connecting to news feed...";
+    if (isSearchActive) return "Searching news...";
+    return isLoading ? "Loading news..." : "Waiting for news updates...";
+  };
+
+  // Get appropriate empty state message based on current state
+  const getEmptyStateMessage = () => {
+    if (isSearchActive) return `No results found for "${searchQuery}"`;
+    if (feedType === "bookmarked") return "No bookmarked items yet";
+    return "No news items available";
+  };
 
   return (
     <>
-      <div className="p-2 border-b border-border flex justify-between items-center">
-        <h2 className="text-lg font-semibold">News Feed</h2>
-        <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-1 px-3 py-1 text-sm rounded-md border border-input hover:bg-accent">
-            {feedType === "all" ? "All News" : "Bookmarks"}
-            <ChevronDown className="h-4 w-4" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={() => handleFeedTypeChange("all")}
-              className={feedType === "all" ? "bg-accent" : ""}
-            >
-              All News
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleFeedTypeChange("bookmarked")}
-              className={feedType === "bookmarked" ? "bg-accent" : ""}
-            >
-              Bookmarks
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      <div className="p-2 border-b border-border">
+        <div className="flex items-center gap-2">
+          <SearchBar
+            onSearch={handleSearch}
+            className="flex-1"
+          />
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex items-center gap-1 px-3 py-1 h-9 text-sm rounded-md border border-input hover:bg-accent whitespace-nowrap">
+              {feedType === "all" ? "All News" : "Bookmarks"}
+              <ChevronDown className="h-4 w-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => handleFeedTypeChange("all")}
+                className={feedType === "all" ? "bg-accent" : ""}
+              >
+                All News
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleFeedTypeChange("bookmarked")}
+                className={feedType === "bookmarked" ? "bg-accent" : ""}
+              >
+                Bookmarks
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {isError || isWebsocketError ? (
@@ -256,7 +325,11 @@ const NewsList = () => {
       ) : !isConnected || (isLoading && !newsItems.length) ? (
         <div className="flex flex-row items-center justify-center h-full py-6 gap-3">
           <Spinner size="md" />
-          <p className="text-muted-foreground">{loadingMessage}</p>
+          <p className="text-muted-foreground">{getLoadingMessage()}</p>
+        </div>
+      ) : newsItems.length === 0 ? (
+        <div className="flex items-center justify-center h-full py-10">
+          <p className="text-muted-foreground">{getEmptyStateMessage()}</p>
         </div>
       ) : (
         <div

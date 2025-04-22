@@ -10,6 +10,11 @@ class PaginationParams(BaseModel):
     page_size: int = Field(default=20, ge=1, le=100, description="Number of items per page")
 
 
+class SearchParams(BaseModel):
+    """Search parameters for news item queries"""
+    query: str = Field(..., min_length=1, description="Search query string")
+
+
 class PaginatedResponse(BaseModel):
     """Generic paginated response"""
     page: int

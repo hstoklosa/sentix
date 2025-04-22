@@ -3,7 +3,7 @@ from datetime import datetime
 
 import logging
 
-from sqlmodel import Session, select, func
+from sqlmodel import Session, select, func, or_
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.models.news import Coin, NewsItem, NewsCoin
@@ -169,6 +169,53 @@ async def get_news_feed(
     # Query for items, sorted by time and paginated
     stmt = (
         select(NewsItem)
+        .options(selectinload(NewsItem.coins).selectinload(NewsCoin.coin))
+        .order_by(NewsItem.time.desc())
+        .offset(offset)
+        .limit(page_size)
+    )
+    items = session.exec(stmt).all()
+    
+    return items, total_count
+
+
+async def search_news(
+    session: Session,
+    query: str,
+    page: int = 1,
+    page_size: int = 20
+) -> Tuple[List[NewsItem], int]:
+    """
+    Search news items by query string in title and body
+    
+    Args:
+        session: The database session
+        query: The search query string
+        page: The page number (1-indexed)
+        page_size: Number of items per page
+    
+    Returns:
+        Tuple containing:
+            - List of news items matching the search query
+            - Total count of matching items
+    """
+    offset = (page - 1) * page_size
+    
+    # Prepare search condition (title or body contains the query)
+    search_term = f"%{query}%"
+    search_condition = or_(
+        NewsItem.title.ilike(search_term),
+        NewsItem.body.ilike(search_term)
+    )
+    
+    # Count total matching items
+    count_stmt = select(func.count()).select_from(NewsItem).where(search_condition)
+    total_count = session.exec(count_stmt).one()
+    
+    # Query for matching items, sorted by time and paginated
+    stmt = (
+        select(NewsItem)
+        .where(search_condition)
         .options(selectinload(NewsItem.coins).selectinload(NewsCoin.coin))
         .order_by(NewsItem.time.desc())
         .offset(offset)
