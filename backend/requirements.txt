@@ -14,3 +14,11 @@ transformers
 torch
 aiocache
 aiohttp
+
+# Testing libraries
+pytest
+pytest-asyncio
+pytest-mock
+httpx
+pytest-cov
+aiosqlite
