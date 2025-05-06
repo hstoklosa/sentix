@@ -15,7 +15,7 @@ class SentimentAnalyser:
     """A class to handle sentiment analysis for crypto-related text using a fine-tuned model."""
     
     def __init__(self, model_dir=None):
-        self.model_dir = model_dir or self.MODEL_DIR
+        self.model_dir = model_dir or MODEL_DIR
         self.model = None
         self.tokenizer = None
         self.device = torch.device("cpu")

@@ -27,20 +27,18 @@ app = FastAPI(
 async def on_startup():
     create_db_and_tables()
     await async_sync_coins_from_coingecko()
+    
+    sentiment_analyser.load_model()
 
-    sentiment_analyser.load()
-
-    # Initialize news manager to connect to providers at startup
     news_manager = NewsManager.get_instance()
     asyncio.create_task(news_manager.initialize())
-    logger.info("Started news provider connections")
 
     # Schedule token cleanup task
     scheduler.add_job(
         id="cleanup_expired_tokens",
         name="Remove expired tokens from database",
         func=purge_expired_tokens,
-        trigger=IntervalTrigger(hours=24),  # run once a day
+        trigger=IntervalTrigger(hours=24),
         replace_existing=True,
     )
     
@@ -49,7 +47,7 @@ async def on_startup():
         id="sync_coins",
         name="Synchronise coins from CoinGecko",
         func=sync_coins_from_coingecko,
-        trigger=IntervalTrigger(hours=12),  # run twice a day
+        trigger=IntervalTrigger(hours=12),
         replace_existing=True,
     )
     
@@ -58,14 +56,12 @@ async def on_startup():
 
 @app.on_event("shutdown")
 async def on_shutdown():
-    # Shutdown news manager
     news_manager = NewsManager.get_instance()
-    await news_manager.shutdown()
-    logger.info("News manager shut down")
+    if news_manager.is_initialized:
+        await news_manager.shutdown()
     
     if scheduler.running:
         scheduler.shutdown()
-        logger.info("Scheduler shut down")
 
 
 if settings.all_cors_origins:

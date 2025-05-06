@@ -11,7 +11,7 @@ from app.core.news.coindesk_news import CoinDeskNews
 from app.core.news.types import NewsData, NewsProvider
 from app.models.user import User
 from app.models.news import NewsItem
-from app.ml_models.sentiment_analysis import predict_sentiment
+from app.ml_models.sentiment_analysis import sentiment_analyser
 from app.services.news import save_news_item
 from app.utils import format_datetime_iso
 
@@ -117,7 +117,7 @@ class NewsManager:
         try:
             session = next(get_session())
             news_data.feed = provider_name
-            sentiment = predict_sentiment(news_data.body)
+            sentiment = sentiment_analyser.predict(news_data.body)
             saved_post = await save_news_item(session, news_data, sentiment)
             await self.broadcast_to_clients(saved_post)
         except Exception as e:
