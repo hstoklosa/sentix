@@ -1,7 +1,6 @@
-from pydantic import BaseModel, Field
-from typing import Generic, TypeVar, List
+from typing import List
+from pydantic import BaseModel
 
-from app.schemas.pagination import PaginatedResponse
 
 class MarketStats(BaseModel):
     total_market_cap: float

@@ -21,16 +21,6 @@ async def get_trending_coins_by_mentions(
     """
     Get trending coins based on mentions in posts for the current day,
     ordered by number of mentions and with sentiment statistics.
-    
-    Args:
-        session: The database session
-        page: The page number (1-indexed)
-        page_size: Number of items per page
-    
-    Returns:
-        Tuple containing:
-            - List of trending coins with mention count and sentiment stats
-            - Total count of coins mentioned today
     """
     # Get today's date and calculate start/end timestamps
     today = date.today()

@@ -33,9 +33,9 @@ const TIME_PERIODS: { label: string; value: ChartPeriod }[] = [
   { label: "30D", value: 30 },
   { label: "90D", value: 90 },
   { label: "180D", value: 180 },
-  { label: "YTD", value: "ytd" },
+  // { label: "YTD", value: "ytd" },
   { label: "365D", value: 365 },
-  { label: "MAX", value: "max" },
+  // { label: "MAX", value: "max" },
 ];
 
 // Color constants for up and down trends
@@ -237,7 +237,7 @@ export const PriceChart = ({
         )}
 
         <div className="flex items-center space-x-4 ml-auto">
-          <div className="bg-black/80 rounded-full p-0.5 inline-flex w-fit">
+          <div className="bg-accent/80 rounded-full p-0.5 inline-flex w-fit">
             {TIME_PERIODS.map((period) => (
               <Button
                 key={period.value.toString()}
@@ -247,8 +247,8 @@ export const PriceChart = ({
                 className={cn(
                   "h-6 rounded-full px-2 py-0 text-xs font-medium min-w-0",
                   selectedPeriod === period.value
-                    ? "bg-white text-black hover:bg-white hover:text-black pointer-events-none"
-                    : "text-white/80 hover:bg-zinc-800 hover:text-white"
+                    ? "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground pointer-events-none"
+                    : "text-foreground/80 hover:bg-secondary hover:text-foreground"
                 )}
               >
                 {period.label}

@@ -5,14 +5,12 @@ from app.schemas.pagination import PaginatedResponse
 
 
 class SentimentStats(BaseModel):
-    """Sentiment statistics for a coin"""
     positive: int
     negative: int
     neutral: int
 
 
 class TrendingCoin(BaseModel):
-    """Trending coin response model"""
     id: int
     symbol: str
     name: Optional[str] = None
@@ -25,5 +23,4 @@ class TrendingCoin(BaseModel):
 
 
 class TrendingCoinsResponse(PaginatedResponse):
-    """Paginated response containing trending coins"""
     items: List[TrendingCoin] 

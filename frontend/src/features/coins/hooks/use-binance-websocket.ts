@@ -127,7 +127,6 @@ class BinanceWebSocketManager {
 
     const formattedSymbol = this.formatSymbol(symbol);
 
-    // Skip if already subscribed or pending subscription
     if (
       this.subscriptions.has(formattedSymbol) ||
       this.pendingSubscriptions.has(formattedSymbol)
@@ -145,9 +144,6 @@ class BinanceWebSocketManager {
     this.scheduleBatch();
   }
 
-  /**
-   * Remove a subscription - batches multiple unsubscription requests
-   */
   public unsubscribe(symbol: string): void {
     if (!symbol) return;
 
@@ -170,9 +166,6 @@ class BinanceWebSocketManager {
     this.scheduleBatch();
   }
 
-  /**
-   * Schedule a batch operation with debouncing
-   */
   private scheduleBatch(): void {
     if (this.batchTimeoutId !== null) {
       window.clearTimeout(this.batchTimeoutId);
@@ -184,9 +177,6 @@ class BinanceWebSocketManager {
     }, 100); // Batch window of 100ms
   }
 
-  /**
-   * Process all pending subscriptions and unsubscriptions in a single batch
-   */
   private processBatchedSubscriptions(): void {
     // Don't process empty batches
     if (

@@ -2,12 +2,14 @@ import pytest
 from datetime import datetime, timedelta
 from sqlmodel import Session
 import uuid
+from unittest.mock import patch, MagicMock
 
 from app.services.token import (
     blacklist_token,
     get_token_by_jti,
     is_token_blacklisted,
-    get_expired_tokens
+    get_expired_tokens,
+    purge_expired_tokens
 )
 from app.models.token import Token
 from app.core.config import settings
@@ -71,43 +73,54 @@ class TestTokenService:
         # Assert
         assert result is True
     
-    @pytest.mark.skip("This test needs further investigation")    
-    def test_blacklist_token(self, db_session: Session, monkeypatch):
+    def test_blacklist_token(self, db_session: Session):
         """Test blacklisting a token"""
-        # Arrange
-        jti = "test-jti"
-        exp = int((datetime.utcnow() + timedelta(days=30)).timestamp())
+        # Create a real refresh token for a user
+        user_id = 123
+        refresh_token = create_refresh_token(user_id)
         
-        # Mock decode_token to return a valid payload
-        def mock_decode_token(token):
-            return {
-                "jti": jti,
-                "exp": exp,
-                "type": "refresh",
-                "sub": "1"  # user_id
-            }
+        # Act - Blacklist the token
+        blacklist_token(session=db_session, token=refresh_token)
         
-        # Mock verify_token_type to return True for refresh tokens
-        def mock_verify_token_type(payload, expected_type):
-            return payload.get("type") == expected_type
-        
-        # Apply the mocks
-        from app.core import security
-        monkeypatch.setattr(security, "decode_token", mock_decode_token)
-        monkeypatch.setattr(security, "verify_token_type", mock_verify_token_type)
-        
-        # Ensure token doesn't exist before the test
-        existing = get_token_by_jti(session=db_session, jti=jti)
-        assert existing is None
-        
-        # Act
-        blacklist_token(session=db_session, token="dummy_token")
+        # Decode the token manually to get the JTI
+        from app.core.security import decode_token
+        payload = decode_token(refresh_token)
+        jti = payload.get("jti")
         
         # Assert
         token = get_token_by_jti(session=db_session, jti=jti)
         assert token is not None
         assert token.jti == jti
         assert token.is_blacklisted is True
+    
+    def test_blacklist_token_invalid_token(self, db_session: Session):
+        """Test blacklisting an invalid token doesn't cause errors"""
+        # Act - try to blacklist an invalid token
+        blacklist_token(session=db_session, token="invalid_token")
+        
+        # No assertion needed, just verifying no exception is raised
+    
+    def test_blacklist_token_already_blacklisted(self, db_session: Session):
+        """Test blacklisting an already blacklisted token"""
+        # Create a real refresh token for a user
+        user_id = 123
+        refresh_token = create_refresh_token(user_id)
+        
+        # Blacklist the token
+        blacklist_token(session=db_session, token=refresh_token)
+        
+        # Get the token count
+        from app.core.security import decode_token
+        payload = decode_token(refresh_token)
+        jti = payload.get("jti")
+        initial_count = db_session.query(Token).count()
+        
+        # Try to blacklist again
+        blacklist_token(session=db_session, token=refresh_token)
+        
+        # Assert no new token was added
+        new_count = db_session.query(Token).count()
+        assert new_count == initial_count
     
     def test_manual_blacklist_entry(self, db_session: Session):
         """Test directly adding a blacklisted token to the database"""
@@ -152,4 +165,59 @@ class TestTokenService:
         
         # Assert
         assert len(expired_tokens) == 1
-        assert expired_tokens[0].jti == expired_jti 
+        assert expired_tokens[0].jti == expired_jti
+        
+    @patch('app.services.token.Session')
+    @patch('app.services.token.get_expired_tokens')
+    def test_purge_expired_tokens(self, mock_get_expired, mock_session):
+        """Test purging expired tokens"""
+        # Setup mocks
+        mock_session_instance = MagicMock()
+        mock_session.return_value.__enter__.return_value = mock_session_instance
+        
+        # Create mock expired tokens
+        expired_token1 = Token(jti="expired1", is_blacklisted=True, expires_at=datetime.utcnow() - timedelta(days=1))
+        expired_token2 = Token(jti="expired2", is_blacklisted=True, expires_at=datetime.utcnow() - timedelta(days=2))
+        mock_get_expired.return_value = [expired_token1, expired_token2]
+        
+        # Act
+        purge_expired_tokens()
+        
+        # Assert
+        mock_get_expired.assert_called_once_with(session=mock_session_instance)
+        assert mock_session_instance.delete.call_count == 2
+        mock_session_instance.commit.assert_called_once()
+        
+    @patch('app.services.token.Session')
+    @patch('app.services.token.get_expired_tokens')
+    def test_purge_expired_tokens_no_tokens(self, mock_get_expired, mock_session):
+        """Test purging when there are no expired tokens"""
+        # Setup mocks
+        mock_session_instance = MagicMock()
+        mock_session.return_value.__enter__.return_value = mock_session_instance
+        mock_get_expired.return_value = []
+        
+        # Act
+        purge_expired_tokens()
+        
+        # Assert
+        mock_get_expired.assert_called_once_with(session=mock_session_instance)
+        mock_session_instance.delete.assert_not_called()
+        mock_session_instance.commit.assert_not_called()
+        
+    @patch('app.services.token.Session')
+    @patch('app.services.token.get_expired_tokens')
+    @patch('app.services.token.logger')
+    def test_purge_expired_tokens_exception(self, mock_logger, mock_get_expired, mock_session):
+        """Test error handling in purge_expired_tokens"""
+        # Setup mock to raise exception
+        mock_session.return_value.__enter__.side_effect = Exception("Database error")
+        
+        # Act
+        purge_expired_tokens()
+        
+        # Assert
+        mock_logger.error.assert_called_once()
+        # Verify error message contains the exception info
+        args, _ = mock_logger.error.call_args
+        assert "Database error" in args[0]

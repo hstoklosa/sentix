@@ -22,6 +22,12 @@ class UserCreate(UserBase):
         return v
 
 
+class UserUpdate(BaseModel):
+    username: Optional[str] = Field(None, min_length=3, max_length=50)
+    email: Optional[EmailStr] = Field(None, max_length=255)
+    is_superuser: Optional[bool] = None
+
+
 class UserLogin(BaseModel):
     email: Optional[EmailStr] = None
     username: Optional[str] = None

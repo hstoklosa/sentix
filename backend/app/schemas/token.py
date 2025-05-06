@@ -16,6 +16,5 @@ class TokenPayload(BaseModel):
     exp: int
 
 class AuthResponse(BaseModel):
-    """Response schema for authentication endpoints that includes both token and user data"""
     token: Token
     user: UserPublic

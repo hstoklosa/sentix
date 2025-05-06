@@ -12,7 +12,6 @@ class CoinMarketCapClient(BaseApiClient):
     _API_BASE_URL = "https://pro-api.coinmarketcap.com"
     _API_KEY = settings.COINMARKETCAP_API_KEY
     
-    # TTL constants for different endpoints (in seconds)
     _MARKET_STATS_TTL = 300  # 5 minutes
     _FEAR_GREED_TTL = 900  # 15 minutes
 
@@ -20,7 +19,6 @@ class CoinMarketCapClient(BaseApiClient):
         headers = { "X-CMC_PRO_API_KEY": self._API_KEY }
         super().__init__(self._API_BASE_URL, headers)
         
-        # Set cache TTLs for specific endpoints
         self.set_cache_ttl("/v1/global-metrics/quotes/latest", self._MARKET_STATS_TTL)
         self.set_cache_ttl("/v3/fear-and-greed/latest", self._FEAR_GREED_TTL)
     
@@ -28,8 +26,7 @@ class CoinMarketCapClient(BaseApiClient):
         """
         Extract next update time from CoinMarketCap response if available
         
-        Returns:
-            Seconds until next update or None if not available
+
         """
         try:
             # CoinMarketCap provides status.timestamp for when the data was generated
@@ -58,9 +55,17 @@ class CoinMarketCapClient(BaseApiClient):
         return None
 
     async def get_market_stats(self, force_refresh: bool = False) -> Dict[str, Any]:
+        """
+        Get a summary of the cryptocurrency market statistics.
+        Documentation: https://coinmarketcap.com/api/documentation/v1/#operation/getV2CryptocurrencyQuotesLatest
+        """
         return await self._send_request("/v1/global-metrics/quotes/latest", force_refresh=force_refresh)
 
     async def get_fear_greed_index(self, force_refresh: bool = False) -> Dict[str, Any]:
+        """
+        Get the Fear and Greed Index.
+        Documentation: https://coinmarketcap.com/api/documentation/v3/#operation/getV3FearAndGreed
+        """
         return await self._send_request("/v3/fear-and-greed/latest", force_refresh=force_refresh)
 
 

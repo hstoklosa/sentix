@@ -316,4 +316,37 @@ def test_sync_coins_from_coingecko():
         mock_run.assert_called_once()
         # The first argument should be the coroutine object from async_sync_coins_from_coingecko
         args, _ = mock_run.call_args
-        assert 'async_sync_coins_from_coingecko' in str(args[0]) 
+        assert 'async_sync_coins_from_coingecko' in str(args[0])
+
+
+@pytest.mark.asyncio
+async def test_get_coin_by_symbol(async_db_session):
+    """Test retrieving a coin by its symbol"""
+    # Arrange
+    from app.services.news import get_coin_by_symbol
+    
+    # Create a test coin
+    btc_coin = Coin(symbol="BTC", name="Bitcoin", image_url="https://example.com/btc.png")
+    async_db_session.add(btc_coin)
+    await async_db_session.commit()
+    await async_db_session.refresh(btc_coin)
+    
+    # Act
+    # Test with uppercase symbol
+    result_upper = await get_coin_by_symbol(async_db_session, "BTC")
+    # Test with lowercase symbol (should still find the coin)
+    result_lower = await get_coin_by_symbol(async_db_session, "btc")
+    # Test with non-existent symbol
+    result_none = await get_coin_by_symbol(async_db_session, "NONEXISTENT")
+    
+    # Assert
+    assert result_upper is not None
+    assert result_upper.id == btc_coin.id
+    assert result_upper.symbol == "BTC"
+    assert result_upper.name == "Bitcoin"
+    
+    assert result_lower is not None
+    assert result_lower.id == btc_coin.id
+    assert result_lower.symbol == "BTC"
+    
+    assert result_none is None

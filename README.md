@@ -1,162 +1,119 @@
-# SentiX: Real-Time Insights into Cryptocurrency Markets
+# Project Product Package
 
-A modern web application that provides real-time sentiment analysis for cryptocurrency markets, helping traders and investors make data-driven decisions.
+The project consisted of developing an NLP pipeline for sentiment analysis of cryptocurrency-related text. Consequently, this has resulted in a fine-tuned language model that exceeds Moodle's size limit, hence the source code for this project can be found in the following OneDrive folder: [https://cityuni-my.sharepoint.com/:f:/g/personal/hubert_stoklosa_city_ac_uk/Ej8ltfC7h6BMrWLwMZ3l3bgBgOkLD06SmFShkvrBs4OIog?e=RRTQKg](https://cityuni-my.sharepoint.com/:f:/g/personal/hubert_stoklosa_city_ac_uk/Ej8ltfC7h6BMrWLwMZ3l3bgBgOkLD06SmFShkvrBs4OIog?e=RRTQKg)
 
-## Features
+As a side-note, there are 2 separate GitHub repositories for the project:
 
-- Real-time cryptocurrency sentiment analysis
-- Personalized content delivery system
-- Secure user authentication and authorization
-- Interactive data visualization
-- RESTful API with comprehensive documentation
+- Full-stack Web Application: [https://github.com/hstoklosa/sentix](https://github.com/hstoklosa/sentix)
+- Natural Language Processing Engine: [https://github.com/hstoklosa/sentix-nlp](https://github.com/hstoklosa/sentix-nlp)
 
-## Tech Stack
+## Setting up Sentix
 
-### Frontend
-
-- **Framework**: React 19 with TypeScript
-- **Build Tool**: Vite 6
-- **State Management**: React Query (TanStack Query)
-- **Styling**: TailwindCSS 4
-- **HTTP Client**: Axios
-- **UI Components**: Custom components with Lucide React icons
-
-### Backend
-
-- **Framework**: FastAPI with Python
-- **Database**: PostgreSQL with SQLAlchemy/SQLModel
-- **Authentication**: PassLib with JWT (python-jose)
-- **API Documentation**: FastAPI Swagger/OpenAPI
-- **Environment**: Python dotenv for configuration
-
-### DevOps
-
-- **Containerization**: Docker and Docker Compose
-- **Development**: Hot-reloading for both frontend and backend
-
-## Project Structure
-
-```
-sentix/
-├── frontend/          # React + Vite frontend application
-├── backend/           # FastAPI backend service
-├── nlp-engine/        # Natural Language Processing service
-└── docker-compose.yml # Docker composition for all services
-```
-
-## Getting Started
+Once the application is running, you w
 
 ### Prerequisites
 
-- Python 3.8+
-- Node.js 18+
-- Docker and Docker Compose (optional)
-- PostgreSQL (if running without Docker)
+You need Docker and Docker Compose installed on your system. Docker Desktop includes both. You can download it from the official Docker website: [https://www.docker.com/products/docker-desktop/](https://www.docker.com/products/docker-desktop/).
 
-### Environment Setup
+Docker will allow for the easiest setup of the web application since it orchestrates the backend, frontend, and database services and does not require the user to install any additional software. Otherwise, the user would need to install Python, Node.js, PostgreSQL, and anything else that full-stack web applications requires.
 
-1. Clone the repository:
+## Running the application
 
-   ```bash
-   git clone git@github.com:hstoklosa/sentix.git
-   cd sentix
-   ```
+1. Download the project files from the OneDrive link and place them in a desired location on your computer.
 
-2. Set up environment variables:
-   ```bash
-   cp .env.sample .env
-   cp frontend/.env.sample frontend/.env
-   cp backend/.env.sample backend/.env
-   ```
+2. If `.env` doesn't exist, then proceed to create it and using the following contents:
 
-### Development Setup
+```bash
+FRONTEND_URL=http://localhost:5173
 
-#### Using Docker (Recommended)
+BACKEND_CORS_ORIGINS="http://localhost,http://localhost:5173,https://localhost,https://localhost:5173,http://localhost.tiangolo.com"
+SECRET_KEY=7123ac49576369cb05c6efa938dad6b19979aa9c74ea92134ad5cb33b9241411
 
-1. Build and start all services:
+SUPERUSER_USERNAME=admin
+SUPERUSER_EMAIL=admin@gmail.com
+SUPERUSER_PASSWORD=Password123!
 
-   ```bash
-   docker-compose up --build
-   ```
+COINMARKETCAP_API_KEY=793d7cdf-c940-40f9-8ebc-dc6b348e2172
+COINGECKO_API_KEY=CG-Gkh8Z3KS1npaAts2MNZaChm8
+TREENEWS_API_KEY=3d97f7319b028d1590e25f2b2f4fe544cd70bb64e9f23fc53e0bbd7affab4b93
+COINDESK_API_KEY=d77c11241b74b5412d5bab0a6ca79c7280ebe8ac0217f2a3c3858c00fc8388c1
 
-   This will start the frontend, backend, and database services in development mode with hot-reloading.
+POSTGRES_HOST=db
+POSTGRES_PORT=5432
+POSTGRES_DB=app
+POSTGRES_USER=sentix
+POSTGRES_PASS=jdjd123
+```
 
-#### Manual Setup
+2. Open a terminal and navigate to the project directory.
 
-##### Backend Setup
+3. Run the following command to start the application:
 
-1. Navigate to the backend directory:
+```bash
+docker-compose up --build
+```
 
-   ```bash
-   cd backend
-   ```
+4. Wait for the application to start. Once it is running, you will be able to access the web application with a web browser using this link: `http://localhost:5173/`.
 
-2. Create and activate a virtual environment:
+### Testing the application
 
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows: .\venv\Scripts\activate
-   ```
+Once you have the web application running, the user interface will be easily accessible. Simply use the credentials "admin" and "Password123!" to log in. The application will automatically redirect you to the homepage, where you can explore its features.
 
-3. Install dependencies:
+## Folder Structure
 
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. Start the development server:
-
-   ```bash
-   fastapi dev main.py
-   ```
-
-   <!-- ```bash
-   uvicorn app.main:app --reload --port 8000
-   ``` -->
-
-##### Frontend Setup
-
-1. Navigate to the frontend directory:
-
-   ```bash
-   cd frontend
-   ```
-
-2. Install dependencies:
-
-   ```bash
-   npm install
-   ```
-
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
-
-### Accessing the Application
-
-- Frontend Application: http://localhost:3000
-- Backend API: http://localhost:8000
-- API Documentation: http://localhost:8000/docs
-
-## Copyright & Licenses
-
-### Code
-
-All code is authored by [hstoklosa](https://github.com/hstoklosa), unless it has been referenced.
-
-Imported libraries (authors and licenses):
-
-- FastAPI (Open-Source) - MIT License
-- React (Meta Open Source) - MIT License
-- Vite (Open Source) - MIT License
-- TailwindCSS (Open Source) - MIT License
-- SQLAlchemy (Open Source) - MIT License
-- PassLib (Open Source) - BSD License
-- Python-Jose (Open Source) - MIT License
-
-<br />
-
-© 2025 H. Stoklosa - hubert.stoklosa23@gmail.com
-
-https://github.com/hstoklosa
+```
+.
+├── backend/          # FastAPI backend application
+│   ├── app/          # Main application source code
+│   │   ├── api/      # API endpoints and routing
+│   │   │   └── routes/ # Specific route modules
+│   │   │       ├── rest/     # REST API routes
+│   │   │       └── websocket/# WebSocket routes
+│   │   ├── core/     # Core logic (config, db, security, domain logic)
+│   │   │   ├── market/ # Market data related core logic
+│   │   │   └── news/   # News related core logic
+│   │   ├── ml_models/ # Machine learning models
+│   │   │   └── finetuned_cryptobert/ # Specific ML model directory
+│   │   ├── models/   # Database ORM models (SQLAlchemy)
+│   │   ├── schemas/  # Pydantic data validation schemas
+│   │   └── services/ # Business logic services
+└── frontend/         # React/Vite/TypeScript frontend application
+    ├── public/       # Static assets served directly by the web server
+    └── src/          # Main frontend source code
+        ├── app/      # Core application setup (routing, providers)
+        │   └── routes/ # File-based routes (TanStack Router)
+        │       ├── (auth)/ # Route group for authentication pages
+        │       └── _app/   # Route group for authenticated application pages
+        ├── assets/   # Static assets like images, logos used within the app
+        ├── components/ # Reusable UI components
+        │   ├── error/  # Error handling components (e.g., Not Found)
+        │   ├── layout/ # Page layout components
+        │   └── ui/     # Base UI components (shadcn/ui)
+        ├── features/ # Feature-specific modules
+        │   ├── auth/ # Authentication feature
+        │   │   ├── api/      # API hooks for auth
+        │   │   ├── components/ # UI components for auth
+        │   │   └── types/    # Types specific to auth
+        │   ├── bookmarks/ # Bookmarks feature
+        │   │   ├── api/      # API hooks for bookmarks
+        │   │   └── components/ # UI components for bookmarks
+        │   ├── coins/    # Coins/Cryptocurrency feature
+        │   │   ├── api/      # API hooks for coin data
+        │   │   ├── components/ # UI components for coins
+        │   │   ├── context/  # React context for coin data
+        │   │   └── hooks/    # Custom hooks for coins
+        │   ├── market/   # Market data feature
+        │   │   ├── api/      # API hooks for market data
+        │   │   └── components/ # UI components for market data
+        │   ├── news/     # News feed feature
+        │   │   ├── api/      # API hooks for news
+        │   │   ├── components/ # UI components for news
+        │   │   └── context/  # React context for news data
+        │   └── watchlist/ # Watchlist feature
+        │       ├── api/      # API hooks for watchlist
+        │       └── components/ # UI components for watchlist
+        ├── hooks/    # Shared custom React hooks
+        ├── lib/      # Utility libraries configuration (API client, query client)
+        ├── types/    # Shared TypeScript types and interfaces
+        └── utils/    # General utility functions
+```

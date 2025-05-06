@@ -6,10 +6,9 @@ import logging
 import json
 
 
+
 def setup_logger():
-    """
-    Configure logging for the application
-    """
+    """Configure logging for the application"""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -19,9 +18,7 @@ def setup_logger():
 
 
 def parse_cors(v: Any) -> list[str] | str:
-    """
-    Parse CORS header value to string or list of strings
-    """
+    """Parse CORS header value to string or list of strings"""
     if isinstance(v, str) and not v.startswith("["):
         return [i.strip() for i in v.split(",")]
     elif isinstance(v, list | str):

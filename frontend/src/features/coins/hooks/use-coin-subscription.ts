@@ -21,7 +21,6 @@ const useCoinSubscription = () => {
 
       const currentCount = subscriptionCounters.get(symbol) || 0;
 
-      // Only call the actual subscribe if this is the first reference
       if (currentCount === 0) {
         subscribeToSymbol(symbol);
       }

@@ -1,21 +1,18 @@
 import { createContext, useContext, ReactNode, useState, useMemo } from "react";
 import useBinanceWebSocket from "../hooks/use-binance-websocket";
 
-// Context type definition
 type BinanceWebSocketContextType = {
   isConnected: boolean;
   connect: () => void;
   disconnect: () => void;
 };
 
-// Create context with default values
 const BinanceWebSocketContext = createContext<BinanceWebSocketContextType>({
   isConnected: false,
   connect: () => {},
   disconnect: () => {},
 });
 
-// Provider component
 export const BinanceWebSocketProvider = ({ children }: { children: ReactNode }) => {
   const [isConnected, setIsConnected] = useState(false);
 
@@ -42,7 +39,6 @@ export const BinanceWebSocketProvider = ({ children }: { children: ReactNode }) 
   );
 };
 
-// Custom hook to use the WebSocket context
 export const useBinanceWebSocketContext = () => {
   const context = useContext(BinanceWebSocketContext);
   if (context === undefined) {

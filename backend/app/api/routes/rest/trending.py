@@ -1,13 +1,12 @@
 import math
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlmodel import Session
 
-from app.deps import get_session, CurrentUserDep
+from app.deps import get_session
 from app.services.coin import get_trending_coins_by_mentions
 from app.schemas.coin import TrendingCoinsResponse, TrendingCoin, SentimentStats
 from app.schemas.pagination import PaginationParams
-from app.models.user import User
 
 router = APIRouter(
     prefix="/trending",
@@ -18,21 +17,9 @@ router = APIRouter(
 @router.get("/coins", response_model=TrendingCoinsResponse)
 async def get_trending_coins(
     pagination: PaginationParams = Depends(),
-    session: Session = Depends(get_session),
-    current_user: User = CurrentUserDep
+    session: Session = Depends(get_session)
 ) -> TrendingCoinsResponse:
-    """
-    Get a paginated list of trending coins based on mentions in today's posts,
-    ordered by number of mentions.
-    
-    Args:
-        pagination: Pagination parameters
-        session: Database session
-        current_user: Currently authenticated user
-    
-    Returns:
-        Paginated response containing trending coins with sentiment statistics
-    """
+    """Get paginated list of trending coins based on mentions in today's posts"""
     trending_coins, total_count = await get_trending_coins_by_mentions(
         session=session, 
         page=pagination.page,

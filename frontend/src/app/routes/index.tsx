@@ -23,16 +23,6 @@ const Landing = () => {
       <DotPattern />
 
       <div className="container flex flex-col items-center justify-center gap-6 py-20">
-        {/* <div>
-          <Button
-            variant="secondary"
-            size="sm"
-            className="gap-4"
-          >
-            Explore our API docs <MoveRight className="w-4 h-4" />
-          </Button>
-        </div> */}
-
         <div className="flex gap-4 flex-col">
           <h1 className="text-5xl md:text-7xl max-w-2xl tracking-tighter text-center font-normal">
             <span className="text-primary">Trade smarter with</span>

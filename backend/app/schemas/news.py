@@ -7,22 +7,10 @@ from app.schemas.pagination import PaginatedResponse
 
 
 class SearchParams(BaseModel):
-    """Search parameters for news item queries"""
     query: str = Field(..., min_length=1, description="Search query string")
 
 
-# class PaginatedResponse(BaseModel):
-#     """Generic paginated response"""
-#     page: int
-#     page_size: int
-#     total: int
-#     total_pages: int
-#     has_next: bool
-#     has_prev: bool
-
-
 class CoinResponse(BaseModel):
-    """Coin response model"""
     id: int
     symbol: str
     name: Optional[str] = None
@@ -35,7 +23,6 @@ class CoinResponse(BaseModel):
 
 
 class NewsItem(BaseModel):
-    """Base response model for news items"""
     id: int
     _type: str
     feed: str
@@ -57,5 +44,4 @@ class NewsItem(BaseModel):
         from_attributes = True
 
 class NewsFeedResponse(PaginatedResponse):
-    """Paginated response containing news feed items"""
     items: List[NewsItem]

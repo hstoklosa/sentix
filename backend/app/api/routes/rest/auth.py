@@ -134,11 +134,9 @@ async def refresh_token(
     if not jti or not user_id:
         raise InvalidTokenException()
 
-    # Check if token is blacklisted
     if token_service.is_token_blacklisted(session=session, jti=jti):
         raise InvalidTokenException()
     
-    # Get the user data
     user = user_service.get_user_by_id(session=session, user_id=int(user_id))
     if not user:
         raise InvalidTokenException()
@@ -161,7 +159,6 @@ async def logout(
     session: SessionDep,
     refresh_token: str | None = Cookie(None, include_in_schema=False)
 ):
-    """Blacklist refresh token and clear refresh token cookie"""
     if refresh_token:
         token_service.blacklist_token(session=session, token=refresh_token)
     

@@ -19,14 +19,10 @@ router = APIRouter(prefix="/bookmarks", tags=["bookmarks"])
     summary="Bookmark a news item"
 )
 async def create_bookmark(
-    bookmark_data: BookmarkCreate,
+    session: SessionDep,
     user: CurrentUserDep,
-    session: SessionDep
+    bookmark_data: BookmarkCreate
 ):
-    """
-    Create a bookmark for a news item.
-    - news_item_id: ID of the news item to bookmark
-    """
     result = await bookmark_service.create_bookmark(
         session=session,
         user_id=user.id,
@@ -45,11 +41,6 @@ async def delete_bookmark(
     session: SessionDep,
     news_item_id: int = Path(..., title="The ID of the news item to unbookmark"),
 ):
-    """
-    Remove a bookmark for a news item.
-    
-    - news_item_id: ID of the news item to unbookmark
-    """
     deleted = await bookmark_service.delete_bookmark(
         session=session,
         user_id=user.id,
@@ -75,12 +66,6 @@ async def get_bookmarked_news(
     session: SessionDep,
     pagination: PaginationParams = Depends(),
 ):
-    """
-    Get a paginated list of the current user's bookmarked news items.
-    
-    - page: Page number (1-indexed)
-    - page_size: Number of items per page
-    """
     items, total_count = await bookmark_service.get_user_bookmarks(
         session=session,
         user_id=user.id,
@@ -88,7 +73,6 @@ async def get_bookmarked_news(
         page_size=pagination.page_size
     )
     
-    # Calculate pagination info
     total_pages = (total_count + pagination.page_size - 1) // pagination.page_size
     has_next = pagination.page < total_pages
     has_prev = pagination.page > 1

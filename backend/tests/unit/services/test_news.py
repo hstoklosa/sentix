@@ -9,8 +9,8 @@ from app.models.news import NewsItem, NewsCoin, Coin
 from app.core.news.types import NewsData
 
 # Mocked version of the service functions for testing
-async def mock_get_or_create_coin(session, symbol: str) -> Optional[Coin]:
-    """Mocked version of get_or_create_coin for testing"""
+async def mock_get_coin_by_symbol(session, symbol: str) -> Optional[Coin]:
+    """Mocked version of get_coin_by_symbol for testing"""
     if symbol.upper() == "BTC":
         return Coin(id=1, name="Bitcoin", symbol="BTC", image_url="https://example.com/btc.png")
     return None
@@ -150,20 +150,21 @@ class TestNewsService:
             }
         ]
     
-    @patch("app.services.news.get_or_create_coin", mock_get_or_create_coin)
-    async def test_get_or_create_coin(self, mock_db):
+    async def test_get_coin_by_symbol(self, mock_db):
         """Test retrieving a coin by symbol."""
-        from app.services.news import get_or_create_coin
-        
-        # Test existing coin
-        result = await get_or_create_coin(mock_db, "BTC")
-        assert result is not None
-        assert result.name == "Bitcoin"
-        assert result.symbol == "BTC"
-        
-        # Test non-existent coin
-        result = await get_or_create_coin(mock_db, "UNKNOWN")
-        assert result is None
+        # Use a direct mock instead of patching
+        with patch("app.services.news.get_coin_by_symbol", side_effect=mock_get_coin_by_symbol):
+            from app.services.news import get_coin_by_symbol
+            
+            # Test existing coin
+            result = await get_coin_by_symbol(mock_db, "BTC")
+            assert result is not None
+            assert result.name == "Bitcoin"
+            assert result.symbol == "BTC"
+            
+            # Test non-existent coin
+            result = await get_coin_by_symbol(mock_db, "UNKNOWN")
+            assert result is None
     
     @patch("app.services.news.create_news_item", mock_create_news_item)
     async def test_create_news_item_article(self, news_data_factory, sentiment_data, mock_db):
@@ -298,4 +299,85 @@ class TestNewsService:
         
         result = await get_post_by_id(mock_db, 999)  # Non-existent ID
         
-        assert result is None 
+        assert result is None
+        
+    @pytest.mark.skip("Needs async session handling fix")
+    async def test_search_news_with_real_db(self, async_db_session):
+        """Test the search_news function with a real database session."""
+        from app.services.news import search_news
+        
+        # Create test news items with different content
+        news1 = NewsItem(
+            title="Bitcoin Price Analysis",
+            body="Bitcoin has hit a new all-time high",
+            url="https://example.com/news1",
+            source="CryptoNews",
+            feed="crypto",
+            time=datetime.now(tz=timezone.utc),
+            sentiment="positive",
+            score=0.9,
+            item_type="article"
+        )
+        
+        news2 = NewsItem(
+            title="Ethereum Development Update",
+            body="Ethereum is planning a new upgrade",
+            url="https://example.com/news2",
+            source="CryptoNews",
+            feed="crypto",
+            time=datetime.now(tz=timezone.utc),
+            sentiment="neutral",
+            score=0.5,
+            item_type="article"
+        )
+        
+        news3 = NewsItem(
+            title="Cryptocurrency Market Analysis",
+            body="Bitcoin and other cryptocurrencies are experiencing volatility",
+            url="https://example.com/news3",
+            source="CryptoNews",
+            feed="crypto",
+            time=datetime.now(tz=timezone.utc),
+            sentiment="neutral",
+            score=0.6,
+            item_type="article"
+        )
+        
+        async_db_session.add(news1)
+        async_db_session.add(news2)
+        async_db_session.add(news3)
+        await async_db_session.commit()
+        
+        # Testing search is skipped until we implement async session support
+    
+    @pytest.mark.skip("Needs async session handling fix")
+    async def test_news_coins_association(self, async_db_session):
+        """Test the association between news items and coins"""
+        from app.services.news import get_post_by_id
+        
+        # Create test coins
+        btc_coin = Coin(symbol="BTC", name="Bitcoin", image_url="https://example.com/btc.png")
+        eth_coin = Coin(symbol="ETH", name="Ethereum", image_url="https://example.com/eth.png")
+        async_db_session.add(btc_coin)
+        async_db_session.add(eth_coin)
+        await async_db_session.commit()
+        await async_db_session.refresh(btc_coin)
+        await async_db_session.refresh(eth_coin)
+        
+        # Create a news item
+        news_item = NewsItem(
+            title="Crypto Market Update",
+            body="Bitcoin and Ethereum prices are changing",
+            url="https://example.com/news/crypto-update",
+            source="CryptoNews",
+            feed="crypto",
+            time=datetime.now(tz=timezone.utc),
+            sentiment="neutral",
+            score=0.5,
+            item_type="article"
+        )
+        async_db_session.add(news_item)
+        await async_db_session.commit()
+        await async_db_session.refresh(news_item)
+        
+        # Test is skipped until we implement async session support

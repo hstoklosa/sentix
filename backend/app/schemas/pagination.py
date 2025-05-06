@@ -4,7 +4,6 @@ from pydantic import BaseModel, Field
 
 
 class PaginationParams(BaseModel):
-    """Pagination parameters for API requests"""
     page: int = Field(default=1, ge=1, description="Page number (1-indexed)")
     page_size: int = Field(default=20, ge=1, le=100, description="Number of items per page")
 
@@ -12,7 +11,6 @@ class PaginationParams(BaseModel):
 T = TypeVar('T')
 
 class PaginatedResponse(BaseModel, Generic[T]):
-    """Generic paginated response"""
     page: int
     page_size: int
     total: int

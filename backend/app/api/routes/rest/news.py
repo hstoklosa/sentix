@@ -5,12 +5,12 @@ from sqlmodel import Session
 
 from app.deps import get_session, CurrentUserDep
 from app.services.news import get_news_feed, get_post_by_id, search_news
-from app.services.bookmark import is_bookmarked
 from app.schemas.news import (
-    NewsFeedResponse, 
     NewsItem as NewsItemSchema,
+    NewsFeedResponse, 
     SearchParams
 )
+from app.services.bookmark import is_bookmarked
 from app.schemas.pagination import PaginationParams
 from app.models.user import User
 from app.utils import format_datetime_iso
@@ -27,17 +27,7 @@ async def get_posts(
     session: Session = Depends(get_session),
     current_user: User = CurrentUserDep
 ) -> NewsFeedResponse:
-    """
-    Get a paginated list of posts ordered by published date
-    
-    Args:
-        pagination: Pagination parameters
-        session: Database session
-        current_user: Currently authenticated user
-    
-    Returns:
-        Paginated response containing posts from the feed
-    """
+    """Get a paginated list of posts ordered by published date"""
     items, total_count = await get_news_feed(
         session=session, 
         page=pagination.page,
@@ -83,18 +73,7 @@ async def search_posts(
     session: Session = Depends(get_session),
     current_user: User = CurrentUserDep
 ) -> NewsFeedResponse:
-    """
-    Search news items by query string
-    
-    Args:
-        search: Search parameters
-        pagination: Pagination parameters
-        session: Database session
-        current_user: Currently authenticated user
-    
-    Returns:
-        Paginated response containing matching posts
-    """
+    """Search news items by query string"""
     items, total_count = await search_news(
         session=session,
         query=search.query,
@@ -140,17 +119,7 @@ async def get_post(
     session: Session = Depends(get_session),
     current_user: User = CurrentUserDep
 ) -> NewsItemSchema:
-    """
-    Get a post by its ID
-    
-    Args:
-        post_id: The news item ID
-        session: Database session
-        current_user: Currently authenticated user
-    
-    Returns:
-        The news item
-    """
+    """Get a post by its ID"""
     post = await get_post_by_id(session=session, post_id=post_id)
     
     if not post:
@@ -158,14 +127,11 @@ async def get_post(
     
     # Transform SQLModel instances to schema objects with properly formatted data
     post_dict = post.model_dump()
-    post_dict["coins"] = post.get_formatted_coins()
-    post_dict["is_bookmarked"] = await is_bookmarked(
-        session=session,
-        user_id=current_user.id,
-        news_item_id=post.id
-    )
     post_dict["time"] = format_datetime_iso(post.time)
     post_dict["created_at"] = format_datetime_iso(post.created_at)
     post_dict["updated_at"] = format_datetime_iso(post.updated_at)
+    post_dict["coins"] = post.get_formatted_coins()
+    post_dict["is_bookmarked"] = await is_bookmarked(
+        session=session, user_id=current_user.id, news_item_id=post.id)
     
     return NewsItemSchema.model_validate(post_dict)

@@ -72,6 +72,6 @@ class Settings(BaseSettings):
     COINMARKETCAP_API_KEY: str
     COINGECKO_API_KEY: str
     COINDESK_API_KEY: str = ""
-    COINDESK_API_POLL_INTERVAL: int = 300  # 5 minutes in seconds
+    COINDESK_API_POLL_INTERVAL: int = 300  # 5 minutes
 
 settings = Settings()

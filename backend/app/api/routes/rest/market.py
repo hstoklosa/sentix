@@ -2,9 +2,8 @@ from datetime import datetime, time, date
 from typing import Annotated
 import logging
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
-
 
 from app.core.market.coinmarketcap import cmc_client
 from app.core.market.coingecko import coingecko_client
@@ -23,12 +22,9 @@ router = APIRouter(
 
 @router.get("/", response_model=MarketStats)
 async def get_market_stats(
-    request: Request,
     force_refresh: bool = False,
     session: Session = Depends(get_session)
 ):
-    logger.debug("Fetching market stats from providers")
-    
     # Use force_refresh parameter to bypass cache if requested
     stats = await cmc_client.get_market_stats(force_refresh=force_refresh)
     fear_greed_index = await cmc_client.get_fear_greed_index(force_refresh=force_refresh)
@@ -93,11 +89,9 @@ async def get_coins(
         force_refresh=force_refresh
     )
     
-    # Total count is not directly available from the API
-    # We'll have to estimate based on the assumption that the total 
-    # is at least  the number of items returned, and likely more
+    # Total count is not provided by the API (i.e., using an estimation)
     items_count = len(coins)
-    total_items = max(items_count, 5000)  # Assuming CoinGecko has ~5000 coins
+    total_items = max(items_count, 5000)
     total_pages = (total_items + pagination.page_size - 1) // pagination.page_size
     
     # Map the response to CoinResponse objects
@@ -134,9 +128,6 @@ async def get_coin_chart_data(
     interval: str = "daily",
     force_refresh: bool = False
 ):
-    """Get historical chart data for a specific coin"""
-    logger.debug(f"Fetching chart data for {coin_id} for {days} days with {interval} interval")
-    
     # Validate interval parameter
     valid_intervals = ["daily", "hourly"]
     if interval not in valid_intervals:
@@ -155,7 +146,7 @@ async def get_coin_chart_data(
         force_refresh=force_refresh
     )
     
-    # Transform the data to our schema format
+    # Transform the data into project's schema
     prices = [
         ChartDataPoint(timestamp=item[0], value=item[1])
         for item in chart_data.get("prices", [])
