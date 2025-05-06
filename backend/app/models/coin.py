@@ -1,6 +1,6 @@
 from typing import List, Optional, TYPE_CHECKING
-from sqlmodel import Field, Relationship
 
+from sqlmodel import Field, Relationship
 from app.models.base import Base
 
 if TYPE_CHECKING:

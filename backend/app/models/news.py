@@ -70,7 +70,6 @@ class NewsCoin(SQLModel, table=True):
     price_usd: Optional[float] = Field(default=None)
     price_timestamp: Optional[datetime] = Field(default=None)
     
-    # Add constraint to enforce uniqueness between posts and coins
     __table_args__ = (
         UniqueConstraint("news_item_id", "coin_id", name="unique_news_coin"),
     )

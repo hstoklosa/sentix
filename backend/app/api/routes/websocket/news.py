@@ -10,17 +10,9 @@ router = APIRouter(prefix="/news", tags=["news"])
 
 @router.websocket("/ws/{client_id}")
 async def news_websocket(websocket: WebSocket, client_id: str):
-    """
-    WebSocket endpoint for receiving real-time news updates
-    
-    Args:
-        websocket: The WebSocket connection
-        client_id: A unique identifier for the client
-    """
     is_authenticated, user = await authenticate_ws_connection(websocket)
     
     if not is_authenticated:
-        logger.warning(f"Unauthorized WebSocket connection attempt from client {client_id}")
         return
     
     manager = NewsManager.get_instance() 
@@ -33,57 +25,54 @@ async def news_websocket(websocket: WebSocket, client_id: str):
         
         # Keep the connection alive until client disconnects
         while True:
-            try:
-                # Wait for messages from the client
-                data = await websocket.receive_json()
-                logger.info(f"Received message from client {client_id}: {data}")
+            data = await websocket.receive_json()
+            logger.info(f"Received message from client {client_id}: {data}")
+            
+            if "type" not in data:
+                continue
                 
-                if "type" not in data:
-                    continue
+            message_type = data["type"]
+            
+            if message_type == "ping":
+                await websocket.send_json({"type": "pong"})
+            elif message_type == "subscribe":
+                if "feed" in data and isinstance(data["feed"], str):
+                    feed = data["feed"]
+                    subscription = await manager.update_subscription(websocket, feed)
                     
-                message_type = data["type"]
-                
-                if message_type == "ping":
-                    await websocket.send_json({"type": "pong"})
-                elif message_type == "subscribe":
-                    if "feed" in data and isinstance(data["feed"], str):
-                        feed = data["feed"]
-                        subscription = await manager.update_subscription(websocket, feed)
-                        
-                        if subscription:
-                            await websocket.send_json({
-                                "type": "subscribed",
-                                "feed": subscription
-                            })
-                        else:
-                            await websocket.send_json({
-                                "type": "error",
-                                "message": f"Feed '{feed}' not available"
-                            })
-                elif message_type == "unsubscribe":
-                    success = await manager.unsubscribe(websocket)
-                    await websocket.send_json({
-                        "type": "unsubscribed",
-                        "success": success
-                    })
-                elif message_type == "get_subscription":
-                    subscription = await manager.get_subscription(websocket)
-                    await websocket.send_json({
-                        "type": "subscription",
-                        "feed": subscription
-                    })
-                elif message_type == "get_available_feeds":
-                    feeds = await manager.get_available_feeds()
-                    await websocket.send_json({
-                        "type": "available_feeds",
-                        "feeds": list(feeds)
-                    })
-                    logger.info(f"Sent available feeds to client {client_id}: {feeds}")
-                else:
-                    logger.warning(f"Unknown message type from client {client_id}: {message_type}")
-            except WebSocketDisconnect:
-                logger.info(f"Client {client_id} disconnected from news WebSocket")
-                break
+                    if subscription:
+                        await websocket.send_json({
+                            "type": "subscribed",
+                            "feed": subscription
+                        })
+                    else:
+                        await websocket.send_json({
+                            "type": "error",
+                            "message": f"Feed '{feed}' not available"
+                        })
+            elif message_type == "unsubscribe":
+                success = await manager.unsubscribe(websocket)
+                await websocket.send_json({
+                    "type": "unsubscribed",
+                    "success": success
+                })
+            elif message_type == "get_subscription":
+                subscription = await manager.get_subscription(websocket)
+                await websocket.send_json({
+                    "type": "subscription",
+                    "feed": subscription
+                })
+            elif message_type == "get_available_feeds":
+                feeds = await manager.get_available_feeds()
+                await websocket.send_json({
+                    "type": "available_feeds",
+                    "feeds": list(feeds)
+                })
+                logger.info(f"Sent available feeds to client {client_id}: {feeds}")
+            else:
+                logger.warning(f"Unknown message type from client {client_id}: {message_type}")
+    except WebSocketDisconnect:
+        logger.info(f"Client {client_id} disconnected from news WebSocket")
     except Exception as e:
         logger.error(f"Error in WebSocket connection: {e}")
     finally:
