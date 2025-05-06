@@ -9,7 +9,7 @@ from app.api.main import api_router
 from app.core.db import create_db_and_tables
 from app.services.token import purge_expired_tokens
 from app.services.coin import sync_coins_from_coingecko, async_sync_coins_from_coingecko
-from app.ml_models.sentiment_analysis import load_model
+from app.ml_models.sentiment_analysis import sentiment_analyser
 from app.core.config import settings
 from app.utils import setup_logger
 from app.core.news.news_manager import NewsManager
@@ -28,8 +28,7 @@ async def on_startup():
     create_db_and_tables()
     await async_sync_coins_from_coingecko()
 
-    # Load the sentiment analyser
-    load_model()
+    sentiment_analyser.load()
 
     # Initialize news manager to connect to providers at startup
     news_manager = NewsManager.get_instance()
@@ -49,7 +48,7 @@ async def on_startup():
     scheduler.add_job(
         id="sync_coins",
         name="Synchronise coins from CoinGecko",
-        func=sync_coins_from_coingecko,  # Using the synchronous wrapper
+        func=sync_coins_from_coingecko,
         trigger=IntervalTrigger(hours=12),  # run twice a day
         replace_existing=True,
     )
