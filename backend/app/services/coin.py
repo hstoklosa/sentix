@@ -3,9 +3,10 @@ import asyncio
 from datetime import datetime, time, date
 from typing import List, Tuple, Dict, Any
 
-from sqlmodel import select, Session, func
+from sqlmodel import select, func
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.db import engine
+from app.core.database import sessionmanager
 from app.core.market.coingecko import CoinGeckoClient
 from app.models.coin import Coin
 from app.models.news import NewsItem, NewsCoin
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 async def get_trending_coins_by_mentions(
-    session: Session,
+    session: AsyncSession,
     page: int = 1,
     page_size: int = 20
 ) -> Tuple[List[Dict[str, Any]], int]:
@@ -42,7 +43,8 @@ async def get_trending_coins_by_mentions(
     
     # Get total count for pagination
     count_query = select(func.count()).select_from(subquery)
-    total_count = session.exec(count_query).one()
+    result = await session.execute(count_query)
+    total_count = result.scalar_one()
     
     # Get coin details with mention count, ordered by mention count
     offset = (page - 1) * page_size
@@ -58,7 +60,8 @@ async def get_trending_coins_by_mentions(
         .limit(page_size)
     )
     
-    results = session.exec(query).all()
+    result = await session.execute(query)
+    results = result.all()
 
     # Process the results with sentiment statistics
     trending_coins = []
@@ -71,7 +74,8 @@ async def get_trending_coins_by_mentions(
             .where(NewsItem.time >= start_of_day)
             .where(NewsItem.time <= end_of_day)
         )
-        news_items = session.exec(news_query).all()
+        result = await session.execute(news_query)
+        news_items = result.scalars().all()
         
         # Calculate sentiment statistics
         positive_count = sum(1 for item in news_items if item.sentiment == "Bullish")
@@ -96,7 +100,7 @@ async def get_trending_coins_by_mentions(
     return trending_coins, total_count
 
 
-async def async_sync_coins_from_coingecko():
+async def sync_coins_from_coingecko():
     """Sync coins from CoinGecko API to database (async version)"""
     client = CoinGeckoClient()
     coins_list = await client.get_coins_markets()
@@ -107,7 +111,7 @@ async def async_sync_coins_from_coingecko():
     
     logger.info(f"Fetched {len(coins_list)} coins from CoinGecko")
     
-    with Session(engine) as session:
+    async with sessionmanager.session() as session:
         for coin_data in coins_list:
             try:
                 coin_id = coin_data.get("id")
@@ -119,8 +123,9 @@ async def async_sync_coins_from_coingecko():
                     continue
                 
                 # Check if coin already exists
-                statement = select(Coin).where(Coin.symbol == symbol)
-                existing_coin = session.exec(statement).first()
+                stmt = select(Coin).where(Coin.symbol == symbol)
+                result = await session.execute(stmt)
+                existing_coin = result.scalar_one_or_none()
                 
                 # Update existing coin or create new one
                 if existing_coin:
@@ -138,15 +143,6 @@ async def async_sync_coins_from_coingecko():
                 logger.error(f"Error processing coin {coin_data.get('symbol')}: {str(e)}")
                 continue
         
-        session.commit()
+        await session.commit()
     
     logger.info("Coin synchronisation completed")
-
-
-def sync_coins_from_coingecko():
-    """
-    Sync coins from CoinGecko API to database (synchronous wrapper)
-    This function creates an event loop and runs the async function
-    """
-    # Run the async function in the event loop
-    asyncio.run(async_sync_coins_from_coingecko()) 

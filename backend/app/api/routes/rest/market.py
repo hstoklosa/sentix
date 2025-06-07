@@ -3,14 +3,14 @@ from typing import Annotated
 import logging
 
 from fastapi import APIRouter, Depends
-from sqlmodel import Session, select
+from sqlmodel import select
 
 from app.core.market.coinmarketcap import cmc_client
 from app.core.market.coingecko import coingecko_client
 from app.schemas.market import MarketStats, CoinResponse, MarketChartData, ChartDataPoint
 from app.schemas.pagination import PaginatedResponse, PaginationParams
 from app.models.news import NewsItem
-from app.core.db import get_session
+from app.deps import AsyncSessionDep
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +22,8 @@ router = APIRouter(
 
 @router.get("/", response_model=MarketStats)
 async def get_market_stats(
-    force_refresh: bool = False,
-    session: Session = Depends(get_session)
+    session: AsyncSessionDep,
+    force_refresh: bool = False
 ):
     # Use force_refresh parameter to bypass cache if requested
     stats = await cmc_client.get_market_stats(force_refresh=force_refresh)
@@ -37,11 +37,13 @@ async def get_market_stats(
     end_of_day = datetime.combine(today, time.max)
     
     # Query for today's news items
-    today_news = session.exec(
+    stmt = (
         select(NewsItem)
         .where(NewsItem.time >= start_of_day)
         .where(NewsItem.time <= end_of_day)
-    ).all()
+    )
+    result = await session.execute(stmt)
+    today_news = result.scalars().all()
     
     # Count sentiment types
     bullish_count = sum(1 for item in today_news if item.sentiment == "Bullish")
@@ -78,9 +80,9 @@ async def get_market_stats(
 
 @router.get("/coins", response_model=PaginatedResponse[CoinResponse])
 async def get_coins(
+    session: AsyncSessionDep,
     pagination: Annotated[PaginationParams, Depends()],
     force_refresh: bool = False,
-    session: Session = Depends(get_session)
 ):
     # Get coins with pagination parameters and optional force refresh
     coins = await coingecko_client.get_coins_markets(

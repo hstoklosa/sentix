@@ -1,15 +1,13 @@
 from datetime import timedelta
 
 from fastapi import (
-    APIRouter, 
-    HTTPException, 
-    status, 
-    Depends, 
-    Response, 
-    Cookie, 
+    APIRouter,
+    HTTPException,
+    status,
+    Response,
+    Cookie,
     Request
 )
-from sqlmodel import Session
 
 from app.core.security import (
     create_access_token,
@@ -17,7 +15,7 @@ from app.core.security import (
     decode_token,
     verify_token_type,
 )
-from app.deps import get_session, SessionDep, CurrentUserDep
+from app.deps import AsyncSessionDep, CurrentUserDep
 from app.schemas.user import UserCreate, UserLogin, UserPublic
 from app.services import (
     user as user_service,
@@ -65,18 +63,18 @@ async def get_current_user(current_user: CurrentUserDep) -> UserPublic:
 async def register(
     response: Response,
     user_data: UserCreate,
-    session: Session = Depends(get_session)
+    session: AsyncSessionDep 
 ) -> AuthResponse:
     try:
         # Check if email already exists
-        if existing_user := user_service.get_user_by_email(session=session, email=user_data.email):
+        if existing_user := await user_service.get_user_by_email(session=session, email=user_data.email):
             raise DuplicateEmailException()
         
         # Check if username already exists
-        if existing_user := user_service.get_user_by_username(session=session, username=user_data.username):
+        if existing_user := await user_service.get_user_by_username(session=session, username=user_data.username):
             raise DuplicateUsernameException()
         
-        user = user_service.create_user(session=session, user=user_data)
+        user = await user_service.create_user(session=session, user=user_data)
         access_token = create_access_token(user.id)
         refresh_token = create_refresh_token(user.id)
         
@@ -95,9 +93,9 @@ async def register(
 async def login(
     response: Response,
     credentials: UserLogin,
-    session: Session = Depends(get_session)
+    session: AsyncSessionDep
 ) -> AuthResponse:
-    user = user_service.authenticate_user(
+    user = await user_service.authenticate_user(
         session=session,
         email=credentials.email,
         username=credentials.username,
@@ -120,7 +118,7 @@ async def login(
 async def refresh_token(
     request: Request,
     response: Response,
-    session: SessionDep,
+    session: AsyncSessionDep,
     refresh_token: str | None = Cookie(None, include_in_schema=False)
 ) -> AuthResponse:
     if not refresh_token:
@@ -137,7 +135,7 @@ async def refresh_token(
     if token_service.is_token_blacklisted(session=session, jti=jti):
         raise InvalidTokenException()
     
-    user = user_service.get_user_by_id(session=session, user_id=int(user_id))
+    user = await user_service.get_user_by_id(session=session, user_id=int(user_id))
     if not user:
         raise InvalidTokenException()
     
@@ -156,11 +154,11 @@ async def refresh_token(
 @router.post("/logout")
 async def logout(
     response: Response,
-    session: SessionDep,
+    session: AsyncSessionDep,
     refresh_token: str | None = Cookie(None, include_in_schema=False)
 ):
     if refresh_token:
-        token_service.blacklist_token(session=session, token=refresh_token)
+        await token_service.blacklist_token(session=session, token=refresh_token)
     
     secure_cookie = settings.ENVIRONMENT == "production"
     samesite = "lax" if settings.ENVIRONMENT == "development" else "strict"

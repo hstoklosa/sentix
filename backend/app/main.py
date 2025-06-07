@@ -1,15 +1,15 @@
 from fastapi import FastAPI
-import asyncio
+from contextlib import asynccontextmanager
 
 from starlette.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
 from app.api.main import api_router
-from app.core.db import create_db_and_tables
+from app.core.database import create_db_and_tables
 from app.services.token import purge_expired_tokens
-from app.services.coin import sync_coins_from_coingecko, async_sync_coins_from_coingecko
-from app.ml_models.sentiment_analysis import sentiment_analyser
+from app.services.coin import sync_coins_from_coingecko
+# from app.ml_models.sentiment_analysis import sentiment_analyser
 from app.core.config import settings
 from app.utils import setup_logger
 from app.core.news.news_manager import NewsManager
@@ -17,21 +17,17 @@ from app.core.news.news_manager import NewsManager
 logger = setup_logger()
 scheduler = AsyncIOScheduler()
 
-app = FastAPI(
-    title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_BASE_PATH}/openapi.json",
-)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Function that handles the startup and shutdown events."""
+    await create_db_and_tables()
+    await sync_coins_from_coingecko()
 
-@app.on_event("startup")
-async def on_startup():
-    create_db_and_tables()
-    await async_sync_coins_from_coingecko()
-    
-    sentiment_analyser.load_model()
+    # sentiment_analyser.load_model()
 
     news_manager = NewsManager.get_instance()
-    asyncio.create_task(news_manager.initialize())
+    await news_manager.initialize()
 
     # Schedule token cleanup task
     scheduler.add_job(
@@ -53,15 +49,22 @@ async def on_startup():
     
     scheduler.start()
 
+    try:
+        yield
+    finally:
+        news_manager = NewsManager.get_instance()
+        if news_manager.is_initialized:
+            await news_manager.shutdown()
 
-@app.on_event("shutdown")
-async def on_shutdown():
-    news_manager = NewsManager.get_instance()
-    if news_manager.is_initialized:
-        await news_manager.shutdown()
-    
-    if scheduler.running:
-        scheduler.shutdown()
+        if scheduler.running:
+            scheduler.shutdown()
+
+
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    openapi_url=f"{settings.API_BASE_PATH}/openapi.json",
+    lifespan=lifespan,
+)
 
 
 if settings.all_cors_origins:
@@ -72,5 +75,6 @@ if settings.all_cors_origins:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
 
 app.include_router(api_router, prefix=settings.API_BASE_PATH)

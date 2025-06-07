@@ -56,6 +56,8 @@ class Settings(BaseSettings):
             port=self.POSTGRES_PORT,
             path=self.POSTGRES_DB,
         )
+    
+    ECHO_SQL: bool = False
 
     # AUTH
     SECRET_KEY: str = secrets.token_urlsafe(32)

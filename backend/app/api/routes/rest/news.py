@@ -1,9 +1,9 @@
 import math
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.deps import get_session, CurrentUserDep
+from app.deps import AsyncSessionDep, CurrentUserDep
 from app.services.news import get_news_feed, get_post_by_id, search_news
 from app.schemas.news import (
     NewsItem as NewsItemSchema,
@@ -23,8 +23,8 @@ router = APIRouter(
 
 @router.get("/", response_model=NewsFeedResponse)
 async def get_posts(
+    session: AsyncSessionDep,
     pagination: PaginationParams = Depends(),
-    session: Session = Depends(get_session),
     current_user: User = CurrentUserDep
 ) -> NewsFeedResponse:
     """Get a paginated list of posts ordered by published date"""
@@ -68,10 +68,10 @@ async def get_posts(
 
 @router.get("/search", response_model=NewsFeedResponse)
 async def search_posts(
+    session: AsyncSessionDep,
+    current_user: CurrentUserDep,
     search: SearchParams = Depends(),
     pagination: PaginationParams = Depends(),
-    session: Session = Depends(get_session),
-    current_user: User = CurrentUserDep
 ) -> NewsFeedResponse:
     """Search news items by query string"""
     items, total_count = await search_news(
@@ -116,8 +116,8 @@ async def search_posts(
 @router.get("/{post_id}", response_model=NewsItemSchema)
 async def get_post(
     post_id: int,
-    session: Session = Depends(get_session),
-    current_user: User = CurrentUserDep
+    session: AsyncSessionDep,
+    current_user: CurrentUserDep
 ) -> NewsItemSchema:
     """Get a post by its ID"""
     post = await get_post_by_id(session=session, post_id=post_id)

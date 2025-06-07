@@ -5,13 +5,13 @@ import logging
 import asyncio
 from fastapi import WebSocket
 
-from app.core.db import get_session
+from app.core.database import sessionmanager
 from app.core.news.tree_news import TreeNews
 from app.core.news.coindesk_news import CoinDeskNews
 from app.core.news.types import NewsData, NewsProvider
 from app.models.user import User
 from app.models.news import NewsItem
-from app.ml_models.sentiment_analysis import sentiment_analyser
+# from app.ml_models.sentiment_analysis import sentiment_analyser
 from app.services.news import save_news_item
 from app.utils import format_datetime_iso
 
@@ -115,11 +115,20 @@ class NewsManager:
             provider_name: The name of the provider that sent the news
         """
         try:
-            session = next(get_session())
-            news_data.feed = provider_name
-            sentiment = sentiment_analyser.predict(news_data.body)
-            saved_post = await save_news_item(session, news_data, sentiment)
-            await self.broadcast_to_clients(saved_post)
+            async with sessionmanager.session() as session:
+                news_data.feed = provider_name
+
+                # TODO: Temporarily hardcode results of sentiment analysis
+                # sentiment = sentiment_analyser.predict(news_data.body)
+                # saved_post = await save_news_item(session, news_data, sentiment)
+
+                saved_post = await save_news_item(session, news_data, {
+                    "label": "neutral",
+                    "score": 0.5,
+                    "polarity": 0.0
+                })
+
+                await self.broadcast_to_clients(saved_post)
         except Exception as e:
             logger.error(f"Error processing news item: {str(e)}")
     
@@ -245,35 +254,6 @@ class NewsManager:
             # Make a safe copy of connections to avoid mutation during iteration
             connections = list(self.active_connections.items())
             disconnected_websockets = []
-            
-            # logger.info(f"Broadcasting news item from {post.feed}: {post.title}")
-            # client_count = len(connections)
-            # logger.info(f"Number of active connections: {client_count}")
-            
-            # # Debug each connection and its subscription
-            # if client_count > 0:
-            #     for ws, conn in connections:
-            #         username = conn.user.username if conn.user else "Anonymous"
-            #         sub = conn.current_subscription or "None"
-            #         logger.debug(f"Client {username} (websocket ID: {id(ws)}) is subscribed to: {sub}")
-            
-            # formatted_post = {
-            #     "id": post.id,
-            #     "_type": post.item_type,
-            #     "title": post.title,
-            #     "body": post.body[:100] + "..." if len(post.body) > 100 else post.body,  # Truncate for logging
-            #     "source": post.source,
-            #     "url": post.url,
-            #     "icon_url": post.icon_url,
-            #     "image_url": post.image_url,
-            #     "feed": post.feed,
-            #     "time": format_datetime_iso(post.time),
-            #     "created_at": format_datetime_iso(post.created_at),
-            #     "updated_at": format_datetime_iso(post.updated_at),
-            #     "coins": post.get_formatted_coins(),
-            #     "sentiment": post.sentiment,
-            #     "score": post.score
-            # }
 
             message = {
                 "type": "news",

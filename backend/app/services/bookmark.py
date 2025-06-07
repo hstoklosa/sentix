@@ -1,9 +1,10 @@
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 import logging
 
-from sqlmodel import Session, select, func
+from sqlmodel import select, func
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 
 from app.models.bookmark import NewsBookmark
@@ -12,7 +13,7 @@ from app.models.news import NewsItem
 logger = logging.getLogger(__name__)
 
 
-async def create_bookmark(session: Session, user_id: int, news_item_id: int) -> NewsBookmark:
+async def create_bookmark(session: AsyncSession, user_id: int, news_item_id: int) -> NewsBookmark:
     """
     Create a bookmark for a news item
     
@@ -28,7 +29,8 @@ async def create_bookmark(session: Session, user_id: int, news_item_id: int) -> 
         HTTPException: If news item doesn't exist or bookmark already exists
     """
     # Check if news item exists
-    news_item = session.exec(select(NewsItem).where(NewsItem.id == news_item_id)).first()
+    result = await session.execute(select(NewsItem).where(NewsItem.id == news_item_id))
+    news_item = result.scalar_one_or_none()
     if not news_item:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -39,16 +41,17 @@ async def create_bookmark(session: Session, user_id: int, news_item_id: int) -> 
         # Create bookmark
         bookmark = NewsBookmark(user_id=user_id, news_item_id=news_item_id)
         session.add(bookmark)
-        session.commit()
-        session.refresh(bookmark)
+        await session.commit()
+        await session.refresh(bookmark)
         return bookmark
     except IntegrityError:
-        session.rollback()
+        await session.rollback()
         # Get existing bookmark if it was a duplicate
-        existing = session.exec(
+        result = await session.execute(
             select(NewsBookmark)
             .where(NewsBookmark.user_id == user_id, NewsBookmark.news_item_id == news_item_id)
-        ).first()
+        )
+        existing = result.scalar_one_or_none()
         if existing:
             return existing
         
@@ -59,7 +62,7 @@ async def create_bookmark(session: Session, user_id: int, news_item_id: int) -> 
         )
 
 
-async def delete_bookmark(session: Session, user_id: int, news_item_id: int) -> bool:
+async def delete_bookmark(session: AsyncSession, user_id: int, news_item_id: int) -> bool:
     """
     Delete a user's bookmark for a news item
     
@@ -78,17 +81,18 @@ async def delete_bookmark(session: Session, user_id: int, news_item_id: int) -> 
             NewsBookmark.news_item_id == news_item_id
         )
     )
-    bookmark = session.exec(stmt).first()
+    result = await session.execute(stmt)
+    bookmark = result.scalar_one_or_none()
     
     if bookmark:
-        session.delete(bookmark)
-        session.commit()
+        await session.delete(bookmark)
+        await session.commit()
         return True
     
     return False
 
 
-async def is_bookmarked(session: Session, user_id: int, news_item_id: int) -> bool:
+async def is_bookmarked(session: AsyncSession, user_id: int, news_item_id: int) -> bool:
     """
     Check if a news item is bookmarked by a user
     
@@ -107,12 +111,13 @@ async def is_bookmarked(session: Session, user_id: int, news_item_id: int) -> bo
             NewsBookmark.news_item_id == news_item_id
         )
     )
-    bookmark = session.exec(stmt).first()
+    result = await session.execute(stmt)
+    bookmark = result.scalar_one_or_none()
     return bookmark is not None
 
 
 async def get_user_bookmarks(
-    session: Session, 
+    session: AsyncSession, 
     user_id: int, 
     page: int = 1, 
     page_size: int = 20
@@ -139,7 +144,8 @@ async def get_user_bookmarks(
         .select_from(NewsBookmark)
         .where(NewsBookmark.user_id == user_id)
     )
-    total_count = session.exec(count_stmt).one()
+    result = await session.execute(count_stmt)
+    total_count = result.scalar_one()
     
     # Get bookmarked items with news item data
     stmt = (
@@ -152,14 +158,15 @@ async def get_user_bookmarks(
         .limit(page_size)
     )
     
-    results = session.exec(stmt).all()
+    result = await session.execute(stmt)
+    results = result.all()
     
     # Combine news items with bookmark information
     items = []
     for news_item, bookmark in results:
         # Convert to dict and add bookmark info
         item_dict = {
-            **news_item.dict(),
+            **news_item.model_dump(),  # Changed from dict() to model_dump() for Pydantic v2
             "bookmark_id": bookmark.id,
             "bookmarked_at": bookmark.created_at
         }

@@ -2,14 +2,13 @@ from typing import Tuple, Optional
 from urllib.parse import parse_qs
 
 from fastapi import WebSocket, status
-from fastapi.concurrency import run_in_threadpool
-from sqlmodel import Session
-import jwt
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.db import get_session
+from app.core.database import sessionmanager
 from app.core.security import decode_token, verify_token_type
 from app.services.user import get_user_by_id
 from app.models.user import User
+import jwt
 
 
 async def get_token_from_query(websocket: WebSocket) -> Optional[str]:
@@ -54,17 +53,9 @@ async def get_current_ws_user(websocket: WebSocket) -> Optional[User]:
     except (TypeError, ValueError):
         return None
 
-    def _get_user_sync(user_id_int: int) -> Optional[User]:
-        db_session: Session = next(get_session())
-        try:
-            user = get_user_by_id(session=db_session, user_id=user_id_int)
-            return user
-        finally:
-            pass
-
-    # Run the synchronous database call in a threadpool
-    user = await run_in_threadpool(_get_user_sync, user_id)
-    return user
+    async with sessionmanager.session() as session:
+        user = await get_user_by_id(session=session, user_id=user_id)
+        return user
 
 
 async def authenticate_ws_connection(websocket: WebSocket) -> Tuple[bool, Optional[User]]:

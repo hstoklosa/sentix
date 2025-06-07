@@ -1,6 +1,6 @@
-from fastapi import APIRouter, status, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, status, Depends, HTTPException, Path
 
-from app.deps import SessionDep, CurrentUserDep
+from app.deps import AsyncSessionDep, CurrentUserDep
 from app.schemas.bookmark import (
     BookmarkCreate, 
     BookmarkResponse, 
@@ -19,7 +19,7 @@ router = APIRouter(prefix="/bookmarks", tags=["bookmarks"])
     summary="Bookmark a news item"
 )
 async def create_bookmark(
-    session: SessionDep,
+    session: AsyncSessionDep,
     user: CurrentUserDep,
     bookmark_data: BookmarkCreate
 ):
@@ -38,7 +38,7 @@ async def create_bookmark(
 )
 async def delete_bookmark(
     user: CurrentUserDep,
-    session: SessionDep,
+    session: AsyncSessionDep,
     news_item_id: int = Path(..., title="The ID of the news item to unbookmark"),
 ):
     deleted = await bookmark_service.delete_bookmark(
@@ -63,7 +63,7 @@ async def delete_bookmark(
 )
 async def get_bookmarked_news(
     user: CurrentUserDep,
-    session: SessionDep,
+    session: AsyncSessionDep,
     pagination: PaginationParams = Depends(),
 ):
     items, total_count = await bookmark_service.get_user_bookmarks(

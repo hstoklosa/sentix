@@ -2,7 +2,10 @@ import logging
 from typing import List, Tuple, Optional
 from datetime import datetime
 
-from sqlmodel import Session, select, func, or_
+# from sqlmodel import Session, select, func, or_
+from sqlmodel import select, func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import or_
 from sqlalchemy.orm import selectinload
 
 from app.models.news import Coin, NewsItem, NewsCoin
@@ -12,12 +15,14 @@ from app.core.market.coingecko import coingecko_client
 logger = logging.getLogger(__name__)
 
 
-async def get_coin_by_symbol(session: Session, symbol: str) -> Optional[Coin]:
-    """Get a coin by symbol"""
-    return session.exec(select(Coin).where(Coin.symbol == symbol)).first()
+async def get_coin_by_symbol(session: AsyncSession, symbol: str) -> Optional[Coin]:
+    """Get a coin by its symbol"""
+    stmt = select(Coin).where(Coin.symbol == symbol)
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
 
 
-async def create_news_item(session: Session, news_data: NewsData, sentiment: dict) -> NewsItem:
+async def create_news_item(session: AsyncSession, news_data: NewsData, sentiment: dict) -> NewsItem:
     """
     Create a news item (article or social post)
     
@@ -45,8 +50,8 @@ async def create_news_item(session: Session, news_data: NewsData, sentiment: dic
     )
     
     session.add(item)
-    session.commit()
-    session.refresh(item)
+    await session.commit()
+    await session.refresh(item)
     
     if news_data.coins:
         current_time = datetime.utcnow()
@@ -79,7 +84,7 @@ async def create_news_item(session: Session, news_data: NewsData, sentiment: dic
             
             session.add(news_coin)
     
-        session.commit()
+        await session.commit()
 
     # Refresh with joined coin data
     stmt = (
@@ -87,11 +92,11 @@ async def create_news_item(session: Session, news_data: NewsData, sentiment: dic
         .where(NewsItem.id == item.id)
         .options(selectinload(NewsItem.coins).selectinload(NewsCoin.coin))
     )
-    item = session.exec(stmt).one()
-    return item
+    result = await session.execute(stmt)
+    return result.scalar_one()
 
 
-async def save_news_item(session: Session, news_data: NewsData, sentiment: dict) -> NewsItem:
+async def save_news_item(session: AsyncSession, news_data: NewsData, sentiment: dict) -> NewsItem:
     """
     Save a news item (article or social post) based on its source
     
@@ -105,7 +110,9 @@ async def save_news_item(session: Session, news_data: NewsData, sentiment: dict)
     try:
         # Check if the URL already exists to avoid duplicates
         stmt = select(NewsItem).where(NewsItem.url == news_data.url)
-        existing_item = session.exec(stmt).first()
+        result = await session.execute(stmt)
+        existing_item = result.scalar_one_or_none()
+        
         if existing_item:
             logger.info(f"News item already exists: {existing_item.id} - {existing_item.title}")
             
@@ -115,7 +122,8 @@ async def save_news_item(session: Session, news_data: NewsData, sentiment: dict)
                 .where(NewsItem.id == existing_item.id)
                 .options(selectinload(NewsItem.coins).selectinload(NewsCoin.coin))
             )
-            existing_item = session.exec(stmt).one()
+            result = await session.execute(stmt)
+            existing_item = result.scalar_one()
             
             return existing_item
         
@@ -126,7 +134,7 @@ async def save_news_item(session: Session, news_data: NewsData, sentiment: dict)
 
 
 async def get_news_feed(
-    session: Session, 
+    session: AsyncSession, 
     page: int = 1, 
     page_size: int = 20
 ) -> Tuple[List[NewsItem], int]:
@@ -144,7 +152,11 @@ async def get_news_feed(
             - Total count of items
     """
     offset = (page - 1) * page_size
-    total_count = session.exec(select(func.count()).select_from(NewsItem)).one()
+    
+    # Get total count
+    count_stmt = select(func.count()).select_from(NewsItem)
+    result = await session.execute(count_stmt)
+    total_count = result.scalar_one()
     
     # Query for items, sorted by time and paginated
     stmt = (
@@ -154,13 +166,14 @@ async def get_news_feed(
         .offset(offset)
         .limit(page_size)
     )
-    items = session.exec(stmt).all()
+    result = await session.execute(stmt)
+    items = result.scalars().all()
     
     return items, total_count
 
 
 async def search_news(
-    session: Session,
+    session: AsyncSession,
     query: str,
     page: int = 1,
     page_size: int = 20
@@ -190,7 +203,8 @@ async def search_news(
     
     # Count total matching items
     count_stmt = select(func.count()).select_from(NewsItem).where(search_condition)
-    total_count = session.exec(count_stmt).one()
+    result = await session.execute(count_stmt)
+    total_count = result.scalar_one()
     
     # Query for matching items, sorted by time and paginated
     stmt = (
@@ -201,12 +215,13 @@ async def search_news(
         .offset(offset)
         .limit(page_size)
     )
-    items = session.exec(stmt).all()
+    result = await session.execute(stmt)
+    items = result.scalars().all()
     
     return items, total_count
 
 
-async def get_post_by_id(session: Session, post_id: int) -> Optional[NewsItem]:
+async def get_post_by_id(session: AsyncSession, post_id: int) -> Optional[NewsItem]:
     """
     Args:
         session: The database session
@@ -221,5 +236,5 @@ async def get_post_by_id(session: Session, post_id: int) -> Optional[NewsItem]:
         .options(selectinload(NewsItem.coins).selectinload(NewsCoin.coin))
     )
     
-    item = session.exec(stmt).first()
-    return item
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()

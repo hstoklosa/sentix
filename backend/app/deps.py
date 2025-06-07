@@ -1,11 +1,11 @@
 from typing import Annotated
 
-from sqlmodel import Session
+import jwt
+from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends, Cookie, status, HTTPException
 from fastapi.security import OAuth2PasswordBearer
-import jwt
 
-from app.core.db import get_session
+from app.core.database import get_db_session
 from app.services.token import is_token_blacklisted
 from app.services.user import get_user_by_id
 from app.models.user import User
@@ -13,15 +13,12 @@ from app.core.config import settings
 from app.core.security import decode_token, verify_token_type
 from app.core.exceptions import InvalidTokenException
 
+
 oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl=f"{settings.API_BASE_PATH}/auth/login"
-)
+    tokenUrl=f"{settings.API_BASE_PATH}/auth/login")
+TokenDep = Annotated[str, Depends(oauth2_scheme)]
 
-
-async def verify_access_token(
-    token: Annotated[str, Depends(oauth2_scheme)],
-    session: Annotated[Session, Depends(get_session)]
-) -> dict:
+async def verify_access_token(token: TokenDep) -> dict:
     try:
         payload = decode_token(token)
         if payload is None:
@@ -32,8 +29,10 @@ async def verify_access_token(
         raise InvalidTokenException(detail=f"Invalid token: {str(e)}")
 
 
+AsyncSessionDep = Annotated[AsyncSession, Depends(get_db_session)]
+
 async def verify_refresh_token(
-    session: Annotated[Session, Depends(get_session)],
+    session: AsyncSessionDep,
     refresh_token: str | None = Cookie(None, include_in_schema=False)
 ) -> dict:
     """Verify that the refresh token is valid and not blacklisted"""
@@ -54,9 +53,11 @@ async def verify_refresh_token(
         raise InvalidTokenException()
 
 
+TokenPayloadDep = Annotated[dict, Depends(verify_access_token)]
+
 async def get_current_user(
-    token_payload: Annotated[dict, Depends(verify_access_token)],
-    session: Annotated[Session, Depends(get_session)]
+    session: AsyncSessionDep,
+    token_payload: TokenPayloadDep
 ) -> User:
     """Get the current authenticated user"""
     user_id = token_payload.get("sub")
@@ -68,7 +69,7 @@ async def get_current_user(
     except (TypeError, ValueError):
         raise InvalidTokenException()
     
-    user = get_user_by_id(session=session, user_id=user_id)
+    user = await get_user_by_id(session=session, user_id=user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -78,8 +79,5 @@ async def get_current_user(
     return user
 
 
-SessionDep = Annotated[Session, Depends(get_session)]
-TokenDep = Annotated[str, Depends(oauth2_scheme)]
-TokenPayloadDep = Annotated[dict, Depends(verify_access_token)]
 RefreshTokenPayloadDep = Annotated[dict, Depends(verify_refresh_token)]
 CurrentUserDep = Annotated[User, Depends(get_current_user)]

@@ -2,16 +2,17 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from sqlmodel import Session, select
+from sqlmodel import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.db import engine
+from app.core.database import sessionmanager
 from app.models.token import Token
 from app.core.security import decode_token, verify_token_type
 
 logger = logging.getLogger(__name__)
 
 
-def blacklist_token(*, session: Session, token: str) -> None:
+async def blacklist_token(*, session: AsyncSession, token: str) -> None:
     """Add a refresh token to the blacklist"""
     payload = decode_token(token)
     if not payload or not verify_token_type(payload, "refresh"):
@@ -21,7 +22,7 @@ def blacklist_token(*, session: Session, token: str) -> None:
     if not jti or not exp:
         return
     
-    if is_token_blacklisted(session=session, jti=jti):
+    if await is_token_blacklisted(session=session, jti=jti):
         return
     
     # Create blacklisted entry
@@ -32,43 +33,48 @@ def blacklist_token(*, session: Session, token: str) -> None:
     )
     
     session.add(token_entry)
-    session.commit()
+    await session.commit()
+    await session.refresh(token_entry)
 
 
-def is_token_blacklisted(*, session: Session, jti: str) -> bool:
+async def is_token_blacklisted(*, session: AsyncSession, jti: str) -> bool:
     """Check if a token is blacklisted by its JTI"""
     stmt = select(Token).where(Token.jti == jti, Token.is_blacklisted == True)
-    result = session.exec(stmt).first()
-    return result is not None
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none() is not None
 
 
-def get_token_by_jti(*, session: Session, jti: str) -> Optional[Token]:
+async def get_token_by_jti(*, session: AsyncSession, jti: str) -> Optional[Token]:
     """Get a token by its JTI"""
     stmt = select(Token).where(Token.jti == jti)
-    return session.exec(stmt).first()
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
 
 
-def get_expired_tokens(*, session: Session) -> list[Token]:
+async def get_expired_tokens(*, session: AsyncSession) -> list[Token]:
     """Get expired tokens from the database"""
     now = datetime.utcnow()
     stmt = select(Token).where(Token.expires_at < now)
-    return session.exec(stmt).all() or []
+    result = await session.execute(stmt)
+    return result.scalars().all() or []
 
 
-def purge_expired_tokens() -> int:
+async def purge_expired_tokens() -> int:
     """Remove expired tokens from the database to prevent table size buildup"""
     try:
-        with Session(engine) as session: 
-            expired_tokens = get_expired_tokens(session=session)
+        async with sessionmanager.session() as session: 
+            expired_tokens = await get_expired_tokens(session=session)
             
             count = 0
             for token in expired_tokens:
-                session.delete(token)
+                await session.delete(token)
                 count += 1
             
             if count > 0:
-                session.commit()
+                await session.commit()
             
             logger.info(f"Removed {count} expired tokens from database")
+            return count
     except Exception as e:
-        logger.error(f"Error cleaning up expired tokens: {e}") 
+        logger.error(f"Error cleaning up expired tokens: {e}")
+        return 0 
