@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.schemas.pagination import PaginatedResponse
 
@@ -18,8 +18,7 @@ class TrendingCoin(BaseModel):
     mention_count: int
     sentiment_stats: SentimentStats
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TrendingCoinsResponse(PaginatedResponse):

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
+from pydantic import BaseModel, EmailStr, Field, validator, ConfigDict
 
-from pydantic import BaseModel, EmailStr, Field, validator
 from app.core.security import validate_password
 
 
@@ -46,5 +46,4 @@ class UserPublic(UserBase):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

@@ -28,13 +28,11 @@ class CoinResponse(BaseModel):
     
 
 class ChartDataPoint(BaseModel):
-    """Data point for price charts"""
     timestamp: int  # Unix timestamp in milliseconds
     value: float
     
     
 class MarketChartData(BaseModel):
-    """Historical market data for charts"""
     prices: List[ChartDataPoint]
     market_caps: List[ChartDataPoint] 
     volumes: List[ChartDataPoint] 

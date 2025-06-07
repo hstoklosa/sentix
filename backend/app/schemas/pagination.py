@@ -1,5 +1,4 @@
 from typing import TypeVar, Generic, List
-
 from pydantic import BaseModel, Field
 
 

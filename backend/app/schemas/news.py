@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 from app.schemas.pagination import PaginatedResponse
 
@@ -18,8 +18,7 @@ class CoinResponse(BaseModel):
     price_usd: Optional[float] = None
     price_timestamp: Optional[datetime] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class NewsItem(BaseModel):
@@ -40,8 +39,8 @@ class NewsItem(BaseModel):
     sentiment: str
     score: float
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 class NewsFeedResponse(PaginatedResponse):
     items: List[NewsItem]

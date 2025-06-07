@@ -1,7 +1,7 @@
 from typing import List
-
 from datetime import datetime
-from pydantic import BaseModel
+
+from pydantic import BaseModel, ConfigDict
 
 from app.schemas.news import NewsItem, PaginatedResponse
 
@@ -11,21 +11,19 @@ class BookmarkCreate(BaseModel):
 
 
 class BookmarkResponse(BaseModel):
+    id: int
     user_id: int
     news_item_id: int
     created_at: datetime
-    id: int
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BookmarkedNewsItem(NewsItem):
     bookmark_id: int
     bookmarked_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BookmarkedNewsResponse(PaginatedResponse):
