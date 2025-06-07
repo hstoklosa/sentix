@@ -173,21 +173,22 @@ const NewsItem = ({ news, refreshCounter = 0, priceData = {} }: NewsItemProps) =
               </span>
             </div>
 
-            {/* {news.coins && news.coins.length > 0 && (
+            {news.coins && news.coins.length > 0 && (
               <>
                 <span className="text-xs text-muted-foreground">|</span>
                 {news.coins.map((coin) => (
                   <CoinTag
                     key={coin.id}
                     symbol={coin.symbol}
+                    imageUrl={coin.image_url}
                     priceUsd={coin.price_usd}
                     priceTimestamp={coin.price_timestamp}
-                    currentPrice={priceData[coin.symbol]?.price}
-                    changePercent={priceData[coin.symbol]?.changePercent}
+                    // currentPrice={priceData[coin.symbol]?.price}
+                    // changePercent={priceData[coin.symbol]?.changePercent}
                   />
                 ))}
               </>
-            )} */}
+            )}
 
             {/* TODO: Do not compute sentiment for news without related coins */}
             {news.coins.length > 0 &&

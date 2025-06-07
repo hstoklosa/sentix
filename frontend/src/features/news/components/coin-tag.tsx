@@ -4,15 +4,16 @@ import { cn } from "@/lib/utils";
 
 type CoinTagProps = {
   symbol: string;
+  imageUrl?: string;
   priceUsd?: number;
   priceTimestamp?: string;
-  // New props for parent-provided price data
   currentPrice?: number;
   changePercent?: number;
 };
 
 const CoinTag = ({
   symbol,
+  imageUrl,
   priceUsd,
   priceTimestamp,
   currentPrice,
@@ -82,11 +83,18 @@ const CoinTag = ({
   return (
     <span
       className={cn(
-        "px-1.5 py-0.5 bg-secondary text-xs rounded-full",
+        "px-1 py-0.5 bg-secondary text-xs rounded-full flex items-center",
         viewData.colorClasses
       )}
       title={viewData.tooltipContent}
     >
+      {imageUrl && (
+        <img
+          src={imageUrl}
+          alt={symbol}
+          className="w-4 h-4 mr-1 rounded-full"
+        />
+      )}
       {symbol}
       {viewData.percentText}
     </span>

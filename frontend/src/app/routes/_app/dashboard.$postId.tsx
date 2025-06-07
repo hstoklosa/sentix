@@ -33,6 +33,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import useBatchedPriceData from "@/features/news/hooks/use-batched-price-data";
+
 function PostComponent() {
   const { postId } = Route.useParams() as { postId: string };
   const previousSymbolsRef = useRef<string[]>([]);
@@ -47,6 +49,10 @@ function PostComponent() {
   const selectedCoin = post?.coins.find(
     (coin) =>
       (coin.name?.toLowerCase() || coin.symbol.toLowerCase()) === selectedCoinId
+  );
+
+  const priceData = useBatchedPriceData(
+    post?.coins.map((coin) => coin.symbol) || []
   );
 
   const createBookmark = useCreateBookmark({
@@ -239,8 +245,11 @@ function PostComponent() {
                         <CoinTag
                           key={coin.id}
                           symbol={coin.symbol}
+                          imageUrl={coin.image_url}
                           priceUsd={coin.price_usd}
                           priceTimestamp={coin.price_timestamp}
+                          currentPrice={priceData[coin.symbol]?.price}
+                          changePercent={priceData[coin.symbol]?.changePercent}
                         />
                       ))}
                     </div>
