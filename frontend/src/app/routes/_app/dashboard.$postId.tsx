@@ -93,25 +93,16 @@ function PostComponent() {
     }
   }, [post]);
 
-  if (isPostLoading) {
-    return (
-      <Spinner
-        className="h-full w-full"
-        size="md"
-      />
-    );
-  }
-
-  if (error || !post) {
-    return (
-      <div className="flex h-full items-center justify-center gap-3">
-        <Info className="size-8 text-muted-foreground" />
-        <h2 className="text-lg text-muted-foreground font-normal">
-          An error occurred while loading the post
-        </h2>
-      </div>
-    );
-  }
+  // if (error || !post) {
+  //   return (
+  //     <div className="flex h-full items-center justify-center gap-3">
+  //       <Info className="size-8 text-muted-foreground" />
+  //       <h2 className="text-lg text-muted-foreground font-normal">
+  //         An error occurred while loading the post
+  //       </h2>
+  //     </div>
+  //   );
+  // }
 
   const handleBookmarkToggle = () => {
     if (!post) return;
@@ -263,76 +254,84 @@ function PostComponent() {
 
       {/* Bottom section - Price chart */}
       <DashboardPanel position={{ rowStart: 2, colStart: 1 }}>
-        <div className="flex flex-col h-full">
-          {post.coins.length > 0 && chartCoinId ? (
-            <PriceChart
-              coinId={chartCoinId}
-              headerLeft={
-                <Select
-                  value={selectedCoinId}
-                  onValueChange={handleCoinChange}
-                >
-                  <SelectTrigger className="h-7 w-auto min-w-auto bg-secondary transition-colors border border-input hover:bg-accent">
-                    <SelectValue placeholder="Select coin">
-                      {selectedCoin && (
-                        <div className="flex items-center">
-                          {selectedCoin.image_url ? (
-                            <img
-                              src={selectedCoin.image_url}
-                              alt={selectedCoin.symbol}
-                              className="w-4 h-4 mr-2 rounded-full"
-                            />
-                          ) : (
-                            <Coins className="w-4 h-4 mr-2 text-muted-foreground" />
-                          )}
-                          <span className="font-medium">{selectedCoin.symbol}</span>
-                        </div>
-                      )}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {post.coins.map((coin) => (
-                      <SelectItem
-                        key={coin.id}
-                        value={
-                          coin.name?.toLowerCase() || coin.symbol.toLowerCase()
-                        }
-                      >
-                        <div className="flex items-center">
-                          {coin.image_url ? (
-                            <img
-                              src={coin.image_url}
-                              alt={coin.symbol}
-                              className="w-5 h-5 mr-2 rounded-full"
-                            />
-                          ) : (
-                            <Coins className="w-5 h-5 mr-2 text-muted-foreground" />
-                          )}
-                          <span className="font-medium">{coin.symbol}</span>
-                          <span className="text-xs text-muted-foreground ml-2">
-                            {coin.name || coin.symbol}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              }
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center flex-col gap-2 p-4">
-              <Info className="size-8 text-muted-foreground" />
-              <div className="flex flex-col items-center justify-center gap-1">
-                <h3 className="text-lg text-muted-foreground font-normal">
-                  No coin data available for this post
-                </h3>
-                <p className="text-sm text-muted-foreground/70">
-                  This post isn't associated with any specific cryptocurrency
-                </p>
+        {isPostLoading || !post ? (
+          <div className="flex h-full items-center justify-center">
+            <Spinner size="md" />
+          </div>
+        ) : (
+          <div className="flex flex-col h-full">
+            {post.coins.length > 0 && chartCoinId ? (
+              <PriceChart
+                coinId={chartCoinId}
+                headerLeft={
+                  <Select
+                    value={selectedCoinId}
+                    onValueChange={handleCoinChange}
+                  >
+                    <SelectTrigger className="h-7 w-auto min-w-auto bg-secondary transition-colors border border-input hover:bg-accent">
+                      <SelectValue placeholder="Select coin">
+                        {selectedCoin && (
+                          <div className="flex items-center">
+                            {selectedCoin.image_url ? (
+                              <img
+                                src={selectedCoin.image_url}
+                                alt={selectedCoin.symbol}
+                                className="w-4 h-4 mr-2 rounded-full"
+                              />
+                            ) : (
+                              <Coins className="w-4 h-4 mr-2 text-muted-foreground" />
+                            )}
+                            <span className="font-medium">
+                              {selectedCoin.symbol}
+                            </span>
+                          </div>
+                        )}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {post.coins.map((coin) => (
+                        <SelectItem
+                          key={coin.id}
+                          value={
+                            coin.name?.toLowerCase() || coin.symbol.toLowerCase()
+                          }
+                        >
+                          <div className="flex items-center">
+                            {coin.image_url ? (
+                              <img
+                                src={coin.image_url}
+                                alt={coin.symbol}
+                                className="w-5 h-5 mr-2 rounded-full"
+                              />
+                            ) : (
+                              <Coins className="w-5 h-5 mr-2 text-muted-foreground" />
+                            )}
+                            <span className="font-medium">{coin.symbol}</span>
+                            <span className="text-xs text-muted-foreground ml-2">
+                              {coin.name || coin.symbol}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                }
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center flex-col gap-2 p-4">
+                <Info className="size-8 text-muted-foreground" />
+                <div className="flex flex-col items-center justify-center gap-1">
+                  <h3 className="text-lg text-muted-foreground font-normal">
+                    No coin data available for this post
+                  </h3>
+                  <p className="text-sm text-muted-foreground/70">
+                    This post isn't associated with any specific cryptocurrency
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </DashboardPanel>
     </div>
   );
