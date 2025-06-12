@@ -31,65 +31,58 @@ const MarketStatsPanel = () => {
       <div className="flex items-center h-[55px] px-2.5 py-2 border-b border-border">
         <h2 className="text-md font-semibold">Market Stats</h2>
       </div>
-      <div className="flex flex-col justify-center h-full gap-5 p-2.5">
-        <div className="flex flex-col gap-1">
-          <div className="flex justify-between gap-1">
-            {/* Total Market Cap */}
-            <div className="flex flex-col gap-1">
-              <p className="text-sm font-medium text-muted-foreground">
-                Market Cap
+      <div className="h-full grid grid-cols-4 grid-rows-2 gap-5 p-2.5 overflow-auto">
+        <div className="row-start-1 row-end-2 col-start-1 col-end-2">
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-medium text-muted-foreground">Market Cap</p>
+            <div className="flex flex-row items-center gap-2">
+              <p className="text-md">
+                {formatCompactNumber(marketStats.total_market_cap, 2, "$", true)}
               </p>
-              <div className="flex flex-row items-center gap-2">
-                <p className="text-md">
-                  {formatCompactNumber(marketStats.total_market_cap, 2, "$", true)}
-                </p>
-                <PriceChangeTag
-                  changePercent={marketStats.total_market_cap_24h_change}
-                />
-              </div>
-            </div>
-
-            {/* Total Volume */}
-            <div className="flex flex-col gap-1">
-              <p className="text-sm font-medium text-muted-foreground">
-                Volume 24h
-              </p>
-              <div className="flex flex-row items-center gap-2">
-                <p className="text-md">
-                  {formatCompactNumber(marketStats.total_volume_24h, 2, "$", true)}
-                </p>
-                <PriceChangeTag
-                  changePercent={marketStats.total_volume_24h_change}
-                />
-              </div>
-            </div>
-
-            {/* BTC Dominance */}
-            <div className="flex flex-col gap-1">
-              <p className="text-sm font-medium text-muted-foreground">BTC Dom</p>
-              <div className="flex flex-row items-center gap-2">
-                <p className="text-md">{marketStats.btc_dominance.toFixed(1)}%</p>
-                <PriceChangeTag
-                  changePercent={marketStats.btc_dominance_24h_change}
-                />
-              </div>
-            </div>
-
-            {/* ETH Dominance */}
-            <div className="flex flex-col gap-1">
-              <p className="text-sm font-medium text-muted-foreground">ETH Dom</p>
-              <div className="flex flex-row items-center gap-2">
-                <p className="text-md">{marketStats.eth_dominance.toFixed(1)}%</p>
-                <PriceChangeTag
-                  changePercent={marketStats.eth_dominance_24h_change}
-                />
-              </div>
+              <PriceChangeTag
+                changePercent={marketStats.total_market_cap_24h_change}
+              />
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-21">
-          {/* Sentiment */}
+        <div className="row-start-1 row-end-2 col-start-2 col-end-3">
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-medium text-muted-foreground">Volume 24h</p>
+            <div className="flex flex-row items-center gap-2">
+              <p className="text-md">
+                {formatCompactNumber(marketStats.total_volume_24h, 2, "$", true)}
+              </p>
+              <PriceChangeTag changePercent={marketStats.total_volume_24h_change} />
+            </div>
+          </div>
+        </div>
+
+        <div className="row-start-1 row-end-2 col-start-3 col-end-4">
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-medium text-muted-foreground">BTC Dom</p>
+            <div className="flex flex-row items-center gap-2">
+              <p className="text-md">{marketStats.btc_dominance.toFixed(1)}%</p>
+              <PriceChangeTag
+                changePercent={marketStats.btc_dominance_24h_change}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="row-start-1 row-end-2 col-start-4 col-end-5">
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-medium text-muted-foreground">ETH Dom</p>
+            <div className="flex flex-row items-center gap-2">
+              <p className="text-md">{marketStats.eth_dominance.toFixed(1)}%</p>
+              <PriceChangeTag
+                changePercent={marketStats.eth_dominance_24h_change}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="row-start-2 row-end-3 col-start-1 col-end-2">
           <div className="flex flex-col gap-1">
             <p className="text-sm font-medium text-muted-foreground">Sentiment</p>
             <div className="flex items-center gap-2">
@@ -100,8 +93,9 @@ const MarketStatsPanel = () => {
               <p className="text-md">{marketStats.market_sentiment}</p>
             </div>
           </div>
+        </div>
 
-          {/* Fear & Greed Index */}
+        <div className="row-start-2 row-end-3 col-start-2 col-end-4">
           <div className="flex flex-col gap-1">
             <p className="text-sm font-medium text-muted-foreground">
               Fear & Greed Index
@@ -113,6 +107,8 @@ const MarketStatsPanel = () => {
             </div>
           </div>
         </div>
+
+        {/* <div className="row-start-2 row-end-3 col-start-4 col-end-5">8</div> */}
       </div>
     </div>
   );

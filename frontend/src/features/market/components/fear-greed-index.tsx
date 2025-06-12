@@ -55,7 +55,7 @@ const FearGreedIndicator = ({ value }: FearGreedProps) => {
 const FearGreedMeter = ({ value }: FearGreedProps) => {
   const level = getFearGreedLevel(value);
   return (
-    <div className="w-16 h-3 bg-secondary rounded-full overflow-hidden">
+    <div className="w-[80%] h-3 bg-secondary rounded-full overflow-hidden">
       <div
         className={`h-full ${level.bgColor} rounded-full`}
         style={{ width: `${value}%` }}
