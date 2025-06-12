@@ -30,26 +30,36 @@ class TreeNews:
         self._socket: Optional[websockets.WebSocketClientProtocol] = None
         self._callback: Optional[Callable[[NewsData], Any]] = None
         self._running = False
-        self._recv_lock = asyncio.Lock()  # Add a lock for WebSocket recv operations
+        self._recv_lock = asyncio.Lock()  # a lock for WebSocket recv operations
+        self._task: Optional[asyncio.Task] = None
+
+    async def connect(self, callback: Callable[[NewsData], Any]):
+        """Connect to the TreeNews WebSocket server with retry logic."""
+        if self._running:
+            return
+            
+        self._callback = callback
+        self._running = True
+        self._task = asyncio.create_task(self._connect_and_listen())
+        logger.info("Started TreeNews WebSocket connection")
 
     @retry(
         stop=stop_after_attempt(5),
         wait=wait_exponential(multiplier=1, min=4, max=60),
         before_sleep=before_sleep_log(logger, logging.WARNING)
     )
-    async def connect(self, callback: Callable[[NewsData], Any]):
+    async def _connect_and_listen(self):
         """Connect to the TreeNews WebSocket server with retry logic."""
-        self._callback = callback
-        self._running = True
-        
         try:
             async with websockets.connect(self.wss) as websocket:
                 self._socket = websocket
                 await websocket.send(f"login {settings.TREENEWS_API_KEY}")
-                logger.info("Connected to TreeNews WebSocket server and sent login")
                 await self._listen()
         except WebSocketException as e:
-            logger.error(f"WebSocket error: {e}")
+            logger.error(f"Error connecting to TreeNews (WS) provider: {e}")
+            raise
+        except asyncio.CancelledError:
+            logger.info("TreeNews connection task cancelled")
             raise
         finally:
             self._socket = None
@@ -129,6 +139,14 @@ class TreeNews:
     async def disconnect(self):
         """Gracefully disconnect from the WebSocket server."""
         self._running = False
+        
+        if self._task:
+            self._task.cancel()
+            try:
+                await self._task
+            except asyncio.CancelledError:
+                pass
+            self._task = None
 
         if self._socket:
             await self._socket.close()

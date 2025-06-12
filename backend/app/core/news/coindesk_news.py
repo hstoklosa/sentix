@@ -2,7 +2,6 @@ from typing import Optional, Callable, Any, Dict, List
 import logging
 import asyncio
 import aiohttp
-from datetime import datetime
 
 from tenacity import (
     before_sleep_log,
@@ -16,6 +15,7 @@ from app.core.news.types import NewsData
 from app.utils import datetime_from_timestamp
 
 logger = logging.getLogger(__name__)
+
 
 class CoinDeskNews:
     """Fetch news from the CoinDesk API."""
@@ -43,8 +43,6 @@ class CoinDeskNews:
             
         self._callback = callback
         self._running = True
-        
-        # Create and start the polling task
         self._task = asyncio.create_task(self._poll_articles())
         logger.info("Started CoinDesk news polling")
     
@@ -72,12 +70,9 @@ class CoinDeskNews:
         Fetch articles from the CoinDesk API.
         
         Returns:
-            List of article dictionaries
+            List of articles in a dictionary format
         """
-        params = {
-            "lang": "EN",
-            "limit": 20  # Adjust as needed
-        }
+        params = { "lang": "EN", "limit": 20 }
         
         async with aiohttp.ClientSession() as session:
             async with session.get(self.api_url, params=params, headers=self._headers) as response:
@@ -101,7 +96,6 @@ class CoinDeskNews:
                 articles = await self._fetch_articles()
                 
                 # Process articles in reverse order (oldest first)
-                # This ensures we maintain chronological order for the news feed
                 for article in reversed(articles):
                     # Skip articles we've already processed
                     if self._last_article_id is not None and article["ID"] <= self._last_article_id:
@@ -120,7 +114,7 @@ class CoinDeskNews:
                 break
             except Exception as e:
                 logger.error(f"Error polling CoinDesk API: {e}")
-                await asyncio.sleep(60)  # Wait a minute before retrying after an error
+                await asyncio.sleep(60)
     
     async def _process_article(self, article: Dict[str, Any]):
         """
@@ -142,23 +136,19 @@ class CoinDeskNews:
             news.body = article.get("BODY", "")
             news.image = article.get("IMAGE_URL", "")
             
-            # Convert timestamp to datetime
-            # CoinDesk API provides Unix timestamp in seconds, but our utility expects milliseconds
+            # Convert timestamp to datetime:
+            # API provides Unix timestamp in seconds, but utility expects milliseconds
             published_ts = article.get("PUBLISHED_ON", 0)
-            # Convert seconds to milliseconds by multiplying by 1000
             news.time = datetime_from_timestamp(published_ts * 1000)
             
-            # Log the timestamp conversion for debugging
             if settings.ENVIRONMENT == "development":
                 logger.debug(f"Raw timestamp: {published_ts}, Converted time: {news.time}")
             
-            # Extract coin information from categories
+            # Simple heuristic for detecting crypto symbols (e.g., BTC, ETH)
             news.coins = set()
             for category in article.get("CATEGORY_DATA", []):
-                # Extract potential cryptocurrency symbols from category names
                 category_name = category.get("NAME", "").strip()
                 if category_name.isupper() and len(category_name) <= 5:
-                    # Simple heuristic for detecting crypto symbols (e.g., BTC, ETH)
                     news.coins.add(category_name)
             
             # Default values for Twitter-specific fields

@@ -1,8 +1,8 @@
 from typing import Dict, Any, Optional, Set
 from datetime import datetime
-
 import logging
 import asyncio
+
 from fastapi import WebSocket
 
 from app.core.database import sessionmanager
@@ -23,16 +23,12 @@ class Connection:
     def __init__(self, websocket: WebSocket, user: Optional[User] = None):
         self.websocket = websocket
         self.user = user
-        self.connected_at = datetime.now()
         self.send_lock = asyncio.Lock()
         self.current_subscription: Optional[str] = None
 
 
 class NewsManager:
-    """
-    A class responsible for managing WebSocket connections between clients and 
-    news providers, acting as a middleman to broadcast news data.
-    """
+    """Class responsible for managing connections between clients and news providers."""
     _instance = None
     
     def __init__(self):
@@ -40,16 +36,15 @@ class NewsManager:
             "TreeNews": TreeNews(),
             "CoinDesk": CoinDeskNews()
         }
-        self.active_connections: Dict[WebSocket, Connection] = {}
         self.is_initialized = False
         self.connection_lock = asyncio.Lock()
+        self.active_connections: Dict[WebSocket, Connection] = {}
     
     @classmethod
     def get_instance(cls):
         """Get or create the singleton instance of the manager"""
         if cls._instance is None:
             cls._instance = NewsManager()
-
         return cls._instance
     
     async def initialize(self):
@@ -58,32 +53,30 @@ class NewsManager:
             return
             
         async with self.connection_lock:
-            if self.is_initialized:  # Double-check after acquiring lock
+            if self.is_initialized:
                 return
-            
+
+            # Create a single callback handler for all providers
+            init_tasks = []
             for provider_name, provider in self.providers.items():
-                # Create a callback that captures provider_name in a closure
-                # Each provider calls callback with just one argument (news_data)
-                async def make_callback(pname=provider_name):
-                    async def callback(news_data):
-                        await self.on_news_received(news_data, pname)
-                    return callback
-                
-                # Launch connection as a background task instead of waiting
-                callback_fn = await make_callback()
-                asyncio.create_task(self._connect_provider(provider, callback_fn, provider_name))
-            
+                init_tasks.append(self._init_provider(provider, provider_name))
+
+            await asyncio.gather(*init_tasks)
             self.is_initialized = True
+            logger.info("All news providers initialised")
     
-    async def _connect_provider(self, provider: NewsProvider, callback_fn, provider_name: str):
-        """Connect to a provider in the background with proper error handling"""
+    async def _init_provider(self, provider: NewsProvider, provider_name: str):
+        """Initialise a single provider with proper error handling"""
         try:
-            logger.info(f"Connecting to provider: {provider_name}")
-            await provider.connect(callback_fn)
-            logger.info(f"Successfully connected to provider: {provider_name}")
+            async def callback(news_data: NewsData):
+                news_data.feed = provider_name
+                await self.on_news_received(news_data, provider_name)
+            
+            # Connect to the provider directly (no background task)
+            await provider.connect(callback)
+            logger.info(f"Successfully initialised provider: {provider_name}")
         except Exception as e:
             logger.error(f"Failed to connect to provider {provider_name}: {str(e)}")
-            # Don't re-raise the exception - we want to continue even if one provider fails
     
     async def shutdown(self):
         """Shutdown and disconnect from all providers"""
@@ -91,21 +84,26 @@ class NewsManager:
             return
             
         async with self.connection_lock:
-            if not self.is_initialized:  # Double-check after acquiring lock
+            if not self.is_initialized:
                 return
-                
-            logger.info("Shutting down connections to all news providers")
+
             disconnect_tasks = []
             
-            for provider in self.providers.values():
-                disconnect_tasks.append(provider.disconnect())
+            for provider_name, provider in self.providers.items():
+                disconnect_tasks.append(self._disconnect_provider(provider, provider_name))
             
-            if disconnect_tasks:
-                await asyncio.gather(*disconnect_tasks)
-                
+            await asyncio.gather(*disconnect_tasks)
             self.is_initialized = False
             logger.info("Disconnected from all news providers")
     
+    async def _disconnect_provider(self, provider: NewsProvider, provider_name: str):
+        """Disconnect a provider with error handling"""
+        try:
+            await provider.disconnect()
+            logger.info(f"Disconnected from provider: {provider_name}")
+        except Exception as e:
+            logger.error(f"Error disconnecting from provider {provider_name}: {str(e)}")
+
     async def on_news_received(self, news_data: NewsData, provider_name: str):
         """
         Callback for when news is received from a provider
@@ -114,6 +112,11 @@ class NewsManager:
             news_data: The news data received
             provider_name: The name of the provider that sent the news
         """
+        if saved_post := await self._process_news_item(news_data, provider_name):
+            await self.broadcast_to_clients(saved_post)
+
+    async def _process_news_item(self, news_data: NewsData, provider_name: str):
+        """Process a news item from a provider"""
         try:
             async with sessionmanager.session() as session:
                 news_data.feed = provider_name
@@ -127,11 +130,83 @@ class NewsManager:
                     "score": 0.5,
                     "polarity": 0.0
                 })
-
-                await self.broadcast_to_clients(saved_post)
+                return saved_post
         except Exception as e:
             logger.error(f"Error processing news item: {str(e)}")
+            return None
     
+    async def send_to_client(self, websocket: WebSocket, connection: Connection, message: Dict[str, Any]) -> bool:
+        """
+        Send a message to a specific client with proper locking
+        
+        Args:
+            websocket: The WebSocket connection
+            connection: The Connection object
+            message: The message to send
+            
+        Returns:
+            True if the message was sent successfully, False otherwise
+        """
+        try:
+            async with connection.send_lock:
+                await websocket.send_json(message)
+                
+            return True
+        except Exception as e:
+            logger.error(f"Error sending to client: {e}")
+            return False
+    
+    async def broadcast_to_clients(self, post: NewsItem):
+        """
+        Broadcast news data to subscribed clients
+        
+        Args:
+            post: The news post to broadcast
+        """
+        try:
+            # Make a safe copy of connections to avoid mutation during iteration
+            connections = list(self.active_connections.items())
+            disconnected_websockets = []
+
+            for websocket, connection in connections:
+                if connection.current_subscription != post.feed:
+                    continue
+                
+                try:
+                    success = await self.send_to_client(websocket, connection, {
+                        "type": "news",
+                        "data": {
+                            "id": post.id,
+                            "_type": post.item_type,
+                            "title": post.title,
+                            "body": post.body,
+                            "source": post.source,
+                            "url": post.url,
+                            "icon_url": post.icon_url,
+                            "image_url": post.image_url,
+                            "feed": post.feed,
+                            "time": format_datetime_iso(post.time),
+                            "created_at": format_datetime_iso(post.created_at),
+                            "updated_at": format_datetime_iso(post.updated_at),
+                            "coins": post.get_formatted_coins(),
+                            "sentiment": post.sentiment,
+                            "score": post.score
+                        }
+                    })
+
+                    if not success:
+                        logger.warning(f"Failed to send news to client, marking for disconnection")
+                        disconnected_websockets.append(websocket)
+
+                except Exception as e:
+                    disconnected_websockets.append(websocket)
+            
+            for websocket in disconnected_websockets:
+                await self.remove_client(websocket)
+                
+        except Exception as e:
+            logger.error(f"Error in broadcast_to_clients: {str(e)}")
+
     async def add_client(self, websocket: WebSocket, user: Optional[User] = None):
         """
         Register a new client WebSocket connection
@@ -141,15 +216,10 @@ class NewsManager:
             user: The authenticated user (optional)
         """
         try:
-            if not self.is_initialized:
-                logger.info("First client connecting, initializing providers")
-                await self.initialize()
-                
             connection = Connection(websocket, user)
             self.active_connections[websocket] = connection
         except Exception as e:
             logger.error(f"Error adding client: {str(e)}")
-            # Don't re-raise to avoid crashing the websocket handler
 
     async def remove_client(self, websocket: WebSocket):
         """
@@ -221,79 +291,3 @@ class NewsManager:
             Set of available feed names
         """
         return set(self.providers.keys())
-    
-    async def send_to_client(self, websocket: WebSocket, connection: Connection, message: Dict[str, Any]) -> bool:
-        """
-        Send a message to a specific client with proper locking
-        
-        Args:
-            websocket: The WebSocket connection
-            connection: The Connection object
-            message: The message to send
-            
-        Returns:
-            True if the message was sent successfully, False otherwise
-        """
-        try:
-            async with connection.send_lock:
-                await websocket.send_json(message)
-                
-            return True
-        except Exception as e:
-            logger.error(f"Error sending to client: {e}")
-            return False
-    
-    async def broadcast_to_clients(self, post: NewsItem):
-        """
-        Broadcast news data to subscribed clients
-        
-        Args:
-            post: The news post to broadcast
-        """
-        try:
-            # Make a safe copy of connections to avoid mutation during iteration
-            connections = list(self.active_connections.items())
-            disconnected_websockets = []
-
-            message = {
-                "type": "news",
-                "data": {
-                    "id": post.id,
-                    "_type": post.item_type,
-                    "title": post.title,
-                    "body": post.body,
-                    "source": post.source,
-                    "url": post.url,
-                    "icon_url": post.icon_url,
-                    "image_url": post.image_url,
-                    "feed": post.feed,
-                    "time": format_datetime_iso(post.time),
-                    "created_at": format_datetime_iso(post.created_at),
-                    "updated_at": format_datetime_iso(post.updated_at),
-                    "coins": post.get_formatted_coins(),
-                    "sentiment": post.sentiment,
-                    "score": post.score
-                }
-            }
-
-            subscribed_count = 0
-            for websocket, connection in connections:
-
-                if connection.current_subscription == post.feed:
-                    subscribed_count += 1
-                    username = connection.user.username if connection.user else "Anonymous"
-                    logger.info(f"Sending news to subscribed client {username} (feed: {post.feed})")
-                    
-                    try:
-                        success = await self.send_to_client(websocket, connection, message)
-                        if not success:
-                            logger.warning(f"Failed to send news to client, marking for disconnection")
-                            disconnected_websockets.append(websocket)
-                    except Exception as e:
-                        disconnected_websockets.append(websocket)
-            
-            for websocket in disconnected_websockets:
-                await self.remove_client(websocket)
-                
-        except Exception as e:
-            logger.error(f"Error in broadcast_to_clients: {str(e)}")
