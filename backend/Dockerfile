@@ -16,7 +16,7 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 COPY requirements.txt /app
 
-RUN pip install --no-cache-dir --upgrade -r requirements.txt
+RUN pip install --no-cache-dir --upgrade -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
 
 COPY ./app /app/app
 
