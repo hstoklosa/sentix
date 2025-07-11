@@ -1,4 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import useWebSocket, { ReadyState } from "react-use-websocket";
+
+import { useLocalStorage } from "@/hooks/use-local-storage";
 
 import { NewsItem } from "../types";
 
@@ -26,11 +29,11 @@ type UseNewsWebSocketResult = {
  * WebSocket hook for connecting to the news WebSocket API with provider subscription support
  */
 export const useNewsWebSocket = ({
-  onMessage,
-  autoConnect = true,
-  authToken,
   baseUrl = "ws://localhost:8000",
+  authToken,
+  onMessage,
   defaultProvider = "TreeNews",
+  autoConnect = true,
 }: UseNewsWebSocketOptions = {}): UseNewsWebSocketResult => {
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +42,26 @@ export const useNewsWebSocket = ({
   const wsRef = useRef<WebSocket | null>(null);
   const pingIntervalRef = useRef<number | null>(null);
   const isInitialConnectionRef = useRef(true);
+
+  // Get the token from localStorage or passed prop
+  const getToken = useCallback(() => {
+    const rawToken = authToken || localStorage.getItem("access_token");
+    // console.log("rawToken", rawToken);
+    return rawToken?.replace(/^["'](.*)["']$/, "$1");
+  }, [authToken]);
+
+  // Generate WebSocket URL with client ID and token
+  const getWebSocketUrl = useCallback(() => {
+    const token = getToken();
+    // console.log("token", token);
+    if (!token) {
+      throw new Error("Not authenticated");
+    }
+    const clientId = Math.floor(Math.random() * 1000000).toString();
+    return `${baseUrl}/api/v1/news/ws/${clientId}?token=${token}`;
+  }, [baseUrl, getToken]);
+
+  //   const {} = useWebSocket(getWebSocketUrl, {});
 
   // Clean up function
   const disconnect = () => {

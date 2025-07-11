@@ -6,7 +6,7 @@ import coinDeskLogo from "@/assets/coindesk-logo.png";
 
 import useAuth from "@/hooks/use-auth";
 import { useLogout } from "@/features/auth/api/logout";
-import { useWebSocketContext } from "@/features/news/context";
+import { useLiveNewsContext } from "@/features/news/context";
 import { useBinanceWebSocketContext } from "@/features/coins/context";
 import { cn } from "@/lib/utils";
 
@@ -30,7 +30,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     currentProvider,
     availableProviders,
     subscribe,
-  } = useWebSocketContext();
+  } = useLiveNewsContext();
   const { isConnected: isBinanceConnected } = useBinanceWebSocketContext();
   const logoutMutation = useLogout({
     onSuccess: () => {

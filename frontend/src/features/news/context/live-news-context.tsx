@@ -1,8 +1,13 @@
-import { createContext, useContext, ReactNode } from "react";
+import { useCallback, createContext, useContext, ReactNode } from "react";
+import useWebSocket from "react-use-websocket";
+
+import { useLocalStorage } from "@/hooks/use-local-storage";
+import useAuth from "@/hooks/use-auth";
+
 import { useNewsWebSocket } from "../hooks/use-news-websocket";
 import { NewsItem } from "../types";
 
-type WebSocketContextType = {
+type LiveNewsContextType = {
   isConnected: boolean;
   error: string | null;
   currentProvider: string | null;
@@ -14,7 +19,7 @@ type WebSocketContextType = {
   refreshProviders: () => void;
 };
 
-const WebSocketContext = createContext<WebSocketContextType>({
+const LiveNewsContext = createContext<LiveNewsContextType>({
   isConnected: false,
   error: null,
   currentProvider: null,
@@ -26,7 +31,7 @@ const WebSocketContext = createContext<WebSocketContextType>({
   refreshProviders: () => {},
 });
 
-type WebSocketProviderProps = {
+type LiveNewsProviderProps = {
   children: ReactNode;
   onMessage?: (news: NewsItem) => void;
   authToken?: string;
@@ -34,13 +39,13 @@ type WebSocketProviderProps = {
   defaultProvider?: string;
 };
 
-export const WebSocketProvider = ({
+export const LiveNewsProvider = ({
   children,
   onMessage,
   authToken,
   baseUrl,
   defaultProvider,
-}: WebSocketProviderProps) => {
+}: LiveNewsProviderProps) => {
   const {
     isConnected,
     error,
@@ -59,8 +64,15 @@ export const WebSocketProvider = ({
     defaultProvider,
   });
 
+  const [accessToken, _] = useLocalStorage("access_token", "");
+  const { user, status: authStatus } = useAuth();
+
+  const getSocketUrl = useCallback(() => {
+    return `ws://localhost:8000/api/v1/news/ws/${user?.id}?token=${accessToken}`;
+  }, [user, accessToken]);
+
   return (
-    <WebSocketContext.Provider
+    <LiveNewsContext.Provider
       value={{
         isConnected,
         error,
@@ -74,14 +86,14 @@ export const WebSocketProvider = ({
       }}
     >
       {children}
-    </WebSocketContext.Provider>
+    </LiveNewsContext.Provider>
   );
 };
 
-export const useWebSocketContext = () => {
-  const context = useContext(WebSocketContext);
+export const useLiveNewsContext = () => {
+  const context = useContext(LiveNewsContext);
   if (context === undefined) {
-    throw new Error("useWebSocketContext must be used within a WebSocketProvider");
+    throw new Error("useLiveNewsContext must be used within a LiveNewsProvider");
   }
   return context;
 };

@@ -3,7 +3,6 @@ import { AlertCircle, ChevronDown, Layers, BookMarked } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 import { Spinner } from "@/components/ui/spinner";
-import { setsAreEqual } from "@/utils/list";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,9 +18,8 @@ import {
   useUpdatePostsCache,
 } from "../api";
 import { useGetInfiniteBookmarkedPosts } from "@/features/bookmarks/api/get-bookmarks";
-import { useWebSocketContext } from "../context";
-import useEfficientSymbolSubscription from "../hooks/use-efficient-symbol-subscription";
-import useBatchedPriceData from "../hooks/use-batched-price-data";
+import { useLiveNewsContext } from "../context";
+// import usePriceData from "../hooks/use-price-data";
 
 type FeedType = "all" | "bookmarked";
 
@@ -30,10 +28,8 @@ const NewsList = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [refreshCounter, setRefreshCounter] = useState(0);
   const parentRef = useRef<HTMLDivElement>(null);
-  const visibleItemsRef = useRef(new Set<number>());
   const loadingMoreRef = useRef(false);
-  const { updateVisibleSymbols } = useEfficientSymbolSubscription();
-  const { isConnected, error: isWebsocketError } = useWebSocketContext();
+  const { isConnected, error: isWebsocketError } = useLiveNewsContext();
 
   const {
     data: allNewsData,
@@ -105,8 +101,6 @@ const NewsList = () => {
   const allNewsItems = data ? data.pages.flatMap((page) => page.items) : [];
 
   // When in bookmarked view, ensure all items have is_bookmarked=true
-  // This is needed because the backend doesn't explicitly set this flag
-  // in the /bookmarks endpoint
   const newsItems = useMemo(() => {
     if (feedType === "bookmarked" && !isSearchActive && allNewsItems.length > 0) {
       return allNewsItems.map((item) => ({
@@ -117,28 +111,9 @@ const NewsList = () => {
     return allNewsItems;
   }, [allNewsItems, feedType, isSearchActive]);
 
-  // Function to extract symbols from currently visible items
-  const extractVisibleSymbols = useCallback(
-    (visibleIndices: Set<number>) => {
-      // Get all unique coin symbols from visible news items
-      return Array.from(visibleIndices)
-        .filter((idx) => idx < newsItems.length) // Filter out loader row
-        .flatMap((idx) => newsItems[idx].coins?.map((coin) => coin.symbol) || [])
-        .filter((value, index, self) => self.indexOf(value) === index); // Unique symbols only
-    },
-    [newsItems]
-  );
-
-  const visibleSymbols = useMemo(() => {
-    return extractVisibleSymbols(visibleItemsRef.current);
-  }, [extractVisibleSymbols, visibleItemsRef.current]);
-
-  const priceData = useBatchedPriceData(visibleSymbols);
-
   const resetVirtualizerOnFeedChange = useCallback(() => {
     if (rowVirtualizer) {
       // Use a more stable way to scroll to top - do it after state updates
-      visibleItemsRef.current = new Set();
       setTimeout(() => {
         if (parentRef.current) {
           parentRef.current.scrollTop = 0;
@@ -146,7 +121,6 @@ const NewsList = () => {
       }, 0);
     }
 
-    // Clear search when changing feed type
     setSearchQuery("");
   }, []);
 
@@ -165,7 +139,7 @@ const NewsList = () => {
       const rect = element.getBoundingClientRect();
       return rect.height;
     }, []),
-    scrollToFn: (offset, options, instance) => {
+    scrollToFn: (offset, options, _) => {
       const scrollElement = parentRef.current;
       if (!scrollElement) return;
 
@@ -178,19 +152,7 @@ const NewsList = () => {
         scrollElement.scrollTop = offset;
       }
     },
-    onChange: (instance) => {
-      const scrollElement = parentRef.current;
-      const renderedIndices = new Set(
-        instance.getVirtualItems().map((item) => item.index)
-      );
-
-      if (!setsAreEqual(visibleItemsRef.current, renderedIndices)) {
-        visibleItemsRef.current = renderedIndices;
-
-        const visibleSymbols = extractVisibleSymbols(renderedIndices);
-        updateVisibleSymbols(visibleSymbols, scrollElement?.scrollTop);
-      }
-    },
+    // onChange: (instance) => {},
   });
 
   const handleFeedTypeChange = (type: FeedType) => {
@@ -201,8 +163,7 @@ const NewsList = () => {
   const handleSearch = (query: string) => {
     if (query === searchQuery) return;
 
-    // First reset tracking variables
-    visibleItemsRef.current = new Set();
+    // Reset tracking variables
     setSearchQuery(query);
 
     // Scroll to top after the state update and re-render
@@ -234,10 +195,7 @@ const NewsList = () => {
     const scrollElement = parentRef.current;
     if (!scrollElement) return;
 
-    const handleScroll = () => {
-      checkAndLoadMore();
-    };
-
+    const handleScroll = () => checkAndLoadMore();
     scrollElement.addEventListener("scroll", handleScroll, { passive: true });
 
     return () => {
@@ -245,8 +203,7 @@ const NewsList = () => {
     };
   }, [checkAndLoadMore]);
 
-  // Initial check for loading more data when component mounts or
-  // data sources change (e.g., switching between all/bookmarked)
+  // Initial check for loading more data when component mounts or filters change
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       checkAndLoadMore();
@@ -255,8 +212,7 @@ const NewsList = () => {
     return () => clearTimeout(timeoutId);
   }, [checkAndLoadMore, feedType, searchQuery]);
 
-  // Update refresh counter every 5 seconds to trigger
-  // relative time recalculation
+  // Update refresh counter every 5 seconds to trigger relative time recalculation
   useEffect(() => {
     const interval = setInterval(() => {
       setRefreshCounter((count) => count + 1);
@@ -265,14 +221,12 @@ const NewsList = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Get appropriate loading message based on current state
   const getLoadingMessage = () => {
     if (!isConnected) return "Connecting to news feed...";
     if (isSearchActive) return "Searching news...";
     return isLoading ? "Loading news..." : "Waiting for news updates...";
   };
 
-  // Get appropriate empty state message based on current state
   const getEmptyStateMessage = () => {
     if (isSearchActive) return `No results found for "${searchQuery}"`;
     if (feedType === "bookmarked") return "No bookmarked items yet";
@@ -377,7 +331,7 @@ const NewsList = () => {
                     <NewsItem
                       news={item}
                       refreshCounter={refreshCounter}
-                      priceData={priceData}
+                      // priceData={priceData}
                     />
                   )}
                 </div>

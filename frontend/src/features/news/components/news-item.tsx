@@ -17,17 +17,11 @@ import { useDeleteBookmark } from "@/features/bookmarks/api/delete-bookmark";
 type NewsItemProps = {
   news: NewsItemType;
   refreshCounter?: number;
-  priceData?: {
-    [symbol: string]: {
-      price?: number;
-      changePercent?: number;
-    };
-  };
 };
 
 /**
- * Determines if the relative time display should be recalculated based on
- * item age and refresh counter (implementing an adaptive refresh strategy).
+ * Function to determine if the relative time display should be recalculated
+ * based on item age and refresh counter (an adaptive refresh strategy).
  */
 const shouldRecalculateTime = (timestamp: string, counter: number = 0): boolean => {
   if (!counter) return true; // always recalculate on first render (counter = 0)
@@ -52,22 +46,10 @@ const shouldRecalculateTime = (timestamp: string, counter: number = 0): boolean 
   }
 };
 
-const NewsItem = ({ news, refreshCounter = 0, priceData = {} }: NewsItemProps) => {
+const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
   const lastTimeRef = useRef<string | null>(null);
 
-  // Determine bookmark status - if the item has a bookmark_id property, it came from the bookmarks endpoint
-  // and should be considered bookmarked regardless of is_bookmarked flag
-  const isBookmarked = "bookmark_id" in news || news.is_bookmarked;
-
-  const createBookmark = useCreateBookmark({
-    onSuccess: () => toast.success("The post has been added to bookmarks"),
-    onError: () => toast.error("Failed to bookmark this post"),
-  });
-  const deleteBookmark = useDeleteBookmark({
-    onSuccess: () => toast.success("The post has been removed from bookmarks"),
-    onError: () => toast.error("Failed to remove this post from bookmarks"),
-  });
-
+  // Calculate relative time for the news item
   const relativeTime = useMemo(() => {
     if (!lastTimeRef.current || shouldRecalculateTime(news.time, refreshCounter)) {
       const newTime = formatRelativeTime(news.time);
@@ -82,6 +64,17 @@ const NewsItem = ({ news, refreshCounter = 0, priceData = {} }: NewsItemProps) =
   const formattedDateTime = useMemo(() => {
     return formatDateTime(news.time);
   }, [news.time]);
+
+  const createBookmark = useCreateBookmark({
+    onSuccess: () => toast.success("The post has been added to bookmarks"),
+    onError: () => toast.error("Failed to bookmark this post"),
+  });
+  const deleteBookmark = useDeleteBookmark({
+    onSuccess: () => toast.success("The post has been removed from bookmarks"),
+    onError: () => toast.error("Failed to remove this post from bookmarks"),
+  });
+
+  const isBookmarked = "bookmark_id" in news || news.is_bookmarked;
 
   const handleBookmarkToggle = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -98,6 +91,7 @@ const NewsItem = ({ news, refreshCounter = 0, priceData = {} }: NewsItemProps) =
   const handleCopyTitle = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
     navigator.clipboard
       .writeText(news.title)
       .then(() => toast.success("The title has been copied to clipboard"))
@@ -107,6 +101,7 @@ const NewsItem = ({ news, refreshCounter = 0, priceData = {} }: NewsItemProps) =
   const handleCopyUrl = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
     navigator.clipboard
       .writeText(news.url)
       .then(() => toast.success("The URL has been copied to clipboard"))
@@ -183,14 +178,11 @@ const NewsItem = ({ news, refreshCounter = 0, priceData = {} }: NewsItemProps) =
                     imageUrl={coin.image_url}
                     priceUsd={coin.price_usd}
                     priceTimestamp={coin.price_timestamp}
-                    // currentPrice={priceData[coin.symbol]?.price}
-                    // changePercent={priceData[coin.symbol]?.changePercent}
                   />
                 ))}
               </>
             )}
 
-            {/* TODO: Do not compute sentiment for news without related coins */}
             {news.coins.length > 0 &&
               news.sentiment &&
               news.score !== undefined && (
@@ -212,7 +204,6 @@ const NewsItem = ({ news, refreshCounter = 0, priceData = {} }: NewsItemProps) =
           title={isBookmarked ? "Remove bookmark" : "Add bookmark"}
           className={cn(actionButtonClass, isBookmarked && "text-primary")}
           onClick={handleBookmarkToggle}
-          // disabled={isLoading}
         >
           <Bookmark
             className="size-3.5"

@@ -1,2 +1,1 @@
-export { WebSocketProvider, useWebSocketContext } from "./news-websocket-context";
-export { WebSocketProviderWrapper } from "./news-websocket-wrapper";
+export { LiveNewsProvider, useLiveNewsContext } from "./live-news-context";

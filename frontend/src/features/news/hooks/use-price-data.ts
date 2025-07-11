@@ -17,8 +17,7 @@ interface CoinPriceData {
  * This is designed to be used at a parent component level where one
  * subscription can serve multiple CoinTag components.
  */
-const useBatchedPriceData = (symbols: string[]): CoinPriceData => {
-  // Create a unique set of symbols to avoid duplicates
+const usePriceData = (symbols: string[]): CoinPriceData => {
   const uniqueSymbols = useMemo(() => {
     return [...new Set(symbols)];
   }, [symbols]);
@@ -46,4 +45,4 @@ const useBatchedPriceData = (symbols: string[]): CoinPriceData => {
   return priceDataMap;
 };
 
-export default useBatchedPriceData;
+export default usePriceData;

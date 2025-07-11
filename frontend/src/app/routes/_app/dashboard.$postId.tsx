@@ -33,7 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import useBatchedPriceData from "@/features/news/hooks/use-batched-price-data";
+import usePriceData from "@/features/news/hooks/use-price-data";
 
 function PostComponent() {
   const { postId } = Route.useParams() as { postId: string };
@@ -45,15 +45,14 @@ function PostComponent() {
     isLoading: isPostLoading,
     error,
   } = useGetPost(parseInt(postId, 10));
+
   const { subscribeToSymbols, unsubscribeFromSymbols } = useCoinSubscription();
   const selectedCoin = post?.coins.find(
     (coin) =>
       (coin.name?.toLowerCase() || coin.symbol.toLowerCase()) === selectedCoinId
   );
 
-  const priceData = useBatchedPriceData(
-    post?.coins.map((coin) => coin.symbol) || []
-  );
+  const priceData = usePriceData(post?.coins.map((coin) => coin.symbol) || []);
 
   const createBookmark = useCreateBookmark({
     onSuccess: () => toast.success("The post has been added to bookmarks"),
@@ -119,6 +118,8 @@ function PostComponent() {
   };
 
   const handleCopyTitle = () => {
+    if (!post) return;
+
     navigator.clipboard
       .writeText(post.title)
       .then(() => toast.success("The title has been copied to clipboard"))
@@ -126,6 +127,8 @@ function PostComponent() {
   };
 
   const handleCopyUrl = () => {
+    if (!post) return;
+
     navigator.clipboard
       .writeText(post.url)
       .then(() => toast.success("The URL has been copied to clipboard"))
