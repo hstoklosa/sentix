@@ -45,7 +45,7 @@ async def verify_refresh_token(
             raise InvalidTokenException()
         
         jti = payload.get("jti")
-        if jti and is_token_blacklisted(session=session, jti=jti):
+        if jti and await is_token_blacklisted(session=session, jti=jti):
             raise InvalidTokenException()
             
         return payload

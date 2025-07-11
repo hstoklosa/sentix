@@ -132,7 +132,7 @@ async def refresh_token(
     if not jti or not user_id:
         raise InvalidTokenException()
 
-    if token_service.is_token_blacklisted(session=session, jti=jti):
+    if await token_service.is_token_blacklisted(session=session, jti=jti):
         raise InvalidTokenException()
     
     user = await user_service.get_user_by_id(session=session, user_id=int(user_id))
