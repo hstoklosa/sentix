@@ -5,6 +5,7 @@ from typing import List, Tuple, Dict, Any
 
 from sqlmodel import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from app.core.database import sessionmanager
 from app.core.market.coingecko import CoinGeckoClient
@@ -50,10 +51,7 @@ async def get_trending_coins_by_mentions(
     offset = (page - 1) * page_size
     
     query = (
-        select(
-            Coin,
-            subquery.c.mention_count
-        )
+        select(Coin, subquery.c.mention_count)
         .join(subquery, Coin.id == subquery.c.coin_id)
         .order_by(subquery.c.mention_count.desc())
         .offset(offset)
@@ -69,14 +67,15 @@ async def get_trending_coins_by_mentions(
         # Get all news items mentioning this coin today
         news_query = (
             select(NewsItem)
+            .options(joinedload(NewsItem.coins))
             .join(NewsCoin, NewsItem.id == NewsCoin.news_item_id)
             .where(NewsCoin.coin_id == coin.id)
             .where(NewsItem.time >= start_of_day)
             .where(NewsItem.time <= end_of_day)
         )
         result = await session.execute(news_query)
-        news_items = result.scalars().all()
-        
+        news_items = result.unique().scalars().all() # result.scalars().all()
+
         # Calculate sentiment statistics
         positive_count = sum(1 for item in news_items if item.sentiment == "Bullish")
         negative_count = sum(1 for item in news_items if item.sentiment == "Bearish")

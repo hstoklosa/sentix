@@ -43,7 +43,7 @@ async def get_market_stats(
         .where(NewsItem.time <= end_of_day)
     )
     result = await session.execute(stmt)
-    today_news = result.scalars().all()
+    today_news = result.scalars().unique().all()
     
     # Count sentiment types
     bullish_count = sum(1 for item in today_news if item.sentiment == "Bullish")
