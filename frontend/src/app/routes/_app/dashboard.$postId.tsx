@@ -32,13 +32,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { ChartInterval, ChartPeriod } from "@/features/market/types";
 
 import usePriceData from "@/features/news/hooks/use-price-data";
+
+const TIME_PERIODS: { label: string; value: ChartPeriod }[] = [
+  { label: "7D", value: 7 },
+  { label: "30D", value: 30 },
+  { label: "90D", value: 90 },
+  { label: "180D", value: 180 },
+  { label: "365D", value: 365 },
+  { label: "MAX", value: "max" },
+];
 
 function PostComponent() {
   const { postId } = Route.useParams() as { postId: string };
   const [selectedCoinId, setSelectedCoinId] = useState<string | null>(null);
   const previousSymbolsRef = useRef<string[]>([]);
+  const [selectedPeriod, setSelectedPeriod] = useState<ChartPeriod>(30);
+  const [selectedInterval, setSelectedInterval] = useState<ChartInterval>("daily");
 
   const {
     data: post,
@@ -134,6 +147,104 @@ function PostComponent() {
 
   const handleCoinChange = (coinId: string) => {
     setSelectedCoinId(coinId);
+  };
+
+  const handlePeriodChange = (period: ChartPeriod) => {
+    setSelectedPeriod(period);
+  };
+
+  const handleIntervalChange = (interval: ChartInterval) => {
+    setSelectedInterval(interval);
+  };
+
+  const renderChartHeader = () => {
+    if (!post?.coins.length || !selectedCoinId) return null;
+
+    return (
+      <div className="py-2 px-3 flex items-center justify-between border-b border-border">
+        <Select
+          value={selectedCoinId}
+          onValueChange={handleCoinChange}
+        >
+          <SelectTrigger className="h-7 w-auto min-w-auto bg-secondary transition-colors border border-input hover:bg-accent">
+            <SelectValue placeholder="Select coin">
+              {selectedCoin && (
+                <div className="flex items-center">
+                  {selectedCoin.image_url ? (
+                    <img
+                      src={selectedCoin.image_url}
+                      alt={selectedCoin.symbol}
+                      className="w-4 h-4 mr-2 rounded-full"
+                    />
+                  ) : (
+                    <Coins className="w-4 h-4 mr-2 text-muted-foreground" />
+                  )}
+                  <span className="font-medium">{selectedCoin.symbol}</span>
+                </div>
+              )}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {post.coins.map((coin) => (
+              <SelectItem
+                key={coin.id}
+                value={coin.symbol.toLowerCase()}
+              >
+                <div className="flex items-center">
+                  {coin.image_url ? (
+                    <img
+                      src={coin.image_url}
+                      alt={coin.symbol}
+                      className="w-5 h-5 mr-2 rounded-full"
+                    />
+                  ) : (
+                    <Coins className="w-5 h-5 mr-2 text-muted-foreground" />
+                  )}
+                  <span className="font-medium">{coin.symbol}</span>
+                  <span className="text-xs text-muted-foreground ml-2">
+                    {coin.name}
+                  </span>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <div className="flex items-center space-x-4 ml-auto">
+          <div className="bg-accent/80 rounded-full p-0.5 inline-flex w-fit">
+            {TIME_PERIODS.map((period) => (
+              <Button
+                key={period.value.toString()}
+                variant="ghost"
+                size="sm"
+                onClick={() => handlePeriodChange(period.value)}
+                className={cn(
+                  "h-6 rounded-full px-2 py-0 text-xs font-medium min-w-0",
+                  selectedPeriod === period.value
+                    ? "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground pointer-events-none"
+                    : "text-foreground/80 hover:bg-secondary hover:text-foreground"
+                )}
+              >
+                {period.label}
+              </Button>
+            ))}
+          </div>
+
+          <Select
+            value={selectedInterval}
+            onValueChange={handleIntervalChange}
+          >
+            <SelectTrigger className="h-7 w-24">
+              <SelectValue placeholder="Interval" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="hourly">Hourly</SelectItem>
+              <SelectItem value="daily">Daily</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -268,63 +379,14 @@ function PostComponent() {
         ) : (
           <div className="flex flex-col h-full">
             {post.coins.length > 0 && selectedCoinId ? (
-              <PriceChart
-                coinId={selectedCoinId}
-                headerLeft={
-                  <Select
-                    value={selectedCoinId}
-                    onValueChange={handleCoinChange}
-                  >
-                    <SelectTrigger className="h-7 w-auto min-w-auto bg-secondary transition-colors border border-input hover:bg-accent">
-                      <SelectValue placeholder="Select coin">
-                        {selectedCoin && (
-                          <div className="flex items-center">
-                            {selectedCoin.image_url ? (
-                              <img
-                                src={selectedCoin.image_url}
-                                alt={selectedCoin.symbol}
-                                className="w-4 h-4 mr-2 rounded-full"
-                              />
-                            ) : (
-                              <Coins className="w-4 h-4 mr-2 text-muted-foreground" />
-                            )}
-                            <span className="font-medium">
-                              {selectedCoin.symbol}
-                            </span>
-                          </div>
-                        )}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {post.coins.map((coin) => (
-                        <SelectItem
-                          key={coin.id}
-                          value={coin.symbol.toLowerCase()}
-                          // value={
-                          //   coin.name?.toLowerCase() || coin.symbol.toLowerCase()
-                          // }
-                        >
-                          <div className="flex items-center">
-                            {coin.image_url ? (
-                              <img
-                                src={coin.image_url}
-                                alt={coin.symbol}
-                                className="w-5 h-5 mr-2 rounded-full"
-                              />
-                            ) : (
-                              <Coins className="w-5 h-5 mr-2 text-muted-foreground" />
-                            )}
-                            <span className="font-medium">{coin.symbol}</span>
-                            <span className="text-xs text-muted-foreground ml-2">
-                              {coin.name}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                }
-              />
+              <>
+                {renderChartHeader()}
+                <PriceChart
+                  coinId={selectedCoinId}
+                  selectedPeriod={selectedPeriod}
+                  selectedInterval={selectedInterval}
+                />
+              </>
             ) : (
               <div className="flex h-full items-center justify-center flex-col gap-2 p-4">
                 <Info className="size-8 text-muted-foreground" />

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   createChart,
   IChartApi,
@@ -7,14 +7,6 @@ import {
   ColorType,
 } from "lightweight-charts";
 
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 import { useGetChartData } from "../api";
@@ -24,19 +16,9 @@ import { formatPrice } from "../utils";
 type PriceChartProps = {
   coinId: string;
   className?: string;
-  headerRight?: ReactNode;
-  headerLeft?: ReactNode;
-  showIntervalSelector?: boolean;
+  selectedPeriod: ChartPeriod;
+  selectedInterval: ChartInterval;
 };
-
-const TIME_PERIODS: { label: string; value: ChartPeriod }[] = [
-  { label: "7D", value: 7 },
-  { label: "30D", value: 30 },
-  { label: "90D", value: 90 },
-  { label: "180D", value: 180 },
-  { label: "365D", value: 365 },
-  { label: "MAX", value: "max" },
-];
 
 const UP_COLOR = "#33D778"; // Green uptrend
 const DOWN_COLOR = "#F23645"; // Red downtrend
@@ -48,21 +30,18 @@ const DOWN_GRADIENT_BOTTOM = "rgba(242, 54, 69, 0)";
 export const PriceChart = ({
   coinId,
   className,
-  headerRight,
-  headerLeft,
-  showIntervalSelector = false,
+  selectedPeriod,
+  selectedInterval,
 }: PriceChartProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [chartInstance, setChartInstance] = useState<IChartApi | null>(null);
   const [chartSeries, setChartSeries] = useState<any>(null);
-  const [selectedPeriod, setSelectedPeriod] = useState<ChartPeriod>(30);
-  const [interval, setInterval] = useState<ChartInterval>("daily");
   const [isUptrend, setIsUptrend] = useState<boolean>(true);
 
   const { data, isLoading, error } = useGetChartData({
     coinId,
     days: selectedPeriod,
-    interval,
+    interval: selectedInterval,
   });
 
   // Create chart instance
@@ -228,51 +207,6 @@ export const PriceChart = ({
 
   return (
     <div className={`flex flex-col h-full w-full ${className || ""}`}>
-      <div className="py-2 px-3 flex items-center justify-between border-b border-border">
-        {headerLeft ? (
-          <div className="flex items-center">{headerLeft}</div>
-        ) : (
-          <div></div> /* Empty div to maintain spacing */
-        )}
-
-        <div className="flex items-center space-x-4 ml-auto">
-          <div className="bg-accent/80 rounded-full p-0.5 inline-flex w-fit">
-            {TIME_PERIODS.map((period) => (
-              <Button
-                key={period.value.toString()}
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedPeriod(period.value)}
-                className={cn(
-                  "h-6 rounded-full px-2 py-0 text-xs font-medium min-w-0",
-                  selectedPeriod === period.value
-                    ? "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground pointer-events-none"
-                    : "text-foreground/80 hover:bg-secondary hover:text-foreground"
-                )}
-              >
-                {period.label}
-              </Button>
-            ))}
-          </div>
-
-          {showIntervalSelector && (
-            <Select
-              value={interval}
-              onValueChange={(value) => setInterval(value as ChartInterval)}
-            >
-              <SelectTrigger className="h-7 w-24">
-                <SelectValue placeholder="Interval" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="hourly">Hourly</SelectItem>
-                <SelectItem value="daily">Daily</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-
-        {headerRight && <div className="flex items-center ml-4">{headerRight}</div>}
-      </div>
       <div className="flex-1 h-full w-full">
         {isLoading && (
           <div className="flex items-center justify-center h-full">
