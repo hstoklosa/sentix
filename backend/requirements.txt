@@ -14,8 +14,9 @@ transformers
 torch
 aiocache
 aiohttp
+ccxt
 
-# Testing libraries
+# Testing
 pytest
 pytest-asyncio
 pytest-mock

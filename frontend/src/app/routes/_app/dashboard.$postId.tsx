@@ -37,22 +37,23 @@ import usePriceData from "@/features/news/hooks/use-price-data";
 
 function PostComponent() {
   const { postId } = Route.useParams() as { postId: string };
+  const [selectedCoinId, setSelectedCoinId] = useState<string | null>(null);
   const previousSymbolsRef = useRef<string[]>([]);
-  const [selectedCoinId, setSelectedCoinId] = useState<string>("bitcoin");
 
   const {
     data: post,
     isLoading: isPostLoading,
     error,
   } = useGetPost(parseInt(postId, 10));
+  console.log("XD", post);
 
   const { subscribeToSymbols, unsubscribeFromSymbols } = useCoinSubscription();
+  const priceData = usePriceData(post?.coins.map((coin) => coin.symbol) || []);
+
   const selectedCoin = post?.coins.find(
     (coin) =>
       (coin.name?.toLowerCase() || coin.symbol.toLowerCase()) === selectedCoinId
   );
-
-  const priceData = usePriceData(post?.coins.map((coin) => coin.symbol) || []);
 
   const createBookmark = useCreateBookmark({
     onSuccess: () => toast.success("The post has been added to bookmarks"),
@@ -90,11 +91,7 @@ function PostComponent() {
   // Set the default selected coin when post loads or changes
   useEffect(() => {
     if (post?.coins?.length) {
-      setSelectedCoinId(
-        post.coins[0].name?.toLowerCase() || post.coins[0].symbol.toLowerCase()
-      );
-    } else {
-      setSelectedCoinId("bitcoin");
+      setSelectedCoinId(post.coins[0].symbol.toLowerCase());
     }
   }, [post]);
 
@@ -138,8 +135,6 @@ function PostComponent() {
   const handleCoinChange = (coinId: string) => {
     setSelectedCoinId(coinId);
   };
-
-  const chartCoinId = selectedCoinId;
 
   return (
     <div className="grid grid-rows-2 h-full w-full gap-2">
@@ -272,9 +267,9 @@ function PostComponent() {
           </div>
         ) : (
           <div className="flex flex-col h-full">
-            {post.coins.length > 0 && chartCoinId ? (
+            {post.coins.length > 0 && selectedCoinId ? (
               <PriceChart
-                coinId={chartCoinId}
+                coinId={selectedCoinId}
                 headerLeft={
                   <Select
                     value={selectedCoinId}
@@ -304,9 +299,10 @@ function PostComponent() {
                       {post.coins.map((coin) => (
                         <SelectItem
                           key={coin.id}
-                          value={
-                            coin.name?.toLowerCase() || coin.symbol.toLowerCase()
-                          }
+                          value={coin.symbol.toLowerCase()}
+                          // value={
+                          //   coin.name?.toLowerCase() || coin.symbol.toLowerCase()
+                          // }
                         >
                           <div className="flex items-center">
                             {coin.image_url ? (
@@ -320,7 +316,7 @@ function PostComponent() {
                             )}
                             <span className="font-medium">{coin.symbol}</span>
                             <span className="text-xs text-muted-foreground ml-2">
-                              {coin.name || coin.symbol}
+                              {coin.name}
                             </span>
                           </div>
                         </SelectItem>

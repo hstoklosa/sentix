@@ -7,8 +7,6 @@ import {
   ColorType,
 } from "lightweight-charts";
 
-import { ChartDataPoint, ChartInterval, ChartPeriod } from "../types";
-import { useGetChartData } from "../api";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -17,30 +15,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatPrice } from "../utils";
 import { cn } from "@/lib/utils";
 
-interface PriceChartProps {
+import { useGetChartData } from "../api";
+import { ChartInterval, ChartPeriod } from "../types";
+import { formatPrice } from "../utils";
+
+type PriceChartProps = {
   coinId: string;
   className?: string;
   headerRight?: ReactNode;
   headerLeft?: ReactNode;
   showIntervalSelector?: boolean;
-}
+};
 
 const TIME_PERIODS: { label: string; value: ChartPeriod }[] = [
   { label: "7D", value: 7 },
   { label: "30D", value: 30 },
   { label: "90D", value: 90 },
   { label: "180D", value: 180 },
-  // { label: "YTD", value: "ytd" },
   { label: "365D", value: 365 },
-  // { label: "MAX", value: "max" },
+  { label: "MAX", value: "max" },
 ];
 
-// Color constants for up and down trends
-const UP_COLOR = "#33D778"; // Green for uptrend
-const DOWN_COLOR = "#F23645"; // Red for downtrend
+const UP_COLOR = "#33D778"; // Green uptrend
+const DOWN_COLOR = "#F23645"; // Red downtrend
 const UP_GRADIENT_TOP = "rgba(51, 215, 120, 0.4)";
 const UP_GRADIENT_BOTTOM = "rgba(51, 215, 120, 0)";
 const DOWN_GRADIENT_TOP = "rgba(242, 54, 69, 0.4)";

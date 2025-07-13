@@ -1,9 +1,11 @@
 from datetime import datetime, time, date
-from typing import Annotated
+from typing import Annotated, Union, Literal
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import select
+
+import ccxt.async_support as ccxt_async
 
 from app.core.market.coinmarketcap import cmc_client
 from app.core.market.coingecko import coingecko_client
@@ -123,47 +125,68 @@ async def get_coins(
     )
 
 
+VALID_CHART_INTERVALS = {"daily": "1d", "hourly": "1h"}
+VALID_CHART_DAYS = [1, 7, 14, 30, 90, 180, 365, "max"]
+
 @router.get("/coins/{coin_id}/chart", response_model=MarketChartData)
 async def get_coin_chart_data(
+    session: AsyncSessionDep,
     coin_id: str,
-    days: int = 30,
+    days: Union[int, Literal["max"]] = 30,
     interval: str = "daily",
-    force_refresh: bool = False
 ):
     # Validate interval parameter
-    valid_intervals = ["daily", "hourly"]
-    if interval not in valid_intervals:
+    if interval not in VALID_CHART_INTERVALS:
         interval = "daily"
-    
+    ccxt_interval = VALID_CHART_INTERVALS[interval]
+
     # Validate days parameter
-    valid_days = [1, 7, 14, 30, 90, 180, 365, "max"]
-    if days not in valid_days and days != "max":
+    if days not in VALID_CHART_DAYS and days != "max":
         days = 30
+
+    # coin_id is the symbol of the coin
+    pair = f"{coin_id.upper()}/USDT"
+
+    # Fetch OHLCV data from Binance using ccxt
+    binance = ccxt_async.binance()
     
-    # Get the chart data from CoinGecko
-    chart_data = await coingecko_client.get_coin_market_chart(
-        coin_id=coin_id,
-        days=days,
-        interval=interval,
-        force_refresh=force_refresh
-    )
-    
-    # Transform the data into project's schema
+    try:
+        # Load markets to ensure the pair exists
+        await binance.load_markets()
+        
+        if pair not in binance.markets:
+            raise HTTPException(status_code=404, detail=f"Pair {pair} not found on Binance")
+
+        # since = binance.milliseconds() - days * 24 * 60 * 60 * 1000
+        # limit = days if ccxt_interval == "1d" else days * 24
+
+        since = None if days == "max" else binance.milliseconds() - days * 24 * 60 * 60 * 1000
+        limit = None if days == "max" else (days if ccxt_interval == "1d" else days * 24)
+        
+        ohlcv = await binance.fetch_ohlcv(
+            pair, timeframe=ccxt_interval, since=since, limit=limit)
+
+    except Exception as e:
+        logger.error(f"Error occurred while fetching chart data from CCXT: {e}")
+        raise HTTPException(status_code=502, detail=f"Failed to fetch chart data: {e}")
+    finally:
+        await binance.close()
+
+    # Transform OHLCV to ChartDataPoint (timestamp, close price)
     prices = [
-        ChartDataPoint(timestamp=item[0], value=item[1])
-        for item in chart_data.get("prices", [])
+        ChartDataPoint(
+            timestamp=timestamp, 
+            value=close_price
+        ) for timestamp, _, _, _, close_price, _ in ohlcv
     ]
-    
-    market_caps = [
-        ChartDataPoint(timestamp=item[0], value=item[1])
-        for item in chart_data.get("market_caps", [])
-    ]
-    
     volumes = [
-        ChartDataPoint(timestamp=item[0], value=item[1])
-        for item in chart_data.get("total_volumes", [])
+        ChartDataPoint(
+            timestamp=timestamp, 
+            value=volume
+        ) for timestamp, _, _, _, _, volume in ohlcv
     ]
-    
+    market_caps = [] # ccxt does not provide market cap data 
+
     return MarketChartData(
         prices=prices,
         market_caps=market_caps,
