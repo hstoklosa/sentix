@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, time
 from typing import List, Optional
 
 from pydantic import BaseModel, Field, ConfigDict
@@ -7,9 +7,11 @@ from app.schemas.pagination import PaginatedResponse
 
 
 class DateFilterParams(BaseModel):
-    """Parameters for filtering news by date range"""
+    """Parameters for filtering news by date and time range"""
     start_date: Optional[datetime] = Field(None, description="Start date for filtering (inclusive)")
     end_date: Optional[datetime] = Field(None, description="End date for filtering (inclusive)")
+    start_time: Optional[time] = Field(None, description="Start time for filtering (inclusive)")
+    end_time: Optional[time] = Field(None, description="End time for filtering (inclusive)")
 
 
 class SearchParams(BaseModel):

@@ -111,16 +111,41 @@ export const useSearchInfinitePosts = (
 export const useUpdatePostsCache = (dateFilter?: {
   startDate?: Date;
   endDate?: Date;
+  startTime?: string;
+  endTime?: string;
 }) => {
   const queryClient = useQueryClient();
 
   const updatePostsCache = (news: NewsItem) => {
-    // Filter websocket updates based on active date filters
-    if (dateFilter && (dateFilter.startDate || dateFilter.endDate)) {
+    // Filter websocket updates based on active date and time filters
+    if (
+      dateFilter &&
+      (dateFilter.startDate ||
+        dateFilter.endDate ||
+        dateFilter.startTime ||
+        dateFilter.endTime)
+    ) {
       const itemDate = new Date(news.time);
+      const itemHours = itemDate.getHours();
+      const itemMinutes = itemDate.getMinutes();
+      const itemTimeInMinutes = itemHours * 60 + itemMinutes;
 
       if (dateFilter.startDate && itemDate < dateFilter.startDate) return;
       if (dateFilter.endDate && itemDate > dateFilter.endDate) return;
+
+      if (dateFilter.startTime) {
+        const [startHours, startMinutes] = dateFilter.startTime
+          .split(":")
+          .map(Number);
+        const startTimeInMinutes = startHours * 60 + startMinutes;
+        if (itemTimeInMinutes < startTimeInMinutes) return;
+      }
+
+      if (dateFilter.endTime) {
+        const [endHours, endMinutes] = dateFilter.endTime.split(":").map(Number);
+        const endTimeInMinutes = endHours * 60 + endMinutes;
+        if (itemTimeInMinutes > endTimeInMinutes) return;
+      }
     }
 
     // Update query cache for the default params

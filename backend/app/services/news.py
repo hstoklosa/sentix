@@ -1,6 +1,6 @@
 import logging
 from typing import List, Tuple, Optional
-from datetime import datetime
+from datetime import datetime, time
 
 from sqlmodel import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -158,7 +158,9 @@ async def get_news_feed(
     page: int = 1, 
     page_size: int = 20,
     start_date: Optional[datetime] = None,
-    end_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None,
+    start_time: Optional[time] = None,
+    end_time: Optional[time] = None
 ) -> Tuple[List[NewsItem], int]:
     """
     Get a paginated feed of news items ordered by published date
@@ -169,28 +171,30 @@ async def get_news_feed(
         page_size: Number of items per page
         start_date: Optional start date for filtering (inclusive)
         end_date: Optional end date for filtering (inclusive)
+        start_time: Optional start time for filtering (inclusive)
+        end_time: Optional end time for filtering (inclusive)
     
     Returns:
         Tuple containing:
             - List of news items
             - Total count of items
     """
-    print(f"DEBUG: get_news_feed called with start_date={start_date}, end_date={end_date}")
-    
-    # Debug: Check what news items exist in the database
-    debug_stmt = select(NewsItem.time).order_by(NewsItem.time.desc()).limit(3)
-    debug_result = await session.execute(debug_stmt)
-    recent_times = debug_result.scalars().all()
-    print(f"DEBUG: Recent news item times: {recent_times}")
+    print(f"DEBUG: get_news_feed called with start_date={start_date}, end_date={end_date}, start_time={start_time}, end_time={end_time}")
     
     offset = (page - 1) * page_size
     
-    # Build date filter conditions
+    # Build date and time filter conditions
     date_conditions = []
     if start_date:
         date_conditions.append(NewsItem.time >= start_date)
     if end_date:
         date_conditions.append(NewsItem.time <= end_date)
+    
+    # Add time conditions if specified
+    if start_time:
+        date_conditions.append(func.extract('hour', NewsItem.time) * 60 + func.extract('minute', NewsItem.time) >= start_time.hour * 60 + start_time.minute)
+    if end_time:
+        date_conditions.append(func.extract('hour', NewsItem.time) * 60 + func.extract('minute', NewsItem.time) <= end_time.hour * 60 + end_time.minute)
     
     # Combine date conditions
     where_clause = and_(*date_conditions) if date_conditions else None

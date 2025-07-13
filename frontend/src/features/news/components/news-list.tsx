@@ -22,6 +22,8 @@ type FeedType = "all" | "bookmarked";
 interface DateFilter {
   startDate?: Date;
   endDate?: Date;
+  startTime?: string;
+  endTime?: string;
 }
 
 const NewsList = () => {
@@ -46,8 +48,30 @@ const NewsList = () => {
       const params = {
         page: pageParam,
         page_size: 20,
-        start_date: dateFilter.startDate?.toISOString(),
-        end_date: dateFilter.endDate?.toISOString(),
+        start_date: dateFilter.startDate
+          ? new Date(
+              dateFilter.startDate.getFullYear(),
+              dateFilter.startDate.getMonth(),
+              dateFilter.startDate.getDate(),
+              dateFilter.startTime
+                ? parseInt(dateFilter.startTime.split(":")[0])
+                : 0,
+              dateFilter.startTime
+                ? parseInt(dateFilter.startTime.split(":")[1])
+                : 0,
+              0
+            ).toISOString()
+          : undefined,
+        end_date: dateFilter.endDate
+          ? new Date(
+              dateFilter.endDate.getFullYear(),
+              dateFilter.endDate.getMonth(),
+              dateFilter.endDate.getDate(),
+              dateFilter.endTime ? parseInt(dateFilter.endTime.split(":")[0]) : 23,
+              dateFilter.endTime ? parseInt(dateFilter.endTime.split(":")[1]) : 59,
+              59
+            ).toISOString()
+          : undefined,
       };
 
       if (searchQuery) {
@@ -256,6 +280,8 @@ const NewsList = () => {
           <ContentFilter
             startDate={dateFilter.startDate}
             endDate={dateFilter.endDate}
+            startTime={dateFilter.startTime}
+            endTime={dateFilter.endTime}
             onApplyFilters={handleApplyDateFilters}
             onResetFilters={handleResetDateFilters}
           />
