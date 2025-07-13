@@ -2,7 +2,6 @@ from datetime import datetime
 from typing import List, Optional, TYPE_CHECKING, Dict, Any
 
 from sqlmodel import Field, SQLModel, Relationship
-from sqlalchemy import UniqueConstraint
 
 from app.models.base import Base
 from app.models.coin import Coin
@@ -26,7 +25,7 @@ class NewsItem(Base, table=True):
     sentiment: str = Field(index=True)
     score: float = Field(index=True)
 
-    coins: List["NewsCoin"] = Relationship(back_populates="news_item")
+    coins: List["NewsCoin"] = Relationship(back_populates="news_item", sa_relationship_kwargs={'lazy': 'joined'})
     bookmarks: List["NewsBookmark"] = Relationship(back_populates="news_item")
     
     @property
@@ -64,15 +63,11 @@ class NewsItem(Base, table=True):
 class NewsCoin(SQLModel, table=True):
     __tablename__ = "news_coins"
     
-    id: Optional[int] = Field(default=None, primary_key=True)
-    news_item_id: int = Field(foreign_key="news_items.id")
-    coin_id: int = Field(foreign_key="coins.id")
+    news_item_id: int = Field(foreign_key="news_items.id", primary_key=True)
+    coin_id: int = Field(foreign_key="coins.id", primary_key=True)
     price_usd: Optional[float] = Field(default=None)
     price_timestamp: Optional[datetime] = Field(default=None)
     
-    __table_args__ = (
-        UniqueConstraint("news_item_id", "coin_id", name="unique_news_coin"),
-    )
-    
-    news_item: NewsItem = Relationship(back_populates="coins")
-    coin: Coin = Relationship(back_populates="news_items")
+    # Relationships
+    news_item: "NewsItem" = Relationship(back_populates="coins")  # news_coins
+    coin: "Coin" = Relationship(back_populates="news_coins")

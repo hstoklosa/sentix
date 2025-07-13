@@ -14,4 +14,5 @@ class Coin(Base, table=True):
     symbol: str = Field(unique=True, index=True)
     image_url: Optional[str] = Field(default=None)
 
-    news_items: List["NewsCoin"] = Relationship(back_populates="coin")
+    # news_items: List["NewsCoin"] = Relationship(back_populates="coin")
+    news_coins: List["NewsCoin"] = Relationship(back_populates="coin")

@@ -1,11 +1,14 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlmodel import Field, Relationship
 from sqlalchemy import UniqueConstraint
 
 from app.models.base import Base
-from app.models.news import NewsItem
-from app.models.user import User
+
+if TYPE_CHECKING:
+    from app.models.news import NewsItem
+    from app.models.user import User
 
 
 class NewsBookmark(Base, table=True):
@@ -20,5 +23,5 @@ class NewsBookmark(Base, table=True):
         UniqueConstraint("user_id", "news_item_id", name="unique_user_news_bookmark"),
     )
     
-    user: User = Relationship(back_populates="news_bookmarks")
-    news_item: NewsItem = Relationship(back_populates="bookmarks") 
+    user: "User" = Relationship(back_populates="news_bookmarks")
+    news_item: "NewsItem" = Relationship(back_populates="bookmarks") 

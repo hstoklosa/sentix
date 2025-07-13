@@ -1,9 +1,13 @@
-from typing import List, Optional
+from typing import List, TYPE_CHECKING
 
 from pydantic import EmailStr
 from sqlmodel import Field, Relationship
 
 from app.models.base import Base
+
+if TYPE_CHECKING:
+    from app.models.bookmark import NewsBookmark
+
 
 class User(Base, table=True):
     __tablename__ = "users"
@@ -13,5 +17,5 @@ class User(Base, table=True):
     is_superuser: bool = Field(default=False)
     password: str
     
-    # Add relationship to bookmarks (must be at the end to avoid circular imports)
+    # Relationships
     news_bookmarks: List["NewsBookmark"] = Relationship(back_populates="user")
