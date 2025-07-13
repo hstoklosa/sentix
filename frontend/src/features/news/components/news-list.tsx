@@ -10,110 +10,91 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import NewsItem from "./news-item";
-import SearchBar from "./search-bar";
-import {
-  useGetInfinitePosts,
-  useSearchInfinitePosts,
-  useUpdatePostsCache,
-} from "../api";
-import { useGetInfiniteBookmarkedPosts } from "@/features/bookmarks/api/get-bookmarks";
+import { NewsItem, SearchBar, ContentFilter } from ".";
+import { getPosts, useUpdatePostsCache } from "../api/get-news";
+import { searchPosts } from "../api/get-news"; // Assuming searchPosts is exported
+import { getBookmarkedPosts } from "@/features/bookmarks/api/get-bookmarks";
 import { useLiveNewsContext } from "../context";
-// import usePriceData from "../hooks/use-price-data";
+import { useInfiniteQuery } from "@tanstack/react-query";
 
 type FeedType = "all" | "bookmarked";
+
+interface DateFilter {
+  startDate?: Date;
+  endDate?: Date;
+}
 
 const NewsList = () => {
   const [feedType, setFeedType] = useState<FeedType>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [dateFilter, setDateFilter] = useState<DateFilter>({});
   const [refreshCounter, setRefreshCounter] = useState(0);
   const parentRef = useRef<HTMLDivElement>(null);
   const loadingMoreRef = useRef(false);
   const { isConnected, error: isWebsocketError } = useLiveNewsContext();
 
   const {
-    data: allNewsData,
-    isLoading: isAllNewsLoading,
-    isError: isAllNewsError,
-    isFetchingNextPage: isAllNewsFetchingNextPage,
-    hasNextPage: hasAllNewsNextPage,
-    fetchNextPage: fetchAllNewsNextPage,
-  } = useGetInfinitePosts();
+    data,
+    isLoading,
+    isError,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteQuery({
+    queryKey: ["news-feed", feedType, searchQuery, dateFilter],
+    queryFn: async ({ pageParam = 1 }) => {
+      const params = {
+        page: pageParam,
+        page_size: 20,
+        start_date: dateFilter.startDate?.toISOString(),
+        end_date: dateFilter.endDate?.toISOString(),
+      };
 
-  const {
-    data: bookmarkedData,
-    isLoading: isBookmarkedLoading,
-    isError: isBookmarkedError,
-    isFetchingNextPage: isBookmarkedFetchingNextPage,
-    hasNextPage: hasBookmarkedNextPage,
-    fetchNextPage: fetchBookmarkedNextPage,
-  } = useGetInfiniteBookmarkedPosts();
+      if (searchQuery) {
+        return searchPosts(searchQuery, params);
+      } else if (feedType === "all") {
+        return getPosts(params);
+      } else {
+        return getBookmarkedPosts({ pageParam });
+      }
+    },
+    getNextPageParam: (lastPage) =>
+      lastPage.has_next ? lastPage.page + 1 : undefined,
+    initialPageParam: 1,
+  });
 
-  const {
-    data: searchData,
-    isLoading: isSearchLoading,
-    isError: isSearchError,
-    isFetchingNextPage: isSearchFetchingNextPage,
-    hasNextPage: hasSearchNextPage,
-    fetchNextPage: fetchSearchNextPage,
-  } = useSearchInfinitePosts(searchQuery);
-
-  const updatePostsCache = useUpdatePostsCache();
+  const updatePostsCache = useUpdatePostsCache(dateFilter);
 
   const isSearchActive = !!searchQuery;
+  const hasDateFilter = !!(dateFilter.startDate || dateFilter.endDate);
 
-  const data = isSearchActive
-    ? searchData
-    : feedType === "all"
-      ? allNewsData
-      : bookmarkedData;
-
-  const isLoading = isSearchActive
-    ? isSearchLoading
-    : feedType === "all"
-      ? isAllNewsLoading
-      : isBookmarkedLoading;
-
-  const isError = isSearchActive
-    ? isSearchError
-    : feedType === "all"
-      ? isAllNewsError
-      : isBookmarkedError;
-
-  const isFetchingNextPage = isSearchActive
-    ? isSearchFetchingNextPage
-    : feedType === "all"
-      ? isAllNewsFetchingNextPage
-      : isBookmarkedFetchingNextPage;
-
-  const hasNextPage = isSearchActive
-    ? hasSearchNextPage
-    : feedType === "all"
-      ? hasAllNewsNextPage
-      : hasBookmarkedNextPage;
-
-  const fetchNextPage = isSearchActive
-    ? fetchSearchNextPage
-    : feedType === "all"
-      ? fetchAllNewsNextPage
-      : fetchBookmarkedNextPage;
-
-  const allNewsItems = data ? data.pages.flatMap((page) => page.items) : [];
-
-  // When in bookmarked view, ensure all items have is_bookmarked=true
   const newsItems = useMemo(() => {
-    if (feedType === "bookmarked" && !isSearchActive && allNewsItems.length > 0) {
-      return allNewsItems.map((item) => ({
-        ...item,
-        is_bookmarked: true,
-      }));
+    const items = data ? data.pages.flatMap((page) => page.items) : [];
+    if (feedType === "bookmarked" && !searchQuery) {
+      return items.map((item) => ({ ...item, is_bookmarked: true }));
     }
-    return allNewsItems;
-  }, [allNewsItems, feedType, isSearchActive]);
+    return items;
+  }, [data, feedType, searchQuery]);
+
+  // Filter websocket updates based on active date filters
+  const shouldIncludeWebsocketUpdate = useCallback(
+    (newsItem: any) => {
+      if (!hasDateFilter) return true;
+
+      const itemDate = new Date(newsItem.time);
+      const { startDate, endDate } = dateFilter;
+
+      if (startDate && itemDate < startDate) return false;
+      if (endDate && itemDate > endDate) return false;
+
+      return true;
+    },
+    [dateFilter, hasDateFilter]
+  );
 
   const resetVirtualizerOnFeedChange = useCallback(() => {
     if (rowVirtualizer) {
-      // Use a more stable way to scroll to top - do it after state updates
+      // Use a more stable way to scroll to top (do it after state updates)
       setTimeout(() => {
         if (parentRef.current) {
           parentRef.current.scrollTop = 0;
@@ -122,6 +103,7 @@ const NewsList = () => {
     }
 
     setSearchQuery("");
+    setDateFilter({});
   }, []);
 
   // Set up virtualizer for rendering only visible items with dynamic measurement
@@ -162,8 +144,9 @@ const NewsList = () => {
 
   const handleSearch = (query: string) => {
     if (query === searchQuery) return;
-
-    // Reset tracking variables
+    if (feedType === "bookmarked" && query) {
+      setFeedType("all"); // Auto-switch to all for searching
+    }
     setSearchQuery(query);
 
     // Scroll to top after the state update and re-render
@@ -174,8 +157,30 @@ const NewsList = () => {
     }, 0);
   };
 
-  // Handle infinite scrolling more reliably with a separate function
-  // that checks scroll position directly
+  const handleApplyDateFilters = (filters: DateFilter) => {
+    setDateFilter(filters);
+
+    // Scroll to top after applying filters
+    setTimeout(() => {
+      if (parentRef.current) {
+        parentRef.current.scrollTop = 0;
+      }
+    }, 0);
+  };
+
+  const handleResetDateFilters = () => {
+    setDateFilter({});
+
+    // Scroll to top after resetting filters
+    setTimeout(() => {
+      if (parentRef.current) {
+        parentRef.current.scrollTop = 0;
+      }
+    }, 0);
+  };
+
+  // Handle infinite scrolling more reliably with a separate
+  // function that checks scroll position directly
   const checkAndLoadMore = useCallback(() => {
     if (loadingMoreRef.current || !hasNextPage || !parentRef.current) return;
 
@@ -210,7 +215,7 @@ const NewsList = () => {
     }, 100);
 
     return () => clearTimeout(timeoutId);
-  }, [checkAndLoadMore, feedType, searchQuery]);
+  }, [checkAndLoadMore, feedType, searchQuery, dateFilter]);
 
   // Update refresh counter every 5 seconds to trigger relative time recalculation
   useEffect(() => {
@@ -230,6 +235,7 @@ const NewsList = () => {
   const getEmptyStateMessage = () => {
     if (isSearchActive) return `No results found for "${searchQuery}"`;
     if (feedType === "bookmarked") return "No bookmarked items yet";
+    if (hasDateFilter) return "No news items found for the selected date range";
     return "No news items available";
   };
 
@@ -237,16 +243,28 @@ const NewsList = () => {
     <>
       <div className="p-1.5 border-b border-border">
         <div className="flex items-center gap-2 h-8">
-          <SearchBar
-            onSearch={handleSearch}
-            className="flex-1"
+          {feedType === "all" ? (
+            <SearchBar
+              onSearch={handleSearch}
+              className="flex-1"
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground flex-1">
+              Search is available in News view
+            </p>
+          )}
+          <ContentFilter
+            startDate={dateFilter.startDate}
+            endDate={dateFilter.endDate}
+            onApplyFilters={handleApplyDateFilters}
+            onResetFilters={handleResetDateFilters}
           />
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center gap-1 px-1.5 py-1 h-7 text-sm rounded-md border border-input hover:bg-accent whitespace-nowrap">
               {feedType === "all" ? (
-                <Layers className="size-4" />
+                <Layers className="size-3.5" />
               ) : (
-                <BookMarked className="size-4" />
+                <BookMarked className="size-3.5" />
               )}
               <ChevronDown className="h-4 w-4" />
             </DropdownMenuTrigger>

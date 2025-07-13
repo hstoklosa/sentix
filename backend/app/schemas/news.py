@@ -6,6 +6,12 @@ from pydantic import BaseModel, Field, ConfigDict
 from app.schemas.pagination import PaginatedResponse
 
 
+class DateFilterParams(BaseModel):
+    """Parameters for filtering news by date range"""
+    start_date: Optional[datetime] = Field(None, description="Start date for filtering (inclusive)")
+    end_date: Optional[datetime] = Field(None, description="End date for filtering (inclusive)")
+
+
 class SearchParams(BaseModel):
     query: str = Field(..., min_length=1, description="Search query string")
 

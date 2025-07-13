@@ -8,7 +8,8 @@ from app.services.news import get_news_feed, get_post_by_id, search_news
 from app.schemas.news import (
     NewsItem as NewsItemSchema,
     NewsFeedResponse, 
-    SearchParams
+    SearchParams,
+    DateFilterParams
 )
 from app.services.bookmark import is_bookmarked
 from app.schemas.pagination import PaginationParams
@@ -25,13 +26,16 @@ router = APIRouter(
 async def get_posts(
     session: AsyncSessionDep,
     pagination: PaginationParams = Depends(),
+    date_filter: DateFilterParams = Depends(),
     current_user: User = CurrentUserDep
 ) -> NewsFeedResponse:
     """Get a paginated list of posts ordered by published date"""
     items, total_count = await get_news_feed(
         session=session, 
         page=pagination.page,
-        page_size=pagination.page_size
+        page_size=pagination.page_size,
+        start_date=date_filter.start_date,
+        end_date=date_filter.end_date
     )
     
     # Calculate pagination metadata
@@ -43,6 +47,7 @@ async def get_posts(
     news_items = []
     for item in items:
         item_dict = item.model_dump()
+        print("xd1", item_dict)
         item_dict["coins"] = item.get_formatted_coins()
         item_dict["is_bookmarked"] = await is_bookmarked(
             session=session,
@@ -52,7 +57,7 @@ async def get_posts(
         item_dict["time"] = format_datetime_iso(item.time)
         item_dict["created_at"] = format_datetime_iso(item.created_at)
         item_dict["updated_at"] = format_datetime_iso(item.updated_at)
-        
+        print("xd2", item_dict) 
         news_items.append(NewsItemSchema.model_validate(item_dict))
 
     return NewsFeedResponse(
@@ -72,13 +77,16 @@ async def search_posts(
     current_user: CurrentUserDep,
     search: SearchParams = Depends(),
     pagination: PaginationParams = Depends(),
+    date_filter: DateFilterParams = Depends(),
 ) -> NewsFeedResponse:
     """Search news items by query string"""
     items, total_count = await search_news(
         session=session,
         query=search.query,
         page=pagination.page,
-        page_size=pagination.page_size
+        page_size=pagination.page_size,
+        start_date=date_filter.start_date,
+        end_date=date_filter.end_date
     )
     
     # Calculate pagination metadata
@@ -121,7 +129,8 @@ async def get_post(
 ) -> NewsItemSchema:
     """Get a post by its ID"""
     post = await get_post_by_id(session=session, post_id=post_id)
-    
+    print("got post: ", post.dict())
+
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
     
@@ -134,4 +143,6 @@ async def get_post(
     post_dict["is_bookmarked"] = await is_bookmarked(
         session=session, user_id=current_user.id, news_item_id=post.id)
     
+    print("got post2: ", post_dict)
+
     return NewsItemSchema.model_validate(post_dict)

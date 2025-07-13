@@ -2,10 +2,9 @@ import logging
 from typing import List, Tuple, Optional
 from datetime import datetime
 
-# from sqlmodel import Session, select, func, or_
 from sqlmodel import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 from sqlalchemy.orm import selectinload
 
 from app.models.news import Coin, NewsItem, NewsCoin
@@ -49,10 +48,14 @@ async def create_news_item(session: AsyncSession, news_data: NewsData, sentiment
         score=sentiment["score"]
     )
     
+    print("debug3") 
+
     session.add(item)
     await session.commit()
     await session.refresh(item)
-    
+
+    print("debug4") 
+
     if news_data.coins:
         current_time = datetime.utcnow()
         coins_list = list(news_data.coins)
@@ -60,6 +63,8 @@ async def create_news_item(session: AsyncSession, news_data: NewsData, sentiment
         coins_data = await coingecko_client.get_coins_markets(
             symbols=coins_list, include_tokens="top"
         )
+
+        print("debug5") 
 
         for coin_data in coins_data:
             symbol = coin_data.get("symbol").upper()
@@ -83,17 +88,26 @@ async def create_news_item(session: AsyncSession, news_data: NewsData, sentiment
             )
             
             session.add(news_coin)
-    
+
+        print("debug6") 
+        
         await session.commit()
+        await session.refresh(item)
+
+    print("debug7") 
 
     # Refresh with joined coin data
-    stmt = (
-        select(NewsItem)
-        .where(NewsItem.id == item.id)
-        .options(selectinload(NewsItem.coins).selectinload(NewsCoin.coin))
-    )
-    result = await session.execute(stmt)
-    return result.scalar_one()
+    # stmt = (
+    #     select(NewsItem)
+    #     .where(NewsItem.id == item.id)
+    #     .options(selectinload(NewsItem.coins).selectinload(NewsCoin.coin))
+    # )
+    # result = await session.execute(stmt)
+    # return result.scalar_one()
+
+    # print("debug8")
+    
+    return item
 
 
 async def save_news_item(session: AsyncSession, news_data: NewsData, sentiment: dict) -> NewsItem:
@@ -103,16 +117,20 @@ async def save_news_item(session: AsyncSession, news_data: NewsData, sentiment: 
     Args:
         session: The database session
         news_data: The news data from TreeNews
+        sentiment: The sentiment analysis result
     
     Returns:
         The created news item with coin relationships loaded
     """
     try:
         # Check if the URL already exists to avoid duplicates
+        print("debug0") 
         stmt = select(NewsItem).where(NewsItem.url == news_data.url)
         result = await session.execute(stmt)
-        existing_item = result.scalar_one_or_none()
-        
+        existing_item = result.unique().scalar_one_or_none() # result.scalar_one_or_none()
+
+        print("debug1") 
+
         if existing_item:
             logger.info(f"News item already exists: {existing_item.id} - {existing_item.title}")
             
@@ -123,11 +141,13 @@ async def save_news_item(session: AsyncSession, news_data: NewsData, sentiment: 
                 .options(selectinload(NewsItem.coins).selectinload(NewsCoin.coin))
             )
             result = await session.execute(stmt)
-            existing_item = result.scalar_one()
-            
+            existing_item = result.unique().scalar_one() # result.scalar_one()
+            print("debug2") 
             return existing_item
+
+        item = await create_news_item(session, news_data, sentiment)
+        return item
         
-        return await create_news_item(session, news_data, sentiment)
     except Exception as e:
         logger.error(f"Error saving news item: {str(e)}")
         raise
@@ -136,7 +156,9 @@ async def save_news_item(session: AsyncSession, news_data: NewsData, sentiment: 
 async def get_news_feed(
     session: AsyncSession, 
     page: int = 1, 
-    page_size: int = 20
+    page_size: int = 20,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None
 ) -> Tuple[List[NewsItem], int]:
     """
     Get a paginated feed of news items ordered by published date
@@ -145,16 +167,38 @@ async def get_news_feed(
         session: The database session
         page: The page number (1-indexed)
         page_size: Number of items per page
+        start_date: Optional start date for filtering (inclusive)
+        end_date: Optional end date for filtering (inclusive)
     
     Returns:
         Tuple containing:
             - List of news items
             - Total count of items
     """
+    print(f"DEBUG: get_news_feed called with start_date={start_date}, end_date={end_date}")
+    
+    # Debug: Check what news items exist in the database
+    debug_stmt = select(NewsItem.time).order_by(NewsItem.time.desc()).limit(3)
+    debug_result = await session.execute(debug_stmt)
+    recent_times = debug_result.scalars().all()
+    print(f"DEBUG: Recent news item times: {recent_times}")
+    
     offset = (page - 1) * page_size
+    
+    # Build date filter conditions
+    date_conditions = []
+    if start_date:
+        date_conditions.append(NewsItem.time >= start_date)
+    if end_date:
+        date_conditions.append(NewsItem.time <= end_date)
+    
+    # Combine date conditions
+    where_clause = and_(*date_conditions) if date_conditions else None
     
     # Get total count
     count_stmt = select(func.count()).select_from(NewsItem)
+    if where_clause is not None:
+        count_stmt = count_stmt.where(where_clause)
     result = await session.execute(count_stmt)
     total_count = result.scalar_one()
     
@@ -166,8 +210,11 @@ async def get_news_feed(
         .offset(offset)
         .limit(page_size)
     )
+    if where_clause is not None:
+        stmt = stmt.where(where_clause)
+    
     result = await session.execute(stmt)
-    items = result.scalars().all()
+    items = result.unique().scalars().all()
     
     return items, total_count
 
@@ -176,7 +223,9 @@ async def search_news(
     session: AsyncSession,
     query: str,
     page: int = 1,
-    page_size: int = 20
+    page_size: int = 20,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None
 ) -> Tuple[List[NewsItem], int]:
     """
     Search news items by query string in title and body
@@ -186,6 +235,8 @@ async def search_news(
         query: The search query string
         page: The page number (1-indexed)
         page_size: Number of items per page
+        start_date: Optional start date for filtering (inclusive)
+        end_date: Optional end date for filtering (inclusive)
     
     Returns:
         Tuple containing:
@@ -201,22 +252,35 @@ async def search_news(
         NewsItem.body.ilike(search_term)
     )
     
+    # Build date filter conditions
+    date_conditions = []
+    if start_date:
+        date_conditions.append(NewsItem.time >= start_date)
+    if end_date:
+        date_conditions.append(NewsItem.time <= end_date)
+    
+    # Combine all conditions
+    all_conditions = [search_condition]
+    if date_conditions:
+        all_conditions.extend(date_conditions)
+    where_clause = and_(*all_conditions)
+    
     # Count total matching items
-    count_stmt = select(func.count()).select_from(NewsItem).where(search_condition)
+    count_stmt = select(func.count()).select_from(NewsItem).where(where_clause)
     result = await session.execute(count_stmt)
     total_count = result.scalar_one()
     
     # Query for matching items, sorted by time and paginated
     stmt = (
         select(NewsItem)
-        .where(search_condition)
+        .where(where_clause)
         .options(selectinload(NewsItem.coins).selectinload(NewsCoin.coin))
         .order_by(NewsItem.time.desc())
         .offset(offset)
         .limit(page_size)
     )
     result = await session.execute(stmt)
-    items = result.scalars().all()
+    items = result.unique().scalars().all()
     
     return items, total_count
 
@@ -237,4 +301,4 @@ async def get_post_by_id(session: AsyncSession, post_id: int) -> Optional[NewsIt
     )
     
     result = await session.execute(stmt)
-    return result.scalar_one_or_none()
+    return result.unique().scalar_one_or_none() # result.scalar_one_or_none()
