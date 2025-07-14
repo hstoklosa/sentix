@@ -5,11 +5,11 @@ import { DisclaimerAlert } from "@/components/disclaimer-alert";
 
 import { LiveNewsProvider } from "@/features/news/context";
 import { BinanceWebSocketProviderWrapper } from "@/features/coins/context";
-import { useUpdatePostsCache } from "@/features/news/api/get-news";
+import { useUpdatePostsCache } from "@/features/news/api";
 
 const DashboardLayout = () => {
-  // For now, we'll use a basic updatePostsCache without date filtering
-  // The actual filtering will be handled in the individual news list components
+  // Basic updatePostsCache without date filtering: the actual
+  // filtering will be handled in the individual list components
   const updatePostsCache = useUpdatePostsCache();
 
   return (

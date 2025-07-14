@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { AlertCircle, ChevronDown, Layers, BookMarked } from "lucide-react";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { AlertCircle, ChevronDown, Layers, BookMarked } from "lucide-react";
 
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -10,21 +11,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { NewsItem, SearchBar, ContentFilter } from ".";
-import { getPosts, useUpdatePostsCache } from "../api/get-news";
-import { searchPosts } from "../api/get-news"; // Assuming searchPosts is exported
 import { getBookmarkedPosts } from "@/features/bookmarks/api/get-bookmarks";
+
+import { getPosts, useUpdatePostsCache, searchPosts } from "../api";
 import { useLiveNewsContext } from "../context";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { NewsItem, SearchBar, ContentFilter } from ".";
 
 type FeedType = "all" | "bookmarked";
 
-interface DateFilter {
+type DateFilter = {
   startDate?: Date;
   endDate?: Date;
   startTime?: string;
   endTime?: string;
-}
+};
 
 const NewsList = () => {
   const [feedType, setFeedType] = useState<FeedType>("all");

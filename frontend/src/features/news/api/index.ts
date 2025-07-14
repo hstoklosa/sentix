@@ -1,2 +1,2 @@
-export * from "./get-news";
+export * from "./get-posts";
 export * from "./get-post";
