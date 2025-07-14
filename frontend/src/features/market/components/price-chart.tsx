@@ -7,8 +7,6 @@ import {
   ColorType,
 } from "lightweight-charts";
 
-import { cn } from "@/lib/utils";
-
 import { useGetChartData } from "../api";
 import { ChartInterval, ChartPeriod } from "../types";
 import { formatPrice } from "../utils";
@@ -36,7 +34,6 @@ export const PriceChart = ({
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [chartInstance, setChartInstance] = useState<IChartApi | null>(null);
   const [chartSeries, setChartSeries] = useState<any>(null);
-  const [isUptrend, setIsUptrend] = useState<boolean>(true);
 
   const { data, isLoading, error } = useGetChartData({
     coinId,
@@ -44,7 +41,6 @@ export const PriceChart = ({
     interval: selectedInterval,
   });
 
-  // Create chart instance
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
@@ -55,8 +51,15 @@ export const PriceChart = ({
         attributionLogo: false,
       },
       grid: {
-        vertLines: { color: "rgba(197, 203, 206, 0.1)" },
-        horzLines: { color: "rgba(197, 203, 206, 0.1)" },
+        vertLines: { visible: false },
+        horzLines: { visible: false },
+      },
+      crosshair: {
+        vertLine: {
+          visible: true,
+          labelVisible: true,
+        },
+        horzLine: { visible: false, labelVisible: false },
       },
       width: chartContainerRef.current.clientWidth,
       height: chartContainerRef.current.clientHeight,
@@ -89,6 +92,9 @@ export const PriceChart = ({
     const areaSeries = chart.addSeries(AreaSeries, {
       lineWidth: 2,
       crosshairMarkerVisible: true,
+      crosshairMarkerBorderColor: "#FFFFFF",
+      crosshairMarkerBorderWidth: 2,
+      crosshairMarkerRadius: 4,
       lastValueVisible: true,
       lineColor: UP_COLOR,
       topColor: UP_GRADIENT_TOP,
@@ -157,15 +163,14 @@ export const PriceChart = ({
     // Determine if chart is in uptrend or downtrend
     const firstPrice = data.prices[0].value;
     const lastPrice = data.prices[data.prices.length - 1].value;
-    const isUp = lastPrice >= firstPrice;
-    setIsUptrend(isUp);
+    const isUptrend = lastPrice >= firstPrice;
 
     // Update colors based on trend
     if (chartSeries) {
       chartSeries.applyOptions({
-        lineColor: isUp ? UP_COLOR : DOWN_COLOR,
-        topColor: isUp ? UP_GRADIENT_TOP : DOWN_GRADIENT_TOP,
-        bottomColor: isUp ? UP_GRADIENT_BOTTOM : DOWN_GRADIENT_BOTTOM,
+        lineColor: isUptrend ? UP_COLOR : DOWN_COLOR,
+        topColor: isUptrend ? UP_GRADIENT_TOP : DOWN_GRADIENT_TOP,
+        bottomColor: isUptrend ? UP_GRADIENT_BOTTOM : DOWN_GRADIENT_BOTTOM,
       });
     }
 
