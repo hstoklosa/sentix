@@ -14,7 +14,7 @@ type GetChartDataParams = {
 const getChartData = async ({
   coinId,
   days = 30,
-  interval = "daily",
+  interval = "hourly",
 }: GetChartDataParams): Promise<MarketChartData> => {
   return api.get(`/market/coins/${coinId}/chart`, {
     params: { days, interval },

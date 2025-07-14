@@ -38,6 +38,7 @@ import { ChartInterval, ChartPeriod } from "@/features/market/types";
 import usePriceData from "@/features/news/hooks/use-price-data";
 
 const TIME_PERIODS: { label: string; value: ChartPeriod }[] = [
+  { label: "1D", value: 1 },
   { label: "7D", value: 7 },
   { label: "30D", value: 30 },
   { label: "90D", value: 90 },
@@ -51,7 +52,7 @@ function PostComponent() {
   const [selectedCoinId, setSelectedCoinId] = useState<string | null>(null);
   const previousSymbolsRef = useRef<string[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<ChartPeriod>(30);
-  const [selectedInterval, setSelectedInterval] = useState<ChartInterval>("daily");
+  const [selectedInterval, setSelectedInterval] = useState<ChartInterval>("hourly");
 
   const {
     data: post,
@@ -230,7 +231,7 @@ function PostComponent() {
             ))}
           </div>
 
-          <Select
+          {/* <Select
             value={selectedInterval}
             onValueChange={handleIntervalChange}
           >
@@ -241,7 +242,7 @@ function PostComponent() {
               <SelectItem value="hourly">Hourly</SelectItem>
               <SelectItem value="daily">Daily</SelectItem>
             </SelectContent>
-          </Select>
+          </Select> */}
         </div>
       </div>
     );
