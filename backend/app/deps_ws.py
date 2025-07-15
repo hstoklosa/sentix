@@ -14,7 +14,7 @@ import jwt
 async def get_token_from_query(websocket: WebSocket) -> Optional[str]:
     # Get query parameters from the URL
     query_string = websocket.scope.get("query_string", b"").decode()
-    query_params = parse_qs(query_string)
+    query_params = parse_qs(query_string, keep_blank_values=True)
     
     # Extract token from query parameters
     token = query_params.get("token", [None])[0]

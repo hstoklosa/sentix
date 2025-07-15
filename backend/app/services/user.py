@@ -45,7 +45,7 @@ async def authenticate_user(*,
     email: Optional[str] = None, 
     username: Optional[str] = None, 
     password: str
-) -> User:
+) -> Optional[User]:
     user = None
     
     if email:
