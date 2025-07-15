@@ -51,7 +51,7 @@ const Landing = () => {
           </h1>
 
           <p className="text-lg md:text-xl leading-relaxed tracking-tight text-muted-foreground max-w-2xl text-center">
-            Navigate cryptocurrency markets with confidence using SentiX's real-time
+            Navigate cryptocurrency markets with confidence using Sentix's real-time
             sentiment analysis that delivers precise insights that help you spot
             opportunities and minimize risks before others do.
           </p>

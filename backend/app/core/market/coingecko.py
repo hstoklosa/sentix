@@ -34,10 +34,7 @@ class CoinGeckoClient(BaseApiClient):
         include_tokens: str = "top",
         force_refresh: bool = False
     ) -> List[Dict[str, Any]]:
-        """
-        Get list of coins with market data
-        Documentation: https://docs.coingecko.com/reference/coins-markets
-        """
+        """Get list of coins with market data"""
         params = {
             "vs_currency": vs,
             "page": page,
@@ -61,10 +58,7 @@ class CoinGeckoClient(BaseApiClient):
         interval: str = "daily",
         force_refresh: bool = False
     ) -> Dict[str, Any]:
-        """
-        Get historical market data for a specific coin
-        Documentation: https://docs.coingecko.com/reference/coins-id-market-chart
-        """
+        """Get historical market data for a specific coin"""
         return await self._send_request(
             f"/coins/{coin_id}/market_chart", 
             params = {

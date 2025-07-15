@@ -1,5 +1,5 @@
-from typing import Dict, Any, Optional
 import logging
+from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 
 from app.core.config import settings
@@ -23,11 +23,7 @@ class CoinMarketCapClient(BaseApiClient):
         self.set_cache_ttl("/v3/fear-and-greed/latest", self._FEAR_GREED_TTL)
     
     def _parse_next_update_time(self, response_data: Dict[str, Any]) -> Optional[int]:
-        """
-        Extract next update time from CoinMarketCap response if available
-        
-
-        """
+        """Extract next update time from CoinMarketCap response if available"""
         try:
             # CoinMarketCap provides status.timestamp for when the data was generated
             # However, they don't explicitly provide next update time
@@ -55,17 +51,11 @@ class CoinMarketCapClient(BaseApiClient):
         return None
 
     async def get_market_stats(self, force_refresh: bool = False) -> Dict[str, Any]:
-        """
-        Get a summary of the cryptocurrency market statistics.
-        Documentation: https://coinmarketcap.com/api/documentation/v1/#operation/getV2CryptocurrencyQuotesLatest
-        """
+        """Get a summary of the cryptocurrency market statistics."""
         return await self._send_request("/v1/global-metrics/quotes/latest", force_refresh=force_refresh)
 
     async def get_fear_greed_index(self, force_refresh: bool = False) -> Dict[str, Any]:
-        """
-        Get the Fear and Greed Index.
-        Documentation: https://coinmarketcap.com/api/documentation/v3/#operation/getV3FearAndGreed
-        """
+        """Get the Fear and Greed Index."""
         return await self._send_request("/v3/fear-and-greed/latest", force_refresh=force_refresh)
 
 

@@ -5,15 +5,10 @@ import { DisclaimerAlert } from "@/components/disclaimer-alert";
 
 import { LiveNewsProvider } from "@/features/news/hooks";
 import { BinanceWebSocketProviderWrapper } from "@/features/coins/context";
-import { useUpdatePostsCache } from "@/features/news/api";
 
 const DashboardLayout = () => {
-  // Basic updatePostsCache without date filtering: the actual
-  // filtering will be handled in the individual list components
-  const updatePostsCache = useUpdatePostsCache();
-
   return (
-    <LiveNewsProvider onMessage={updatePostsCache}>
+    <LiveNewsProvider>
       <BinanceWebSocketProviderWrapper>
         <AppLayout>
           <DisclaimerAlert />

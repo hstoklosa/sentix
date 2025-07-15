@@ -114,11 +114,8 @@ const WatchlistList = () => {
                   >
                     {isLoaderRow ? (
                       hasNextPage ? (
-                        <div className="flex justify-center items-center py-3">
+                        <div className="flex justify-center items-center py-3 min-h-[60px]">
                           <Spinner size="sm" />
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            Loading more coins...
-                          </span>
                         </div>
                       ) : (
                         <div className="text-center py-3 text-xs text-muted-foreground">

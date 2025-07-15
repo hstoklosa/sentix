@@ -1,4 +1,6 @@
 import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
+import { z } from "zod";
+
 import { cn } from "@/lib/utils";
 
 import { NewsList } from "@/features/news/components";
@@ -98,8 +100,14 @@ function RouteComponent() {
   );
 }
 
+const dashboardSearchSchema = z.object({
+  coin: z.string().optional(),
+  tab: z.enum(["trending", "sentiment"]).optional(),
+});
+
 export const Route = createFileRoute("/_app/dashboard")({
   component: RouteComponent,
+  validateSearch: dashboardSearchSchema,
   head: () => ({
     meta: [{ title: "Dashboard | Sentix" }],
   }),

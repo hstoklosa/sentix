@@ -1,13 +1,6 @@
 import { useMemo } from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-} from "recharts";
+import { useNavigate } from "@tanstack/react-router";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 
 import {
   ChartContainer,
@@ -16,7 +9,8 @@ import {
 } from "@/components/ui/chart";
 import { useGetTrendingCoins } from "../api/get-trending-coins";
 import { formatCurrencyAmount } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
+
+import { Spinner } from "@/components/ui/spinner";
 
 interface TrendingCoinsChartProps {
   limit?: number;
@@ -27,10 +21,23 @@ export const TrendingCoinsChart = ({
   limit = 10,
   className,
 }: TrendingCoinsChartProps) => {
+  const navigate = useNavigate();
   const { data, isLoading, error } = useGetTrendingCoins({
     page: 1,
     page_size: limit,
   });
+
+  const handleCoinClick = (data: any) => {
+    if (data && data.name) {
+      navigate({
+        to: "/dashboard",
+        search: (prev) => ({
+          ...prev,
+          coin: data.name, // data.name is already the symbol in uppercase
+        }),
+      });
+    }
+  };
 
   const chartData = useMemo(() => {
     if (!data?.items) return [];
@@ -64,6 +71,16 @@ export const TrendingCoinsChart = ({
     const { x, y, payload } = props;
     const coin = chartData.find((item) => item.name === payload.value);
 
+    const handleTickClick = () => {
+      navigate({
+        to: "/dashboard",
+        search: (prev) => ({
+          ...prev,
+          coin: payload.value,
+        }),
+      });
+    };
+
     return (
       <g transform={`translate(${x},${y})`}>
         <foreignObject
@@ -71,6 +88,8 @@ export const TrendingCoinsChart = ({
           y="3"
           width="60"
           height="20"
+          style={{ cursor: "pointer" }}
+          // onClick={handleTickClick}
         >
           <div
             style={{
@@ -102,7 +121,11 @@ export const TrendingCoinsChart = ({
   };
 
   if (isLoading) {
-    return <Skeleton className="h-full w-full" />;
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Spinner size="md" />
+      </div>
+    );
   }
 
   if (error || !data) {
@@ -151,13 +174,15 @@ export const TrendingCoinsChart = ({
             fill="#10B981"
             radius={[4, 4, 0, 0]}
             minPointSize={3}
+            // onClick={handleCoinClick}
+            style={{ cursor: "pointer" }}
           />
 
           <ChartTooltip
             cursor={false}
             content={
               <ChartTooltipContent
-                formatter={(value, name, item) => (
+                formatter={(value, _name, item) => (
                   <div className="flex flex-col">
                     <div className="flex items-center">
                       {item.payload.icon && (
@@ -174,6 +199,9 @@ export const TrendingCoinsChart = ({
                       <div>Positive: {item.payload.sentimentStats.positive}</div>
                       <div>Negative: {item.payload.sentimentStats.negative}</div>
                       <div>Neutral: {item.payload.sentimentStats.neutral}</div>
+                    </div>
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      Click to filter news
                     </div>
                   </div>
                 )}

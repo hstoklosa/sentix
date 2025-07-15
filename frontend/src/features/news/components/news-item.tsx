@@ -19,31 +19,25 @@ type NewsItemProps = {
   refreshCounter?: number;
 };
 
-/**
- * Function to determine if the relative time display should be recalculated
- * based on item age and refresh counter (an adaptive refresh strategy).
- */
-const shouldRecalculateTime = (timestamp: string, counter: number = 0): boolean => {
-  if (!counter) return true; // always recalculate on first render (counter = 0)
+const shouldRecalculateTime = (time: string, refreshCounter: number) => {
+  const now = new Date();
+  const newsTime = new Date(time);
+  const diffInMinutes = (now.getTime() - newsTime.getTime()) / (1000 * 60);
 
-  const now = Date.now();
-  const date = new Date(timestamp).getTime();
-  const ageInSeconds = Math.floor((now - date) / 1000);
-
-  switch (true) {
-    // less than 1 minute old: updates every refresh cycle (5s)
-    case ageInSeconds < 60:
-      return true;
-    // 1-5 minutes old: updates every 2 refresh cycles (10s)
-    case ageInSeconds < 300:
-      return counter % 2 === 0;
-    // 5-30 minutes old: updates every 6 refresh cycles (30s)
-    case ageInSeconds < 1800:
-      return counter % 6 === 0;
-    // older than 30 minutes: updates every 12 refresh cycles (60s)
-    default:
-      return counter % 12 === 0;
+  // Recalculate if:
+  // - Less than 1 hour old: every minute
+  // - Less than 24 hours old: every 30 minutes
+  // - Less than 7 days old: every 12 hours
+  // - Older: never (or once per day if needed)
+  if (diffInMinutes < 60) {
+    return true;
+  } else if (diffInMinutes < 24 * 60) {
+    return refreshCounter % 30 === 0;
+  } else if (diffInMinutes < 7 * 24 * 60) {
+    return refreshCounter % (12 * 60) === 0;
   }
+
+  return false;
 };
 
 const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
@@ -74,7 +68,8 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
     onError: () => toast.error("Failed to remove this post from bookmarks"),
   });
 
-  const isBookmarked = "bookmark_id" in news || news.is_bookmarked;
+  // Check both bookmark_id and is_bookmarked for the bookmark state
+  const isBookmarked = Boolean(news.bookmark_id) || news.is_bookmarked;
 
   const handleBookmarkToggle = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -82,7 +77,7 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
 
     isBookmarked
       ? deleteBookmark.mutate(news.id)
-      : createBookmark.mutate({ news_item_id: news.id });
+      : createBookmark.mutate({ post_id: news.id });
   };
 
   const actionButtonClass =

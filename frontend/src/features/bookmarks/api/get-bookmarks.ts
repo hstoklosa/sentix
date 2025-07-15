@@ -2,15 +2,45 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 
 import { BookmarkedNewsResponse } from "../types";
-import { MutationConfig, QueryConfig } from "@/lib/react-query";
+import { QueryConfig } from "@/lib/react-query";
 
-export const getBookmarkedPosts = async ({ pageParam = 1 }) => {
+interface BookmarkParams {
+  pageParam?: number;
+  query?: string;
+  start_date?: string;
+  end_date?: string;
+  coin?: string;
+}
+
+export const getBookmarkedPosts = async ({
+  pageParam = 1,
+  query,
+  start_date,
+  end_date,
+  coin,
+}: BookmarkParams) => {
+  const queryParams: any = {
+    page: pageParam,
+    page_size: 20,
+  };
+
+  // Only include parameters if they are provided
+  if (query) {
+    queryParams.query = query;
+  }
+  if (start_date) {
+    queryParams.start_date = start_date;
+  }
+  if (end_date) {
+    queryParams.end_date = end_date;
+  }
+  if (coin) {
+    queryParams.coin = coin;
+  }
+
   // The api client already returns response.data due to interceptors
   const data = await api.get<never, BookmarkedNewsResponse>("/bookmarks", {
-    params: {
-      page: pageParam,
-      limit: 20,
-    },
+    params: queryParams,
   });
   return data;
 };

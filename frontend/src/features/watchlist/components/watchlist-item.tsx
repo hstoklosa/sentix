@@ -1,9 +1,22 @@
+import { useNavigate } from "@tanstack/react-router";
+
 import { cn } from "@/lib/utils";
 import { WatchlistCoin } from "../types";
 
 const WatchlistItem = ({ coin }: { coin: WatchlistCoin }) => {
+  const navigate = useNavigate();
   const priceChangeIsPositive = (coin.price_change_percentage_24h || 0) > 0;
   const priceChangeIsNegative = (coin.price_change_percentage_24h || 0) < 0;
+
+  const handleClick = () => {
+    navigate({
+      to: "/dashboard",
+      search: (prev) => ({
+        ...prev,
+        coin: coin.symbol.toUpperCase(),
+      }),
+    });
+  };
 
   const formatPrice = (price: number): string => {
     if (price < 0.001) return price.toFixed(6);
@@ -20,7 +33,10 @@ const WatchlistItem = ({ coin }: { coin: WatchlistCoin }) => {
   };
 
   return (
-    <div className="px-3 py-2 border-b border-border hover:bg-muted/30 transition-colors">
+    <div
+      className="px-3 py-2 border-b border-border hover:bg-muted/30 transition-colors cursor-pointer"
+      onClick={handleClick}
+    >
       <div className="flex items-center">
         {/* Coin info */}
         <div className="flex items-center gap-2.5 w-[59%]">

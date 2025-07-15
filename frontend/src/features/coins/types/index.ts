@@ -22,3 +22,18 @@ export interface TrendingCoinsResponse {
   has_next: boolean;
   has_prev: boolean;
 }
+
+export interface SentimentDataPoint {
+  timestamp: string;
+  average_sentiment: number;
+  mentions: number;
+  price: number | null;
+  divergence: "bullish" | "bearish" | null;
+}
+
+export interface SentimentDivergenceProps {
+  coinId: string;
+  days?: number | "max";
+  interval?: "daily" | "hourly";
+  className?: string;
+}

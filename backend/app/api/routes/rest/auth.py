@@ -143,7 +143,7 @@ async def refresh_token(
     new_refresh_token = create_refresh_token(user.id)
     
     # Blacklist the old refresh token
-    token_service.blacklist_token(session=session, token=refresh_token)
+    await token_service.blacklist_token(session=session, token=refresh_token)
 
     set_refresh_token_cookie(response, new_refresh_token)
     token = Token(access_token=access_token)

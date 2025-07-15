@@ -1,6 +1,6 @@
 import logging
 from typing import List, Tuple, Optional
-from datetime import datetime, time
+from datetime import datetime
 
 from sqlmodel import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,7 +8,7 @@ from sqlalchemy import or_, and_
 from sqlalchemy.orm import selectinload
 
 from app.models.coin import Coin
-from app.models.news import NewsItem
+from app.models.post import Post
 from app.models.post_coin import PostCoin
 from app.core.news.types import NewsData
 from app.core.market.coingecko import coingecko_client
@@ -23,28 +23,18 @@ async def get_coin_by_symbol(session: AsyncSession, symbol: str) -> Optional[Coi
     return result.scalar_one_or_none()
 
 
-async def create_news_item(session: AsyncSession, news_data: NewsData, sentiment: dict) -> NewsItem:
-    """
-    Create a news item (article or social post)
-    
-    Args:
-        session: The database session
-        news_data: The news data from TreeNews
-        sentiment: The sentiment analysis result
-    
-    Returns:
-        The created news item
-    """
-    item_type = 'post' if news_data.source == "Twitter" else 'article'
-    item = NewsItem(
-        title=news_data.title,
-        body=news_data.body or "",
-        image_url=news_data.image,
-        time=news_data.time,
-        source=news_data.source,
-        url=news_data.url,
-        icon_url=news_data.icon,
-        feed=news_data.feed,
+async def create_post(session: AsyncSession, post_data: NewsData, sentiment: dict) -> Post:
+    """Create a post entry (article or social post) within the database"""
+    item_type = 'post' if post_data.source == "Twitter" else 'article'
+    item = Post(
+        title=post_data.title,
+        body=post_data.body or "",
+        image_url=post_data.image,
+        time=post_data.time,
+        source=post_data.source,
+        url=post_data.url,
+        icon_url=post_data.icon,
+        feed=post_data.feed,
         item_type=item_type,
         sentiment=sentiment["label"],
         score=sentiment["score"]
@@ -54,9 +44,9 @@ async def create_news_item(session: AsyncSession, news_data: NewsData, sentiment
     await session.commit()
     await session.refresh(item)
 
-    if news_data.coins:
+    if post_data.coins:
         current_time = datetime.utcnow()
-        coins_list = list(news_data.coins)
+        coins_list = list(post_data.coins)
 
         coins_data = await coingecko_client.get_coins_markets(
             symbols=coins_list, include_tokens="top"
@@ -78,7 +68,7 @@ async def create_news_item(session: AsyncSession, news_data: NewsData, sentiment
                 
             news_coin = PostCoin(
                 coin_id=coin.id,
-                news_item_id=item.id, 
+                post_id=item.id, 
                 price_usd=coin_data.get("current_price"),
                 price_timestamp=current_time
             )
@@ -90,9 +80,9 @@ async def create_news_item(session: AsyncSession, news_data: NewsData, sentiment
 
     # Refresh with joined coin data to avoid lazy loading issues
     stmt = (
-        select(NewsItem)
-        .where(NewsItem.id == item.id)
-        .options(selectinload(NewsItem.post_coins).selectinload(PostCoin.coin))
+        select(Post)
+        .where(Post.id == item.id)
+        .options(selectinload(Post.post_coins).selectinload(PostCoin.coin))
     )
     result = await session.execute(stmt)
     item_with_coins = result.unique().scalar_one()
@@ -100,42 +90,31 @@ async def create_news_item(session: AsyncSession, news_data: NewsData, sentiment
     return item_with_coins
 
 
-async def save_news_item(session: AsyncSession, news_data: NewsData, sentiment: dict) -> NewsItem:
-    """
-    Save a news item (article or social post) based on its source
-    
-    Args:
-        session: The database session
-        news_data: The news data from TreeNews
-        sentiment: The sentiment analysis result
-    
-    Returns:
-        The created news item with coin relationships loaded
-    """
+async def save_news_item(session: AsyncSession, post_data: NewsData, sentiment: dict) -> Post:
+    """Save a news item (article or social post) based on its source"""
     try:
-        # Check if the URL already exists to avoid duplicates
-        stmt = select(NewsItem).where(NewsItem.url == news_data.url)
+        stmt = select(Post).where(Post.url == post_data.url)
         result = await session.execute(stmt)
-        existing_item = result.unique().scalar_one_or_none()
+        existing_post = result.unique().scalar_one_or_none()
 
-        if existing_item:
-            logger.info(f"News item already exists: {existing_item.id} - {existing_item.title}")
+        if existing_post:
+            logger.info(f"Post already exists: {existing_post.id} - {existing_post.title}")
             
             # Refresh with joined coin data
             stmt = (
-                select(NewsItem)
-                .where(NewsItem.id == existing_item.id)
-                .options(selectinload(NewsItem.post_coins).selectinload(PostCoin.coin))
+                select(Post)
+                .where(Post.id == existing_post.id)
+                .options(selectinload(Post.post_coins).selectinload(PostCoin.coin))
             )
             result = await session.execute(stmt)
-            existing_item = result.unique().scalar_one()
-            return existing_item
+            existing_post = result.unique().scalar_one()
+            return existing_post
 
-        item = await create_news_item(session, news_data, sentiment)
-        return item
+        post = await create_post(session, post_data, sentiment)
+        return post
         
     except Exception as e:
-        logger.error(f"Error saving news item: {str(e)}")
+        logger.error(f"Error saving post: {str(e)}")
         raise
 
 
@@ -145,58 +124,48 @@ async def get_news_feed(
     page_size: int = 20,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    start_time: Optional[time] = None,
-    end_time: Optional[time] = None
-) -> Tuple[List[NewsItem], int]:
-    """
-    Get a paginated feed of news items ordered by published date
-    
-    Args:
-        session: The database session
-        page: The page number (1-indexed)
-        page_size: Number of items per page
-        start_date: Optional start date for filtering (inclusive)
-        end_date: Optional end date for filtering (inclusive)
-        start_time: Optional start time for filtering (inclusive)
-        end_time: Optional end time for filtering (inclusive)
-    
-    Returns:
-        Tuple containing:
-            - List of news items
-            - Total count of items
-    """
-    print(f"DEBUG: get_news_feed called with start_date={start_date}, end_date={end_date}, start_time={start_time}, end_time={end_time}")
-    
+    coin_symbol: Optional[str] = None
+) -> Tuple[List[Post], int]:
+    """Get a paginated feed of news posts ordered by published date"""
     offset = (page - 1) * page_size
     
     # Build date and time filter conditions
     date_conditions = []
     if start_date:
-        date_conditions.append(NewsItem.time >= start_date)
+        date_conditions.append(Post.time >= start_date)
     if end_date:
-        date_conditions.append(NewsItem.time <= end_date)
+        date_conditions.append(Post.time <= end_date)
     
-    # Add time conditions if specified
-    if start_time:
-        date_conditions.append(func.extract('hour', NewsItem.time) * 60 + func.extract('minute', NewsItem.time) >= start_time.hour * 60 + start_time.minute)
-    if end_time:
-        date_conditions.append(func.extract('hour', NewsItem.time) * 60 + func.extract('minute', NewsItem.time) <= end_time.hour * 60 + end_time.minute)
+    # Note: If time filtering is needed separately from date,
+    # it should be combined with date filtering in the frontend
+    # before sending to the backend for better performance
+    
+    # Add coin filter condition if specified
+    if coin_symbol:
+        coin_filter_condition = (
+            Post.id.in_(
+                select(PostCoin.post_id)
+                .join(Coin)
+                .where(Coin.symbol == coin_symbol.upper())
+            )
+        )
+        date_conditions.append(coin_filter_condition)
     
     # Combine date conditions
     where_clause = and_(*date_conditions) if date_conditions else None
-    
-    # Get total count
-    count_stmt = select(func.count()).select_from(NewsItem)
+    count_stmt = select(func.count()).select_from(Post)
+
     if where_clause is not None:
         count_stmt = count_stmt.where(where_clause)
+
     result = await session.execute(count_stmt)
     total_count = result.scalar_one()
     
-    # Query for items, sorted by time and paginated
+    # Load posts with their relationships
     stmt = (
-        select(NewsItem)
-        .options(selectinload(NewsItem.post_coins).selectinload(PostCoin.coin))
-        .order_by(NewsItem.time.desc())
+        select(Post)
+        .options(selectinload(Post.post_coins).selectinload(PostCoin.coin))
+        .order_by(Post.time.desc())
         .offset(offset)
         .limit(page_size)
     )
@@ -204,9 +173,9 @@ async def get_news_feed(
         stmt = stmt.where(where_clause)
     
     result = await session.execute(stmt)
-    items = result.unique().scalars().all()
+    posts = result.unique().scalars().all()
     
-    return items, total_count
+    return posts, total_count
 
 
 async def search_news(
@@ -215,39 +184,40 @@ async def search_news(
     page: int = 1,
     page_size: int = 20,
     start_date: Optional[datetime] = None,
-    end_date: Optional[datetime] = None
-) -> Tuple[List[NewsItem], int]:
-    """
-    Search news items by query string in title and body
-    
-    Args:
-        session: The database session
-        query: The search query string
-        page: The page number (1-indexed)
-        page_size: Number of items per page
-        start_date: Optional start date for filtering (inclusive)
-        end_date: Optional end date for filtering (inclusive)
-    
-    Returns:
-        Tuple containing:
-            - List of news items matching the search query
-            - Total count of matching items
-    """
+    end_date: Optional[datetime] = None,
+    coin_symbol: Optional[str] = None
+) -> Tuple[List[Post], int]:
+    """Search posts by query string in title and body"""
     offset = (page - 1) * page_size
     
     # Prepare search condition (title or body contains the query)
     search_term = f"%{query}%"
     search_condition = or_(
-        NewsItem.title.ilike(search_term),
-        NewsItem.body.ilike(search_term)
+        Post.title.ilike(search_term),
+        Post.body.ilike(search_term)
     )
     
     # Build date filter conditions
     date_conditions = []
     if start_date:
-        date_conditions.append(NewsItem.time >= start_date)
+        date_conditions.append(Post.time >= start_date)
     if end_date:
-        date_conditions.append(NewsItem.time <= end_date)
+        date_conditions.append(Post.time <= end_date)
+    
+    # Note: If time filtering is needed separately from date,
+    # it should be combined with date filtering in the frontend
+    # before sending to the backend for better performance
+    
+    # Add coin filter condition if specified
+    if coin_symbol:
+        coin_filter_condition = (
+            Post.id.in_(
+                select(PostCoin.post_id)
+                .join(Coin)
+                .where(Coin.symbol == coin_symbol.upper())
+            )
+        )
+        date_conditions.append(coin_filter_condition)
     
     # Combine all conditions
     all_conditions = [search_condition]
@@ -256,39 +226,32 @@ async def search_news(
     where_clause = and_(*all_conditions)
     
     # Count total matching items
-    count_stmt = select(func.count()).select_from(NewsItem).where(where_clause)
+    count_stmt = select(func.count()).select_from(Post).where(where_clause)
     result = await session.execute(count_stmt)
     total_count = result.scalar_one()
     
     # Query for matching items, sorted by time and paginated
     stmt = (
-        select(NewsItem)
+        select(Post)
         .where(where_clause)
-        .options(selectinload(NewsItem.post_coins).selectinload(PostCoin.coin))
-        .order_by(NewsItem.time.desc())
+        .options(selectinload(Post.post_coins).selectinload(PostCoin.coin))
+        .order_by(Post.time.desc())
         .offset(offset)
         .limit(page_size)
     )
     result = await session.execute(stmt)
-    items = result.unique().scalars().all()
+    posts = result.unique().scalars().all()
     
-    return items, total_count
+    return posts, total_count
 
 
-async def get_post_by_id(session: AsyncSession, post_id: int) -> Optional[NewsItem]:
-    """
-    Args:
-        session: The database session
-        post_id: The post item ID
-    
-    Returns:
-        The news item if found, None otherwise
-    """
+async def get_post_by_id(session: AsyncSession, post_id: int) -> Optional[Post]:
+    """Get a post by its ID"""
     stmt = (
-        select(NewsItem)
-        .where(NewsItem.id == post_id)
-        .options(selectinload(NewsItem.post_coins).selectinload(PostCoin.coin))
+        select(Post)
+        .where(Post.id == post_id)
+        .options(selectinload(Post.post_coins).selectinload(PostCoin.coin))
     )
     
     result = await session.execute(stmt)
-    return result.unique().scalar_one_or_none() # result.scalar_one_or_none()
+    return result.unique().scalar_one_or_none()

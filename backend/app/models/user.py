@@ -6,7 +6,7 @@ from sqlmodel import Field, Relationship
 from app.models.base import Base
 
 if TYPE_CHECKING:
-    from app.models.bookmark import NewsBookmark
+    from app.models.bookmark import PostBookmark
 
 
 class User(Base, table=True):
@@ -18,4 +18,4 @@ class User(Base, table=True):
     password: str
     
     # Relationships
-    news_bookmarks: List["NewsBookmark"] = Relationship(back_populates="user")
+    post_bookmarks: List["PostBookmark"] = Relationship(back_populates="user")

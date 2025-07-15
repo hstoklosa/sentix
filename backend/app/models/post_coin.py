@@ -5,17 +5,21 @@ from sqlmodel import Field, SQLModel, Relationship
 
 if TYPE_CHECKING:
     from app.models.coin import Coin
-    from app.models.news import NewsItem
+    from app.models.post import Post
 
 
 class PostCoin(SQLModel, table=True):
     __tablename__ = "post_coins"
     
-    news_item_id: int = Field(foreign_key="news_items.id", primary_key=True)
+    post_id: int = Field(foreign_key="posts.id", primary_key=True)
     coin_id: int = Field(foreign_key="coins.id", primary_key=True)
     price_usd: Optional[float] = Field(default=None)
     price_timestamp: Optional[datetime] = Field(default=None)
     
-    # Relationships
-    news_item: "NewsItem" = Relationship(back_populates="post_coins")
-    coin: "Coin" = Relationship()
+    # # Relationships
+     
+    post: "Post" = Relationship(back_populates="post_coins")
+    coin: "Coin" = Relationship(
+        back_populates="post_coins",  
+        sa_relationship_kwargs={"lazy": "selectin"} # joined
+    )

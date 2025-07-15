@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { useSearch } from "@tanstack/react-router";
 import { AlertCircle, ChevronDown, Layers, BookMarked } from "lucide-react";
 
 import { Spinner } from "@/components/ui/spinner";
@@ -15,6 +16,7 @@ import { getBookmarkedPosts } from "@/features/bookmarks/api/get-bookmarks";
 
 import { getPosts, useUpdatePostsCache, searchPosts } from "../api";
 import { useLiveNews } from "../hooks";
+import { NewsItem as NewsItemType } from "../types";
 import { NewsItem, SearchBar, ContentFilter } from ".";
 
 type FeedType = "all" | "bookmarked";
@@ -24,6 +26,7 @@ type DateFilter = {
   endDate?: Date;
   startTime?: string;
   endTime?: string;
+  selectedCoins?: string[];
 };
 
 const NewsList = () => {
@@ -34,64 +37,101 @@ const NewsList = () => {
   const parentRef = useRef<HTMLDivElement>(null);
   const loadingMoreRef = useRef(false);
 
-  const { isConnected, error: isWebsocketError } = useLiveNews();
+  // Get the coin filter from the dashboard search params
+  const search = useSearch({ from: "/_app/dashboard" });
+  const coinFilter = search.coin !== "BTC" ? search.coin : undefined; // Don't filter for BTC (default)
 
   const {
-    data,
-    isLoading,
-    isError,
-    isFetchingNextPage,
-    hasNextPage,
-    fetchNextPage,
-  } = useInfiniteQuery({
-    queryKey: ["news-feed", feedType, searchQuery, dateFilter],
-    queryFn: async ({ pageParam = 1 }) => {
-      const params = {
-        page: pageParam,
-        page_size: 20,
-        start_date: dateFilter.startDate
-          ? new Date(
-              dateFilter.startDate.getFullYear(),
-              dateFilter.startDate.getMonth(),
-              dateFilter.startDate.getDate(),
-              dateFilter.startTime
-                ? parseInt(dateFilter.startTime.split(":")[0])
-                : 0,
-              dateFilter.startTime
-                ? parseInt(dateFilter.startTime.split(":")[1])
-                : 0,
-              0
-            ).toISOString()
-          : undefined,
-        end_date: dateFilter.endDate
-          ? new Date(
-              dateFilter.endDate.getFullYear(),
-              dateFilter.endDate.getMonth(),
-              dateFilter.endDate.getDate(),
-              dateFilter.endTime ? parseInt(dateFilter.endTime.split(":")[0]) : 23,
-              dateFilter.endTime ? parseInt(dateFilter.endTime.split(":")[1]) : 59,
-              59
-            ).toISOString()
-          : undefined,
+    isConnected,
+    error: isWebsocketError,
+    registerMessageHandler,
+    unregisterMessageHandler,
+  } = useLiveNews();
+
+  // Create cache update function with current query parameters
+  const effectiveCoinFilter =
+    dateFilter.selectedCoins && dateFilter.selectedCoins.length > 0
+      ? dateFilter.selectedCoins[0] // Use first selected coin for now
+      : coinFilter;
+
+  const updatePostsCache = useUpdatePostsCache(dateFilter, effectiveCoinFilter);
+
+  // Register the cache update function with the WebSocket context
+  useEffect(() => {
+    // Only register handler for main feed (all) without search query
+    // Real-time updates should not affect bookmarked or search results
+    if (feedType === "all" && !searchQuery) {
+      console.log("Registering WebSocket handler for real-time news updates");
+      registerMessageHandler((news: NewsItemType) => {
+        console.log("Received real-time news:", news.title);
+        updatePostsCache(news);
+      });
+
+      return () => {
+        unregisterMessageHandler();
       };
+    } else {
+      // Unregister if not applicable
+      console.log(
+        "Unregistering WebSocket handler (not applicable for current view)"
+      );
+      unregisterMessageHandler();
+    }
+  }, [
+    updatePostsCache,
+    feedType,
+    searchQuery,
+    effectiveCoinFilter,
+    registerMessageHandler,
+    unregisterMessageHandler,
+  ]);
 
-      if (searchQuery) {
-        return searchPosts(searchQuery, params);
-      } else if (feedType === "all") {
-        return getPosts(params);
-      } else {
-        return getBookmarkedPosts({ pageParam });
-      }
-    },
-    getNextPageParam: (lastPage) =>
-      lastPage.has_next ? lastPage.page + 1 : undefined,
-    initialPageParam: 1,
-  });
+  const { data, isLoading, isError, hasNextPage, fetchNextPage } = useInfiniteQuery(
+    {
+      queryKey: ["news-feed", feedType, searchQuery, dateFilter, coinFilter],
+      queryFn: async ({ pageParam = 1 }) => {
+        // Determine which coin filter to use
+        // Priority: Content filter coins > URL-based coinFilter
+        const effectiveCoinFilter =
+          dateFilter.selectedCoins && dateFilter.selectedCoins.length > 0
+            ? dateFilter.selectedCoins[0] // Use first selected coin for now
+            : coinFilter;
 
-  const updatePostsCache = useUpdatePostsCache(dateFilter);
+        const params = {
+          page: pageParam,
+          page_size: 20,
+          start_date: dateFilter.startDate?.toISOString(),
+          end_date: dateFilter.endDate?.toISOString(),
+          coin: effectiveCoinFilter,
+        };
+
+        if (searchQuery && feedType === "all") {
+          return searchPosts(searchQuery, params);
+        } else if (feedType === "all") {
+          return getPosts(params);
+        } else {
+          // For bookmarked posts, pass the same filter parameters
+          return getBookmarkedPosts({
+            pageParam,
+            query: searchQuery || undefined,
+            start_date: dateFilter.startDate?.toISOString(),
+            end_date: dateFilter.endDate?.toISOString(),
+            coin: effectiveCoinFilter,
+          });
+        }
+      },
+      getNextPageParam: (lastPage) =>
+        lastPage.has_next ? lastPage.page + 1 : undefined,
+      initialPageParam: 1,
+    }
+  );
 
   const isSearchActive = !!searchQuery;
   const hasDateFilter = !!(dateFilter.startDate || dateFilter.endDate);
+  const hasCoinFilter = !!(
+    effectiveCoinFilter ||
+    (dateFilter.selectedCoins && dateFilter.selectedCoins.length > 0)
+  );
 
   const newsItems = useMemo(() => {
     const items = data ? data.pages.flatMap((page) => page.items) : [];
@@ -100,22 +140,6 @@ const NewsList = () => {
     }
     return items;
   }, [data, feedType, searchQuery]);
-
-  // Filter websocket updates based on active date filters
-  const shouldIncludeWebsocketUpdate = useCallback(
-    (newsItem: any) => {
-      if (!hasDateFilter) return true;
-
-      const itemDate = new Date(newsItem.time);
-      const { startDate, endDate } = dateFilter;
-
-      if (startDate && itemDate < startDate) return false;
-      if (endDate && itemDate > endDate) return false;
-
-      return true;
-    },
-    [dateFilter, hasDateFilter]
-  );
 
   const resetVirtualizerOnFeedChange = useCallback(() => {
     if (rowVirtualizer) {
@@ -169,9 +193,6 @@ const NewsList = () => {
 
   const handleSearch = (query: string) => {
     if (query === searchQuery) return;
-    if (feedType === "bookmarked" && query) {
-      setFeedType("all"); // Auto-switch to all for searching
-    }
     setSearchQuery(query);
 
     // Scroll to top after the state update and re-render
@@ -254,35 +275,56 @@ const NewsList = () => {
   const getLoadingMessage = () => {
     if (!isConnected) return "Connecting to news feed...";
     if (isSearchActive) return "Searching news...";
+    if (coinFilter) return `Loading ${coinFilter} news...`;
     return isLoading ? "Loading news..." : "Waiting for news updates...";
   };
 
   const getEmptyStateMessage = () => {
     if (isSearchActive) return `No results found for "${searchQuery}"`;
     if (feedType === "bookmarked") return "No bookmarked items yet";
+    if (hasDateFilter && hasCoinFilter) {
+      const coinText =
+        dateFilter.selectedCoins && dateFilter.selectedCoins.length > 0
+          ? dateFilter.selectedCoins.join(", ")
+          : effectiveCoinFilter;
+      return `No news found for ${coinText} in the selected date range`;
+    }
     if (hasDateFilter) return "No news items found for the selected date range";
+    if (hasCoinFilter) {
+      const coinText =
+        dateFilter.selectedCoins && dateFilter.selectedCoins.length > 0
+          ? dateFilter.selectedCoins.join(", ")
+          : effectiveCoinFilter;
+      return `No news found for ${coinText}`;
+    }
     return "No news items available";
   };
 
   return (
     <>
       <div className="p-1.5 border-b border-border">
+        {/* Coin filter indicator */}
+        {(effectiveCoinFilter ||
+          (dateFilter.selectedCoins && dateFilter.selectedCoins.length > 0)) && (
+          <div className="mb-2 px-2 py-1 bg-primary/10 text-primary text-xs rounded-md border border-primary/20">
+            Filtering by:{" "}
+            {dateFilter.selectedCoins && dateFilter.selectedCoins.length > 0
+              ? dateFilter.selectedCoins.join(", ")
+              : effectiveCoinFilter}
+          </div>
+        )}
+
         <div className="flex items-center gap-2 h-8">
-          {feedType === "all" ? (
-            <SearchBar
-              onSearch={handleSearch}
-              className="flex-1"
-            />
-          ) : (
-            <p className="text-sm text-muted-foreground flex-1">
-              Search is available in News view
-            </p>
-          )}
+          <SearchBar
+            onSearch={handleSearch}
+            className="flex-1"
+          />
           <ContentFilter
             startDate={dateFilter.startDate}
             endDate={dateFilter.endDate}
             startTime={dateFilter.startTime}
             endTime={dateFilter.endTime}
+            selectedCoins={dateFilter.selectedCoins}
             onApplyFilters={handleApplyDateFilters}
             onResetFilters={handleResetDateFilters}
           />
@@ -366,7 +408,10 @@ const NewsList = () => {
                 >
                   {isLoaderRow ? (
                     hasNextPage ? (
-                      <Spinner size="sm" />
+                      <Spinner
+                        size="sm"
+                        className="min-h-[60px]"
+                      />
                     ) : (
                       <div className="text-center py-4 text-muted-foreground">
                         No more news to load

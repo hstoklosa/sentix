@@ -1,4 +1,12 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from "react";
+import {
+  useState,
+  useEffect,
+  createContext,
+  useContext,
+  ReactNode,
+  useCallback,
+  useRef,
+} from "react";
 import useWebSocket, { ReadyState } from "react-use-websocket";
 
 import { useLocalStorage } from "@/hooks/use-local-storage";
@@ -9,11 +17,15 @@ import { NewsItem } from "../types";
 type LiveNewsContextType = {
   isConnected: boolean;
   error: string | null;
+  registerMessageHandler: (handler: (news: NewsItem) => void) => void;
+  unregisterMessageHandler: () => void;
 };
 
 const LiveNewsContext = createContext<LiveNewsContextType>({
   isConnected: false,
   error: null,
+  registerMessageHandler: () => {},
+  unregisterMessageHandler: () => {},
 });
 
 type LiveNewsProviderProps = {
@@ -28,9 +40,33 @@ export const LiveNewsProvider = ({
   children,
 }: LiveNewsProviderProps) => {
   const [error, setError] = useState<string | null>(null);
+  const messageHandlerRef = useRef<((news: NewsItem) => void) | null>(null);
 
   const [accessToken] = useLocalStorage<string>("access_token", "");
   const { user } = useAuth();
+
+  const handleMessage = useCallback(
+    (news: NewsItem) => {
+      // Use the registered handler if available, otherwise fall back to onMessage prop
+      if (messageHandlerRef.current) {
+        messageHandlerRef.current(news);
+      } else if (onMessage) {
+        onMessage(news);
+      }
+    },
+    [onMessage]
+  );
+
+  const registerMessageHandler = useCallback(
+    (handler: (news: NewsItem) => void) => {
+      messageHandlerRef.current = handler;
+    },
+    []
+  );
+
+  const unregisterMessageHandler = useCallback(() => {
+    messageHandlerRef.current = null;
+  }, []);
 
   const { sendJsonMessage, readyState } = useWebSocket(
     `${baseUrl}/api/v1/news/ws/${user?.id}?token=${accessToken}`,
@@ -47,7 +83,7 @@ export const LiveNewsProvider = ({
           const message = JSON.parse(event.data);
           switch (message.type) {
             case "news":
-              if (message.data && onMessage) onMessage(message.data);
+              if (message.data) handleMessage(message.data);
               break;
             case "pong":
               break;
@@ -85,6 +121,8 @@ export const LiveNewsProvider = ({
       value={{
         isConnected: readyState === ReadyState.OPEN,
         error,
+        registerMessageHandler,
+        unregisterMessageHandler,
       }}
     >
       {children}

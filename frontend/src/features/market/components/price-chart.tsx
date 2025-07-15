@@ -7,6 +7,8 @@ import {
   ColorType,
 } from "lightweight-charts";
 
+import { Spinner } from "@/components/ui/spinner";
+
 import { useGetChartData } from "../api";
 import { ChartInterval, ChartPeriod } from "../types";
 import { formatPrice } from "../utils";
@@ -214,8 +216,8 @@ export const PriceChart = ({
     <div className={`flex flex-col h-full w-full ${className || ""}`}>
       <div className="flex-1 h-full w-full">
         {isLoading && (
-          <div className="flex items-center justify-center h-full">
-            <p>Loading chart data...</p>
+          <div className="flex h-full items-center justify-center">
+            <Spinner size="md" />
           </div>
         )}
         {error && (

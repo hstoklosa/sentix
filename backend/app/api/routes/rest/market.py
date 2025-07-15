@@ -1,5 +1,5 @@
 from datetime import datetime, time, date
-from typing import Annotated, Union, Literal
+from typing import Annotated, Union, Literal, List, Dict, Any
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -11,8 +11,13 @@ from app.core.market.coinmarketcap import cmc_client
 from app.core.market.coingecko import coingecko_client
 from app.schemas.market import MarketStats, CoinResponse, MarketChartData, ChartDataPoint
 from app.schemas.pagination import PaginatedResponse, PaginationParams
-from app.models.news import NewsItem
+from app.models.post import Post
 from app.deps import AsyncSessionDep
+from app.services.coin import (
+    get_trending_coins_by_mentions,
+    sync_coins_from_coingecko,
+    get_coin_sentiment_divergence_history
+)
 
 logger = logging.getLogger(__name__)
 
@@ -38,23 +43,23 @@ async def get_market_stats(
     start_of_day = datetime.combine(today, time.min)
     end_of_day = datetime.combine(today, time.max)
     
-    # Query for today's news items
+    # Query for today's posts
     stmt = (
-        select(NewsItem)
-        .where(NewsItem.time >= start_of_day)
-        .where(NewsItem.time <= end_of_day)
+        select(Post)
+        .where(Post.time >= start_of_day)
+        .where(Post.time <= end_of_day)
     )
     result = await session.execute(stmt)
-    today_news = result.scalars().unique().all()
+    today_posts = result.scalars().unique().all()
     
     # Count sentiment types
-    bullish_count = sum(1 for item in today_news if item.sentiment == "Bullish")
-    bearish_count = sum(1 for item in today_news if item.sentiment == "Bearish")
-    neutral_count = sum(1 for item in today_news if item.sentiment == "Neutral")
+    bullish_count = sum(1 for post in today_posts if post.sentiment == "Bullish")
+    bearish_count = sum(1 for post in today_posts if post.sentiment == "Bearish")
+    neutral_count = sum(1 for post in today_posts if post.sentiment == "Neutral")
     
     # Calculate overall sentiment
     market_sentiment = "Neutral"
-    total_posts = len(today_news)
+    total_posts = len(today_posts)
     
     if total_posts > 0:
         # Calculate ratio of bullish to bearish
@@ -154,7 +159,7 @@ async def get_coin_chart_data(
         # Load markets to ensure the pair exists
         await binance.load_markets()
         
-        if pair not in binance.markets:
+        if binance.markets is None or pair not in binance.markets:
             raise HTTPException(status_code=404, detail=f"Pair {pair} not found on Binance")
 
         # since = binance.milliseconds() - days * 24 * 60 * 60 * 1000
@@ -192,3 +197,25 @@ async def get_coin_chart_data(
         market_caps=market_caps,
         volumes=volumes
     )
+
+
+@router.get("/coins/{coin_id}/sentiment-divergence", response_model=List[Dict[str, Any]])
+async def get_coin_sentiment_divergence(
+    session: AsyncSessionDep,
+    coin_id: str,
+    days: Union[int, Literal["max"]] = 30,
+    interval: str = "daily"
+):
+    """Get historical sentiment divergence data for a specific coin"""
+    if interval not in ["daily", "hourly"]:
+        interval = "daily"
+    if days not in [1, 7, 14, 30, 90, 180, 365] and days != "max":
+        days = 30
+        
+    divergence_data = await get_coin_sentiment_divergence_history(
+        session=session,
+        coin_id=coin_id,
+        days=days,
+        interval=interval
+    )
+    return divergence_data

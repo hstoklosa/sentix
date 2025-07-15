@@ -24,7 +24,7 @@ import useCoinSubscription from "@/features/coins/hooks/use-coin-subscription";
 import { useCreateBookmark } from "@/features/bookmarks/api/create-bookmark";
 import { useDeleteBookmark } from "@/features/bookmarks/api/delete-bookmark";
 import { PriceChart } from "@/features/market/components";
-import { DashboardPanel } from "../_app/dashboard";
+import { DashboardPanel } from "./dashboard";
 import {
   Select,
   SelectContent,

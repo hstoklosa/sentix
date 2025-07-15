@@ -5,8 +5,8 @@ import { api } from "@/lib/api-client";
 import { MutationConfig } from "@/lib/react-query";
 import { NewsItem } from "@/features/news/types";
 
-const deleteBookmark = async (newsItemId: number): Promise<void> => {
-  return api.delete(`/bookmarks/${newsItemId}`);
+const deleteBookmark = async (postId: number): Promise<void> => {
+  return api.delete(`/bookmarks/${postId}`);
 };
 
 export const useDeleteBookmark = ({
@@ -17,9 +17,9 @@ export const useDeleteBookmark = ({
 
   return useMutation({
     mutationFn: deleteBookmark,
-    onSuccess: (data, newsItemId, context) => {
-      // Update the news list cache (infinite query)
-      queryClient.setQueriesData({ queryKey: ["news", "list"] }, (oldData: any) => {
+    onSuccess: (data, postId, context) => {
+      // Update the news feed cache (infinite query)
+      queryClient.setQueriesData({ queryKey: ["news-feed"] }, (oldData: any) => {
         if (!oldData || !oldData.pages) return oldData;
 
         // Update infinite query cache
@@ -28,7 +28,13 @@ export const useDeleteBookmark = ({
           pages: oldData.pages.map((page: any) => ({
             ...page,
             items: page.items.map((item: NewsItem) =>
-              item.id === newsItemId ? { ...item, is_bookmarked: false } : item
+              item.id === postId
+                ? {
+                    ...item,
+                    is_bookmarked: false,
+                    bookmark_id: undefined,
+                  }
+                : item
             ),
           })),
         };
@@ -36,10 +42,14 @@ export const useDeleteBookmark = ({
 
       // Also update the individual post detail cache if it exists
       queryClient.setQueryData(
-        ["news", "post", newsItemId],
+        ["news", "post", postId],
         (oldData: NewsItem | undefined) => {
           if (!oldData) return oldData;
-          return { ...oldData, is_bookmarked: false };
+          return {
+            ...oldData,
+            is_bookmarked: false,
+            bookmark_id: undefined,
+          };
         }
       );
 
@@ -47,10 +57,10 @@ export const useDeleteBookmark = ({
       // This is needed to remove the item from the bookmarked view
       queryClient.invalidateQueries({ queryKey: ["bookmarkedPosts"] });
 
-      onSuccess?.(data, newsItemId, context);
+      onSuccess?.(data, postId, context);
     },
-    onError: (error, newsItemId, context) => {
-      onError?.(error as AxiosError, newsItemId, context);
+    onError: (error, postId, context) => {
+      onError?.(error as AxiosError, postId, context);
     },
   });
 };

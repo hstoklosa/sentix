@@ -6,7 +6,6 @@ import logging
 import json
 
 
-
 def setup_logger():
     """Configure logging for the application"""
     logging.basicConfig(

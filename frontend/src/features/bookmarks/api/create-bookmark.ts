@@ -20,8 +20,8 @@ export const useCreateBookmark = ({
   return useMutation({
     mutationFn: createBookmark,
     onSuccess: (data, variables, context) => {
-      // Update the news list cache (infinite query)
-      queryClient.setQueriesData({ queryKey: ["news", "list"] }, (oldData: any) => {
+      // Update the news feed cache (infinite query)
+      queryClient.setQueriesData({ queryKey: ["news-feed"] }, (oldData: any) => {
         if (!oldData || !oldData.pages) return oldData;
 
         // Update infinite query cache
@@ -30,8 +30,8 @@ export const useCreateBookmark = ({
           pages: oldData.pages.map((page: any) => ({
             ...page,
             items: page.items.map((item: NewsItem) =>
-              item.id === variables.news_item_id
-                ? { ...item, is_bookmarked: true }
+              item.id === variables.post_id
+                ? { ...item, is_bookmarked: true, bookmark_id: data.id }
                 : item
             ),
           })),
@@ -40,10 +40,10 @@ export const useCreateBookmark = ({
 
       // Also update the individual post detail cache if it exists
       queryClient.setQueryData(
-        ["news", "post", variables.news_item_id],
+        ["news", "post", variables.post_id],
         (oldData: NewsItem | undefined) => {
           if (!oldData) return oldData;
-          return { ...oldData, is_bookmarked: true };
+          return { ...oldData, is_bookmarked: true, bookmark_id: data.id };
         }
       );
 

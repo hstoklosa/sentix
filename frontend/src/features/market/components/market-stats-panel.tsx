@@ -6,7 +6,6 @@ import { SentimentTag } from "@/features/news/components";
 
 import { useGetStats } from "../api";
 import PriceChangeTag from "./price-change-tag";
-import { FearGreedIndicator, FearGreedMeter } from "./fear-greed-index";
 
 const MarketStatsPanel = () => {
   const { data: marketStats, isLoading, isError } = useGetStats();
@@ -82,9 +81,11 @@ const MarketStatsPanel = () => {
           </div>
         </div>
 
-        <div className="row-start-2 row-end-3 col-start-1 col-end-2">
+        <div className="row-start-2 row-end-3 col-start-1 col-end-3">
           <div className="flex flex-col gap-1">
-            <p className="text-sm font-medium text-muted-foreground">Sentiment</p>
+            <p className="text-sm font-medium text-muted-foreground">
+              Market Sentiment
+            </p>
             <div className="flex items-center gap-2">
               <SentimentTag
                 size="lg"
@@ -95,7 +96,7 @@ const MarketStatsPanel = () => {
           </div>
         </div>
 
-        <div className="row-start-2 row-end-3 col-start-2 col-end-4">
+        {/* <div className="row-start-2 row-end-3 col-start-2 col-end-4">
           <div className="flex flex-col gap-1">
             <p className="text-sm font-medium text-muted-foreground">
               Fear & Greed Index
@@ -106,7 +107,7 @@ const MarketStatsPanel = () => {
               <FearGreedIndicator value={marketStats.fear_and_greed_index} />
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* <div className="row-start-2 row-end-3 col-start-4 col-end-5">8</div> */}
       </div>

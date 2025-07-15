@@ -17,9 +17,6 @@ from app.core.config import settings
 from app.core.news.types import NewsData
 from app.utils import datetime_from_timestamp, pretty_print
 
-# https://tenacity.readthedocs.io
-# https://websockets.readthedocs.io/en/stable/
-
 logger = logging.getLogger(__name__)
 
 class TreeNews:

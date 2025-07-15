@@ -32,10 +32,10 @@ const Root = () => {
       <Scripts />
 
       {/* {import.meta.env.DEV && ()} */}
-      <TanStackRouterDevtools
+      {/* <TanStackRouterDevtools
         position="bottom-right"
         initialIsOpen={false}
-      />
+      /> */}
     </RootLayout>
   );
 };

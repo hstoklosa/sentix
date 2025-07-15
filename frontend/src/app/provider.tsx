@@ -13,10 +13,10 @@ const AppProvider = ({ children }: { children: React.ReactNode }) => {
     <ThemeProvider>
       <Toaster richColors={true} />
       <QueryClientProvider client={queryClient}>
-        <ReactQueryDevtools
+        {/* <ReactQueryDevtools
           initialIsOpen={false}
           buttonPosition="bottom-right"
-        />
+        /> */}
         {children}
       </QueryClientProvider>
     </ThemeProvider>
