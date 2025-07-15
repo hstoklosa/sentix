@@ -11,7 +11,7 @@ from app.core.news.coindesk_news import CoinDeskNews
 from app.core.news.types import NewsData, NewsProvider
 from app.models.user import User
 from app.models.news import NewsItem
-# from app.ml_models.sentiment_analysis import sentiment_analyser
+from app.ml_models.sentiment_analysis import sentiment_analyser
 from app.services.news import save_news_item
 from app.utils import format_datetime_iso
 
@@ -120,16 +120,8 @@ class NewsManager:
         try:
             async with sessionmanager.session() as session:
                 news_data.feed = provider_name
-
-                # TODO: Temporarily hardcode results of sentiment analysis
-                # sentiment = sentiment_analyser.predict(news_data.body)
-                # saved_post = await save_news_item(session, news_data, sentiment)
-
-                saved_post = await save_news_item(session, news_data, {
-                    "label": "neutral",
-                    "score": 0.5,
-                    "polarity": 0.0
-                })
+                sentiment = sentiment_analyser.predict(news_data.body)
+                saved_post = await save_news_item(session, news_data, sentiment)
                 return saved_post
         except Exception as e:
             logger.error(f"Error processing news item: {str(e)}")

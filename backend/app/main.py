@@ -9,7 +9,7 @@ from app.api.main import api_router
 from app.core.database import create_db_and_tables
 from app.services.token import purge_expired_tokens
 from app.services.coin import sync_coins_from_coingecko
-# from app.ml_models.sentiment_analysis import sentiment_analyser
+from app.ml_models.sentiment_analysis import sentiment_analyser
 from app.core.config import settings
 from app.utils import setup_logger
 from app.core.news.news_manager import NewsManager
@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
     await create_db_and_tables()
     await sync_coins_from_coingecko()
 
-    # sentiment_analyser.load_model()
+    sentiment_analyser.load_model()
 
     news_manager = NewsManager.get_instance()
     await news_manager.initialize()

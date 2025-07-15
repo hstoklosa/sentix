@@ -8,33 +8,31 @@ import torch.nn.functional as F
 
 logger = logging.getLogger(__name__)
 
-MODEL_DIR = Path(__file__).parent / "finetuned_cryptobert"
-
 
 class SentimentAnalyser:
     """A class to handle sentiment analysis for crypto-related text using a fine-tuned model."""
     
-    def __init__(self, model_dir=None):
-        self.model_dir = model_dir or MODEL_DIR
+    def __init__(self):
+        self.model_name = "hstoklosa/finetuned-cryptobert" 
         self.model = None
         self.tokenizer = None
         self.device = torch.device("cpu")
         self.is_loaded = False
     
     def load_model(self):
-        """Load model and tokenizer if not already loaded."""
+        """Load model and tokenizer from Hugging Face if not already loaded."""
         if self.is_loaded:
             return self
             
-        logger.info("Loading model and tokenizer...")
+        logger.info(f"Loading model and tokenizer from Hugging Face: {self.model_name} ...")
 
         try:
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_dir, use_fast=True)
-            self.model = AutoModelForSequenceClassification.from_pretrained(self.model_dir, num_labels=3)
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, use_fast=True)
+            self.model = AutoModelForSequenceClassification.from_pretrained(self.model_name, num_labels=3)
             self.model.to(self.device)
             self.model.eval()
             self.is_loaded = True
-            logger.info(f"Loaded model and tokenizer from {self.model_dir}")
+            logger.info(f"Loaded model and tokenizer from {self.model_name}")
             logger.info(f"Model label mapping: {self.model.config.id2label}")
             return self
         except Exception as e:
