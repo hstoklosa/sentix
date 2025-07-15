@@ -7,7 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import or_, and_
 from sqlalchemy.orm import selectinload
 
-from app.models.news import Coin, NewsItem, NewsCoin
+from app.models.coin import Coin
+from app.models.news import NewsItem
+from app.models.post_coin import PostCoin
 from app.core.news.types import NewsData
 from app.core.market.coingecko import coingecko_client
 
@@ -48,13 +50,9 @@ async def create_news_item(session: AsyncSession, news_data: NewsData, sentiment
         score=sentiment["score"]
     )
     
-    print("debug3") 
-
     session.add(item)
     await session.commit()
     await session.refresh(item)
-
-    print("debug4") 
 
     if news_data.coins:
         current_time = datetime.utcnow()
@@ -63,8 +61,6 @@ async def create_news_item(session: AsyncSession, news_data: NewsData, sentiment
         coins_data = await coingecko_client.get_coins_markets(
             symbols=coins_list, include_tokens="top"
         )
-
-        print("debug5") 
 
         for coin_data in coins_data:
             symbol = coin_data.get("symbol").upper()
@@ -80,7 +76,7 @@ async def create_news_item(session: AsyncSession, news_data: NewsData, sentiment
                 session.add(coin)
                 await session.flush()
                 
-            news_coin = NewsCoin(
+            news_coin = PostCoin(
                 coin_id=coin.id,
                 news_item_id=item.id, 
                 price_usd=coin_data.get("current_price"),
@@ -88,26 +84,20 @@ async def create_news_item(session: AsyncSession, news_data: NewsData, sentiment
             )
             
             session.add(news_coin)
-
-        print("debug6") 
         
         await session.commit()
         await session.refresh(item)
 
-    print("debug7") 
-
-    # Refresh with joined coin data
-    # stmt = (
-    #     select(NewsItem)
-    #     .where(NewsItem.id == item.id)
-    #     .options(selectinload(NewsItem.coins).selectinload(NewsCoin.coin))
-    # )
-    # result = await session.execute(stmt)
-    # return result.scalar_one()
-
-    # print("debug8")
+    # Refresh with joined coin data to avoid lazy loading issues
+    stmt = (
+        select(NewsItem)
+        .where(NewsItem.id == item.id)
+        .options(selectinload(NewsItem.post_coins).selectinload(PostCoin.coin))
+    )
+    result = await session.execute(stmt)
+    item_with_coins = result.unique().scalar_one()
     
-    return item
+    return item_with_coins
 
 
 async def save_news_item(session: AsyncSession, news_data: NewsData, sentiment: dict) -> NewsItem:
@@ -124,12 +114,9 @@ async def save_news_item(session: AsyncSession, news_data: NewsData, sentiment: 
     """
     try:
         # Check if the URL already exists to avoid duplicates
-        print("debug0") 
         stmt = select(NewsItem).where(NewsItem.url == news_data.url)
         result = await session.execute(stmt)
-        existing_item = result.unique().scalar_one_or_none() # result.scalar_one_or_none()
-
-        print("debug1") 
+        existing_item = result.unique().scalar_one_or_none()
 
         if existing_item:
             logger.info(f"News item already exists: {existing_item.id} - {existing_item.title}")
@@ -138,11 +125,10 @@ async def save_news_item(session: AsyncSession, news_data: NewsData, sentiment: 
             stmt = (
                 select(NewsItem)
                 .where(NewsItem.id == existing_item.id)
-                .options(selectinload(NewsItem.coins).selectinload(NewsCoin.coin))
+                .options(selectinload(NewsItem.post_coins).selectinload(PostCoin.coin))
             )
             result = await session.execute(stmt)
-            existing_item = result.unique().scalar_one() # result.scalar_one()
-            print("debug2") 
+            existing_item = result.unique().scalar_one()
             return existing_item
 
         item = await create_news_item(session, news_data, sentiment)
@@ -209,7 +195,7 @@ async def get_news_feed(
     # Query for items, sorted by time and paginated
     stmt = (
         select(NewsItem)
-        .options(selectinload(NewsItem.coins).selectinload(NewsCoin.coin))
+        .options(selectinload(NewsItem.post_coins).selectinload(PostCoin.coin))
         .order_by(NewsItem.time.desc())
         .offset(offset)
         .limit(page_size)
@@ -278,7 +264,7 @@ async def search_news(
     stmt = (
         select(NewsItem)
         .where(where_clause)
-        .options(selectinload(NewsItem.coins).selectinload(NewsCoin.coin))
+        .options(selectinload(NewsItem.post_coins).selectinload(PostCoin.coin))
         .order_by(NewsItem.time.desc())
         .offset(offset)
         .limit(page_size)
@@ -301,7 +287,7 @@ async def get_post_by_id(session: AsyncSession, post_id: int) -> Optional[NewsIt
     stmt = (
         select(NewsItem)
         .where(NewsItem.id == post_id)
-        .options(selectinload(NewsItem.coins).selectinload(NewsCoin.coin))
+        .options(selectinload(NewsItem.post_coins).selectinload(PostCoin.coin))
     )
     
     result = await session.execute(stmt)

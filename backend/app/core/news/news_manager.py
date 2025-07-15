@@ -12,7 +12,7 @@ from app.core.news.types import NewsData, NewsProvider
 from app.models.user import User
 from app.models.news import NewsItem
 from app.ml_models.sentiment_analysis import sentiment_analyser
-from app.services.news import save_news_item
+# Removed to avoid circular import - will import inside function
 from app.utils import format_datetime_iso
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,6 @@ class Connection:
         self.websocket = websocket
         self.user = user
         self.send_lock = asyncio.Lock()
-        self.current_subscription: Optional[str] = None
 
 
 class NewsManager:
@@ -117,6 +116,8 @@ class NewsManager:
 
     async def _process_news_item(self, news_data: NewsData, provider_name: str):
         """Process a news item from a provider"""
+        from app.services.news import save_news_item  # Import here to avoid circular import
+        
         try:
             async with sessionmanager.session() as session:
                 news_data.feed = provider_name
@@ -150,7 +151,7 @@ class NewsManager:
     
     async def broadcast_to_clients(self, post: NewsItem):
         """
-        Broadcast news data to subscribed clients
+        Broadcast news data to all connected clients
         
         Args:
             post: The news post to broadcast
@@ -161,9 +162,6 @@ class NewsManager:
             disconnected_websockets = []
 
             for websocket, connection in connections:
-                if connection.current_subscription != post.feed:
-                    continue
-                
                 try:
                     success = await self.send_to_client(websocket, connection, {
                         "type": "news",
@@ -191,6 +189,7 @@ class NewsManager:
                         disconnected_websockets.append(websocket)
 
                 except Exception as e:
+                    logger.error(f"Exception while sending to client: {str(e)}")
                     disconnected_websockets.append(websocket)
             
             for websocket in disconnected_websockets:
@@ -210,6 +209,7 @@ class NewsManager:
         try:
             connection = Connection(websocket, user)
             self.active_connections[websocket] = connection
+            logger.info(f"Added client. Total active connections: {len(self.active_connections)}")
         except Exception as e:
             logger.error(f"Error adding client: {str(e)}")
 
@@ -222,4 +222,7 @@ class NewsManager:
         """
         if websocket in self.active_connections:
             del self.active_connections[websocket]
+            logger.info(f"Removed client. Total active connections: {len(self.active_connections)}")
+        else:
+            logger.warning(f"Attempted to remove client that was not in active connections")
     

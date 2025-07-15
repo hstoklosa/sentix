@@ -47,7 +47,6 @@ async def get_posts(
     news_items = []
     for item in items:
         item_dict = item.model_dump()
-        print("xd1", item_dict)
         item_dict["coins"] = item.get_formatted_coins()
         item_dict["is_bookmarked"] = await is_bookmarked(
             session=session,
@@ -57,7 +56,6 @@ async def get_posts(
         item_dict["time"] = format_datetime_iso(item.time)
         item_dict["created_at"] = format_datetime_iso(item.created_at)
         item_dict["updated_at"] = format_datetime_iso(item.updated_at)
-        print("xd2", item_dict) 
         news_items.append(NewsItemSchema.model_validate(item_dict))
 
     return NewsFeedResponse(
@@ -129,7 +127,6 @@ async def get_post(
 ) -> NewsItemSchema:
     """Get a post by its ID"""
     post = await get_post_by_id(session=session, post_id=post_id)
-    print("got post: ", post.dict())
 
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
@@ -143,6 +140,4 @@ async def get_post(
     post_dict["is_bookmarked"] = await is_bookmarked(
         session=session, user_id=current_user.id, news_item_id=post.id)
     
-    print("got post2: ", post_dict)
-
     return NewsItemSchema.model_validate(post_dict)

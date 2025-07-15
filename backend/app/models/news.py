@@ -4,10 +4,12 @@ from typing import List, Optional, TYPE_CHECKING, Dict, Any
 from sqlmodel import Field, SQLModel, Relationship
 
 from app.models.base import Base
-from app.models.coin import Coin
+from app.models.post_coin import PostCoin
 
 if TYPE_CHECKING:
+    from app.models.coin import Coin
     from app.models.bookmark import NewsBookmark
+    from app.models.post_coin import PostCoin
 
 
 class NewsItem(Base, table=True):
@@ -25,7 +27,8 @@ class NewsItem(Base, table=True):
     sentiment: str = Field(index=True)
     score: float = Field(index=True)
 
-    coins: List["NewsCoin"] = Relationship(back_populates="news_item", sa_relationship_kwargs={'lazy': 'joined'})
+    coins: List["Coin"] = Relationship(back_populates="news_items", link_model=PostCoin)
+    post_coins: List["PostCoin"] = Relationship(back_populates="news_item")
     bookmarks: List["NewsBookmark"] = Relationship(back_populates="news_item")
     
     @property
@@ -39,35 +42,22 @@ class NewsItem(Base, table=True):
     def get_formatted_coins(self) -> List[Dict[str, Any]]:
         """Return a formatted list of coins directly usable in API responses"""
         coin_list = []
-        for news_coin in self.coins:
-            if not news_coin.coin:
+        for post_coin in self.post_coins:
+            if not post_coin.coin:
                 continue
                 
             coin_data = {
-                "id": news_coin.coin.id,
-                "symbol": news_coin.coin.symbol,
-                "name": news_coin.coin.name,
-                "image_url": news_coin.coin.image_url
+                "id": post_coin.coin.id,
+                "symbol": post_coin.coin.symbol,
+                "name": post_coin.coin.name,
+                "image_url": post_coin.coin.image_url
             }
             
             # Add price information if available
-            if news_coin.price_usd is not None:
-                coin_data["price_usd"] = news_coin.price_usd
-                if news_coin.price_timestamp:
-                    coin_data["price_timestamp"] = news_coin.price_timestamp.isoformat()
+            if post_coin.price_usd is not None:
+                coin_data["price_usd"] = post_coin.price_usd
+                if post_coin.price_timestamp:
+                    coin_data["price_timestamp"] = post_coin.price_timestamp.isoformat()
             
             coin_list.append(coin_data)
         return coin_list
-
-
-class NewsCoin(SQLModel, table=True):
-    __tablename__ = "news_coins"
-    
-    news_item_id: int = Field(foreign_key="news_items.id", primary_key=True)
-    coin_id: int = Field(foreign_key="coins.id", primary_key=True)
-    price_usd: Optional[float] = Field(default=None)
-    price_timestamp: Optional[datetime] = Field(default=None)
-    
-    # Relationships
-    news_item: "NewsItem" = Relationship(back_populates="coins")  # news_coins
-    coin: "Coin" = Relationship(back_populates="news_coins")

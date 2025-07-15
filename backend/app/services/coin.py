@@ -10,7 +10,8 @@ from sqlalchemy.orm import joinedload
 from app.core.database import sessionmanager
 from app.core.market.coingecko import CoinGeckoClient
 from app.models.coin import Coin
-from app.models.news import NewsItem, NewsCoin
+from app.models.news import NewsItem
+from app.models.post_coin import PostCoin
 
 logger = logging.getLogger(__name__)
 
@@ -32,13 +33,13 @@ async def get_trending_coins_by_mentions(
     # Query to get coins mentioned in today's posts with mention count
     subquery = (
         select(
-            NewsCoin.coin_id,
+            PostCoin.coin_id,
             func.count(NewsItem.id).label("mention_count")
         )
-        .join(NewsItem, NewsItem.id == NewsCoin.news_item_id)
+        .join(NewsItem, NewsItem.id == PostCoin.news_item_id)
         .where(NewsItem.time >= start_of_day)
         .where(NewsItem.time <= end_of_day)
-        .group_by(NewsCoin.coin_id)
+        .group_by(PostCoin.coin_id)
         .subquery()
     )
     
@@ -68,8 +69,8 @@ async def get_trending_coins_by_mentions(
         news_query = (
             select(NewsItem)
             .options(joinedload(NewsItem.coins))
-            .join(NewsCoin, NewsItem.id == NewsCoin.news_item_id)
-            .where(NewsCoin.coin_id == coin.id)
+            .join(PostCoin, NewsItem.id == PostCoin.news_item_id)
+            .where(PostCoin.coin_id == coin.id)
             .where(NewsItem.time >= start_of_day)
             .where(NewsItem.time <= end_of_day)
         )
