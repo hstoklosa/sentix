@@ -1,4 +1,4 @@
-import { useCallback, createContext, useContext, ReactNode } from "react";
+import { useState, useCallback, createContext, useContext, ReactNode } from "react";
 import useWebSocket from "react-use-websocket";
 
 import { useLocalStorage } from "@/hooks/use-local-storage";
@@ -24,25 +24,21 @@ const LiveNewsContext = createContext<LiveNewsContextType>({
 type LiveNewsProviderProps = {
   children: ReactNode;
   onMessage?: (news: NewsItem) => void;
-  authToken?: string;
   baseUrl?: string;
-  defaultProvider?: string;
 };
 
 export const LiveNewsProvider = ({
   children,
   onMessage,
-  authToken,
   baseUrl,
-  defaultProvider,
 }: LiveNewsProviderProps) => {
   const { isConnected, error, connect, disconnect } = useNewsWebSocket({
     onMessage,
     autoConnect: true,
-    authToken,
     baseUrl,
-    defaultProvider,
   });
+
+  // const [error, setError] = useState<string | null>(null);
 
   const [accessToken, _] = useLocalStorage("access_token", "");
   const { user, status: authStatus } = useAuth();
