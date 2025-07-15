@@ -1,14 +1,10 @@
 import { useRouter, Link } from "@tanstack/react-router";
 import { UserRound, ChevronDown, Settings, LogOut, Newspaper } from "lucide-react";
 
-import treeNewsLogo from "@/assets/treenews-logo.png";
-import coinDeskLogo from "@/assets/coindesk-logo.png";
-
 import useAuth from "@/hooks/use-auth";
 import { useLogout } from "@/features/auth/api/logout";
 import { useLiveNewsContext } from "@/features/news/context";
 import { useBinanceWebSocketContext } from "@/features/coins/context";
-import { cn } from "@/lib/utils";
 
 import Logo from "../logo";
 import ThemeToggle from "../theme-toggle";
@@ -25,12 +21,7 @@ import {
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
   const { user } = useAuth();
-  const {
-    isConnected: isNewsConnected,
-    currentProvider,
-    availableProviders,
-    subscribe,
-  } = useLiveNewsContext();
+  const { isConnected: isNewsConnected } = useLiveNewsContext();
   const { isConnected: isBinanceConnected } = useBinanceWebSocketContext();
   const logoutMutation = useLogout({
     onSuccess: () => {
@@ -54,73 +45,6 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* News Feed Selector */}
-          {isNewsConnected && availableProviders.length > 0 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <div className="flex items-center group">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="font-normal flex items-center gap-2.5 p-2! h-9"
-                  >
-                    <div className="flex items-center justify-center p-1.5 bg-card text-foreground rounded group-hover:bg-muted transition-colors">
-                      <Newspaper className="size-2.5 font-light" />
-                    </div>
-                    <span className="truncate max-w-[100px] text-sm">
-                      {currentProvider || "News Feed"}
-                    </span>
-                    <ChevronDown className="size-3.5 text-foreground" />
-                  </Button>
-                </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                side="bottom"
-                sideOffset={10}
-                className="w-[135px]"
-              >
-                <DropdownMenuLabel className="cursor-default">
-                  <p className="text-sm font-normal text-foreground">Feed</p>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <div className="flex flex-col gap-0.2">
-                  {availableProviders.map((provider) => (
-                    <DropdownMenuItem
-                      key={provider}
-                      className={cn(
-                        "flex justify-between items-center cursor-pointer my-0.5 text-sm",
-                        currentProvider === provider && "bg-accent"
-                      )}
-                      onClick={() => subscribe(provider)}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        {provider === "TreeNews" ? (
-                          <img
-                            src={treeNewsLogo}
-                            alt="TreeNews"
-                            className="size-4"
-                          />
-                        ) : (
-                          <img
-                            src={coinDeskLogo}
-                            alt="CoinDesk"
-                            className="size-4"
-                          />
-                        )}
-
-                        <span>{provider}</span>
-                      </div>
-                      {currentProvider === provider && (
-                        <div className="size-2 rounded-full bg-chart-2 ml-auto" />
-                      )}
-                    </DropdownMenuItem>
-                  ))}
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div className="flex items-center group">

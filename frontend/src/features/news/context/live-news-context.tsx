@@ -10,25 +10,15 @@ import { NewsItem } from "../types";
 type LiveNewsContextType = {
   isConnected: boolean;
   error: string | null;
-  currentProvider: string | null;
-  availableProviders: string[];
   connect: () => void;
   disconnect: () => void;
-  subscribe: (provider: string) => void;
-  unsubscribe: () => void;
-  refreshProviders: () => void;
 };
 
 const LiveNewsContext = createContext<LiveNewsContextType>({
   isConnected: false,
   error: null,
-  currentProvider: null,
-  availableProviders: [],
   connect: () => {},
   disconnect: () => {},
-  subscribe: () => {},
-  unsubscribe: () => {},
-  refreshProviders: () => {},
 });
 
 type LiveNewsProviderProps = {
@@ -46,17 +36,7 @@ export const LiveNewsProvider = ({
   baseUrl,
   defaultProvider,
 }: LiveNewsProviderProps) => {
-  const {
-    isConnected,
-    error,
-    currentProvider,
-    availableProviders,
-    connect,
-    disconnect,
-    subscribe,
-    unsubscribe,
-    refreshProviders,
-  } = useNewsWebSocket({
+  const { isConnected, error, connect, disconnect } = useNewsWebSocket({
     onMessage,
     autoConnect: true,
     authToken,
@@ -76,13 +56,8 @@ export const LiveNewsProvider = ({
       value={{
         isConnected,
         error,
-        currentProvider,
-        availableProviders,
         connect,
         disconnect,
-        subscribe,
-        unsubscribe,
-        refreshProviders,
       }}
     >
       {children}

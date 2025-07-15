@@ -16,13 +16,8 @@ type UseNewsWebSocketOptions = {
 type UseNewsWebSocketResult = {
   isConnected: boolean;
   error: string | null;
-  currentProvider: string | null;
-  availableProviders: string[];
   connect: () => void;
   disconnect: () => void;
-  subscribe: (provider: string) => void;
-  unsubscribe: () => void;
-  refreshProviders: () => void;
 };
 
 /**
@@ -37,11 +32,8 @@ export const useNewsWebSocket = ({
 }: UseNewsWebSocketOptions = {}): UseNewsWebSocketResult => {
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentProvider, setCurrentProvider] = useState<string | null>(null);
-  const [availableProviders, setAvailableProviders] = useState<string[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const pingIntervalRef = useRef<number | null>(null);
-  const isInitialConnectionRef = useRef(true);
 
   // Get the token from localStorage or passed prop
   const getToken = useCallback(() => {
@@ -60,8 +52,6 @@ export const useNewsWebSocket = ({
     const clientId = Math.floor(Math.random() * 1000000).toString();
     return `${baseUrl}/api/v1/news/ws/${clientId}?token=${token}`;
   }, [baseUrl, getToken]);
-
-  //   const {} = useWebSocket(getWebSocketUrl, {});
 
   // Clean up function
   const disconnect = () => {
@@ -84,7 +74,6 @@ export const useNewsWebSocket = ({
     }
 
     setIsConnected(false);
-    setCurrentProvider(null);
   };
 
   // Helper to send a message to the WebSocket
@@ -99,30 +88,6 @@ export const useNewsWebSocket = ({
     } catch (error) {
       console.error("Error sending WebSocket message:", error);
       return false;
-    }
-  };
-
-  // Get available providers
-  const refreshProviders = () => {
-    if (isConnected) {
-      sendMessage({ type: "get_available_feeds" });
-    }
-  };
-
-  // Subscribe to a specific provider
-  const subscribe = (provider: string) => {
-    if (isConnected && provider) {
-      sendMessage({
-        type: "subscribe",
-        feed: provider,
-      });
-    }
-  };
-
-  // Unsubscribe from current provider
-  const unsubscribe = () => {
-    if (isConnected) {
-      sendMessage({ type: "unsubscribe" });
     }
   };
 
@@ -157,31 +122,11 @@ export const useNewsWebSocket = ({
             ws.send(JSON.stringify({ type: "ping" }));
           }
         }, 30000);
-
-        // Get available providers
-        sendMessage({ type: "get_available_feeds" });
-
-        // Get current subscription
-        sendMessage({ type: "get_subscription" });
-
-        // After a short delay, explicitly subscribe to the default provider
-        // This ensures we always make the subscription request
-        setTimeout(() => {
-          console.log(
-            `Explicitly subscribing to default provider: ${defaultProvider}`
-          );
-          sendMessage({
-            type: "subscribe",
-            feed: defaultProvider,
-          });
-          isInitialConnectionRef.current = false;
-        }, 500);
       };
 
       ws.onclose = (event) => {
         console.log(`WebSocket closed: ${event.code}`);
         setIsConnected(false);
-        setCurrentProvider(null);
 
         if (pingIntervalRef.current) {
           window.clearInterval(pingIntervalRef.current);
@@ -210,43 +155,6 @@ export const useNewsWebSocket = ({
               console.debug("Received pong from server");
               break;
 
-            case "available_feeds":
-              if (Array.isArray(message.feeds)) {
-                setAvailableProviders(message.feeds);
-
-                // Check if we need to subscribe - no condition on currentProvider
-                // since it might not be updated yet due to React state batching
-                if (
-                  isInitialConnectionRef.current &&
-                  message.feeds.includes(defaultProvider)
-                ) {
-                  subscribe(defaultProvider);
-                  isInitialConnectionRef.current = false;
-                }
-              }
-              break;
-
-            case "subscription":
-              setCurrentProvider(message.feed);
-
-              // If we receive a null subscription, check if we need to subscribe
-              if (message.feed === null && isInitialConnectionRef.current) {
-                // Don't check availableProviders here as it might not be updated yet
-                // We'll handle subscription in the available_feeds case
-                console.log(
-                  "No current subscription, will wait for available_feeds"
-                );
-              }
-              break;
-
-            case "subscribed":
-              setCurrentProvider(message.feed);
-              break;
-
-            case "unsubscribed":
-              setCurrentProvider(null);
-              break;
-
             case "error":
               setError(message.message || "An error occurred");
               break;
@@ -272,12 +180,7 @@ export const useNewsWebSocket = ({
   return {
     isConnected,
     error,
-    currentProvider,
-    availableProviders,
     connect,
     disconnect,
-    subscribe,
-    unsubscribe,
-    refreshProviders,
   };
 };
