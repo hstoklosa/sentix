@@ -59,7 +59,6 @@ function PostComponent() {
     isLoading: isPostLoading,
     error,
   } = useGetPost(parseInt(postId, 10));
-  console.log("XD", post);
 
   const { subscribeToSymbols, unsubscribeFromSymbols } = useCoinSubscription();
   const priceData = usePriceData(post?.coins.map((coin) => coin.symbol) || []);

@@ -3,7 +3,7 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { AppLayout } from "@/components/layout";
 import { DisclaimerAlert } from "@/components/disclaimer-alert";
 
-import { LiveNewsProvider } from "@/features/news/context";
+import { LiveNewsProvider } from "@/features/news/hooks";
 import { BinanceWebSocketProviderWrapper } from "@/features/coins/context";
 import { useUpdatePostsCache } from "@/features/news/api";
 

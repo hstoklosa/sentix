@@ -14,7 +14,7 @@ import {
 import { getBookmarkedPosts } from "@/features/bookmarks/api/get-bookmarks";
 
 import { getPosts, useUpdatePostsCache, searchPosts } from "../api";
-import { useLiveNewsContext } from "../context";
+import { useLiveNews } from "../hooks";
 import { NewsItem, SearchBar, ContentFilter } from ".";
 
 type FeedType = "all" | "bookmarked";
@@ -33,7 +33,8 @@ const NewsList = () => {
   const [refreshCounter, setRefreshCounter] = useState(0);
   const parentRef = useRef<HTMLDivElement>(null);
   const loadingMoreRef = useRef(false);
-  const { isConnected, error: isWebsocketError } = useLiveNewsContext();
+
+  const { isConnected, error: isWebsocketError } = useLiveNews();
 
   const {
     data,

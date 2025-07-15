@@ -3,7 +3,7 @@ import { UserRound, ChevronDown, Settings, LogOut, Newspaper } from "lucide-reac
 
 import useAuth from "@/hooks/use-auth";
 import { useLogout } from "@/features/auth/api/logout";
-import { useLiveNewsContext } from "@/features/news/context";
+import { useLiveNews } from "@/features/news/hooks";
 import { useBinanceWebSocketContext } from "@/features/coins/context";
 
 import Logo from "../logo";
@@ -21,7 +21,7 @@ import {
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
   const { user } = useAuth();
-  const { isConnected: isNewsConnected } = useLiveNewsContext();
+  const { isConnected: isNewsConnected } = useLiveNews();
   const { isConnected: isBinanceConnected } = useBinanceWebSocketContext();
   const logoutMutation = useLogout({
     onSuccess: () => {
