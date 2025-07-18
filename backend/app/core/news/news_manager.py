@@ -10,7 +10,7 @@ from app.core.news.coindesk_news import CoinDeskNews
 from app.core.news.types import NewsData, NewsProvider
 from app.models.user import User
 from app.models.post import Post
-from app.ml_models.sentiment_analysis import sentiment_analyser
+from app.services.llms import analyse_post_sentiment
 from app.utils import format_datetime_iso
 
 logger = logging.getLogger(__name__)
@@ -109,7 +109,7 @@ class NewsManager:
         try:
             async with sessionmanager.session() as session:
                 news_data.feed = provider_name
-                sentiment = sentiment_analyser.predict(news_data.body)
+                sentiment = await analyse_post_sentiment(news_data)
                 saved_post = await save_news_item(session, news_data, sentiment)
                 return saved_post
         except Exception as e:

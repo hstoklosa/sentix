@@ -76,4 +76,8 @@ class Settings(BaseSettings):
     COINDESK_API_KEY: str = ""
     COINDESK_API_POLL_INTERVAL: int = 300  # 5 minutes
 
+    OPENAI_API_KEY: str
+    OPENAI_BASE_URL: str
+
+
 settings = Settings()
