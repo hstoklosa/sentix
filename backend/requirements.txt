@@ -6,6 +6,7 @@ sqlalchemy
 sqlmodel
 psycopg[binary,pool]
 passlib[bcrypt]
+bcrypt
 pyjwt
 tenacity
 apscheduler
@@ -15,6 +16,7 @@ torch
 aiocache
 aiohttp
 ccxt
+openai
 
 # Testing
 pytest

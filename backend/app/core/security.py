@@ -4,11 +4,9 @@ from datetime import datetime, timedelta, timezone
 import re
 import uuid
 import jwt
-from passlib.context import CryptContext
+import bcrypt
 
 from app.core.config import settings
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def validate_password(password: str) -> tuple[bool, Optional[str]]:
@@ -43,12 +41,18 @@ def validate_password(password: str) -> tuple[bool, Optional[str]]:
 
 def get_password_hash(password: str) -> str:
     """Hash the provided password after validation is handled by the schema."""
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(
+        bytes(password, encoding="utf-8"),
+        bcrypt.gensalt()
+    )
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
-        return pwd_context.verify(plain_password, hashed_password)
+        return bcrypt.checkpw(
+            bytes(plain_password, encoding="utf-8"),
+            bytes(hashed_password, encoding="utf-8"),
+        )
     except Exception:
         return False
 
