@@ -4,7 +4,6 @@ import { z } from "zod";
 import { cn } from "@/lib/utils";
 
 import { NewsList } from "@/features/news/components";
-import { MarketStatsPanel } from "@/features/market/components";
 import { WatchlistList } from "@/features/watchlist/components";
 
 type DashboardContainerProps = {
@@ -90,7 +89,7 @@ function RouteComponent() {
       </DashboardPanel>
 
       <DashboardPanel position={{ rowStart: 1, rowEnd: 2, colStart: 3, colEnd: 4 }}>
-        <MarketStatsPanel />
+        <div>Market Stats</div>
       </DashboardPanel>
 
       <DashboardPanel position={{ rowStart: 2, rowEnd: 6, colStart: 3, colEnd: 4 }}>

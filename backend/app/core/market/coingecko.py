@@ -17,7 +17,7 @@ class CoinGeckoClient(BaseApiClient):
     def __init__(self):
         headers = { "x-cg-demo-api-key": self._API_KEY }
         super().__init__(self._API_BASE_URL, headers)
-        
+
         self.set_cache_ttl("/coins/markets", self._COINS_MARKETS_TTL)
         self.set_cache_ttl("/coins/{id}/market_chart", self._COIN_MARKET_CHART_TTL)
     

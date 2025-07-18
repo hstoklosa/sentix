@@ -1,7 +1,6 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 
 import { AppLayout } from "@/components/layout";
-import { DisclaimerAlert } from "@/components/disclaimer-alert";
 
 import { LiveNewsProvider } from "@/features/news/hooks";
 import { BinanceWebSocketProviderWrapper } from "@/features/coins/context";
@@ -11,7 +10,6 @@ const DashboardLayout = () => {
     <LiveNewsProvider>
       <BinanceWebSocketProviderWrapper>
         <AppLayout>
-          <DisclaimerAlert />
           <Outlet />
         </AppLayout>
       </BinanceWebSocketProviderWrapper>

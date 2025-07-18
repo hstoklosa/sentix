@@ -124,7 +124,7 @@ const NewsItem = ({ news, refreshCounter = 0 }: NewsItemProps) => {
             {news.icon_url && (
               <img
                 src={news.icon_url}
-                alt={news.source}
+                // alt={news.source}
                 className="size-4 rounded-full shrink-0 mt-0.5"
               />
             )}
