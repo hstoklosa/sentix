@@ -11,20 +11,25 @@ from app.services.token import purge_expired_tokens
 from app.services.coin import sync_coins_from_coingecko
 from app.core.config import settings
 from app.utils import setup_logger
-from app.core.news.news_manager import NewsManager
+from app.core.news.websocket_manager import connection_manager
+from app.core.news.news_manager import NewsIngestionService
 
 logger = setup_logger()
 scheduler = AsyncIOScheduler()
+
+news_service: NewsIngestionService | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Function that handles the startup and shutdown events."""
+    global news_service
+
     await create_db_and_tables()
     await sync_coins_from_coingecko()
 
-    news_manager = NewsManager.get_instance()
-    await news_manager.initialize()
+    news_service = NewsIngestionService(connection_manager)
+    await news_service.initialize()
 
     # Schedule token cleanup task
     scheduler.add_job(
@@ -49,9 +54,8 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
-        news_manager = NewsManager.get_instance()
-        if news_manager.is_initialized:
-            await news_manager.shutdown()
+        if news_service and news_service.is_initialized:
+            await news_service.shutdown()
 
         if scheduler.running:
             scheduler.shutdown()

@@ -78,3 +78,19 @@ class Post(BaseModel):
 
 class NewsFeedResponse(PaginatedResponse):
     items: List[Post]
+
+
+def serialize_post_for_ws(db_post) -> dict:
+    """Serialize a Post ORM model into the WebSocket broadcast format.
+    
+    Reuses the Post Pydantic schema so REST and WebSocket responses
+    stay consistent automatically.
+    """
+    post_schema = Post.model_validate(db_post, from_attributes=True)
+    post_schema.coins = [
+        CoinResponse.from_post_coin(pc) for pc in db_post.post_coins
+    ]
+    return {
+        "type": "news",
+        "data": post_schema.model_dump(mode="json"),
+    }

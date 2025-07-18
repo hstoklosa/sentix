@@ -26,30 +26,27 @@ class CoinDeskNews:
         self._running = False
         self._task: Optional[asyncio.Task] = None
         self._last_article_id: Optional[int] = None
+        self._session: Optional[aiohttp.ClientSession] = None
         self._headers = {
             "X-API-KEY": settings.COINDESK_API_KEY,
-            "Accept": "application/json"
+            "Accept": "application/json",
         }
     
     async def connect(self, callback: Callable[[NewsData], Any]):
-        """
-        Start polling the CoinDesk API for news.
-        
-        Args:
-            callback: Function to call when news is received
-        """
+        """Start polling the CoinDesk API for news."""
         if self._running:
             return
-            
+
         self._callback = callback
         self._running = True
+        self._session = aiohttp.ClientSession(headers=self._headers)
         self._task = asyncio.create_task(self._poll_articles())
         logger.info("Started CoinDesk news polling")
     
     async def disconnect(self):
         """Stop polling the CoinDesk API."""
         self._running = False
-        
+
         if self._task:
             self._task.cancel()
             try:
@@ -57,37 +54,38 @@ class CoinDeskNews:
             except asyncio.CancelledError:
                 pass
             self._task = None
-        
+
+        if self._session:
+            await self._session.close()
+            self._session = None
+
         logger.info("Stopped CoinDesk news polling")
     
     @retry(
         stop=stop_after_attempt(5),
         wait=wait_exponential(multiplier=1, min=4, max=60),
-        before_sleep=before_sleep_log(logger, logging.WARNING)
+        before_sleep=before_sleep_log(logger, logging.WARNING),
     )
     async def _fetch_articles(self) -> List[Dict[str, Any]]:
-        """
-        Fetch articles from the CoinDesk API.
-        
-        Returns:
-            List of articles in a dictionary format
-        """
-        params = { "lang": "EN", "limit": 20 }
-        
-        async with aiohttp.ClientSession() as session:
-            async with session.get(self.api_url, params=params, headers=self._headers) as response:
-                if response.status != 200:
-                    error_text = await response.text()
-                    logger.error(f"Error fetching CoinDesk news: {response.status} - {error_text}")
-                    return []
-                
-                data = await response.json()
-                
-                if "Data" not in data:
-                    logger.error(f"Invalid response format from CoinDesk API: {data}")
-                    return []
-                
-                return data["Data"]
+        """Fetch articles from the CoinDesk API."""
+        if not self._session:
+            return []
+
+        params = {"lang": "EN", "limit": 20}
+
+        async with self._session.get(self.api_url, params=params) as response:
+            if response.status != 200:
+                error_text = await response.text()
+                logger.error(f"Error fetching CoinDesk news: {response.status} - {error_text}")
+                return []
+
+            data = await response.json()
+
+            if "Data" not in data:
+                logger.error(f"Invalid response format from CoinDesk API: {data}")
+                return []
+
+            return data["Data"]
     
     async def _poll_articles(self):
         """Continuously poll the CoinDesk API for new articles."""

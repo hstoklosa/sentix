@@ -27,7 +27,6 @@ class TreeNews:
         self._socket: Optional[websockets.WebSocketClientProtocol] = None
         self._callback: Optional[Callable[[NewsData], Any]] = None
         self._running = False
-        self._recv_lock = asyncio.Lock()  # a lock for WebSocket recv operations
         self._task: Optional[asyncio.Task] = None
 
     async def connect(self, callback: Callable[[NewsData], Any]):
@@ -68,11 +67,7 @@ class TreeNews:
 
         while self._running:
             try:
-                # Use the lock to ensure only one coroutine can call recv at a time
-                async with self._recv_lock:
-                    message = await self._socket.recv()
-                
-                # Process message outside the lock
+                message = await self._socket.recv()
                 await self._handle_message(message)
             except websockets.ConnectionClosed:
                 logger.warning("WebSocket connection closed")
