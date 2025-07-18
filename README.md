@@ -1,93 +1,300 @@
-# Sentix Framework: Project Product Package
+# Sentix: Real-time Cryptocurrency News Aggregator
 
-The source code for the project is fully avilable within the following GitHub repositories:
+A full-stack cryptocurrency sentiment analysis platform that aggregates real-time news from multiple sources, performs AI-powered sentiment analysis, and provides market insights to help users make informed trading decisions.
 
-- **Full-Stack Web Application**: [https://github.com/hstoklosa/sentix](https://github.com/hstoklosa/sentix)
-- **NLP Pipeline**: [https://github.com/hstoklosa/sentix-nlp](https://github.com/hstoklosa/sentix-nlp)
+<p align="center" style="border-radius: 1rem;"><img src="https://github.com/hstoklosa/hstoklosa/blob/main/assets/sentix.jpg?raw=true" style="width: 90%; border-radius: 1rem;" /></p>
+
+## Features
+
+### Core Functionality
+
+- **Real-time News Aggregation**: Streams live cryptocurrency news from multiple sources (TreeNews, CoinDesk)
+- **AI Sentiment Analysis**: Uses a fine-tuned CryptoBERT model (`hstoklosa/finetuned-cryptobert`) to analyze sentiment (Bearish/Neutral/Bullish)
+- **Market Data Integration**: Real-time market statistics from CoinMarketCap and CoinGecko
+- **WebSocket Support**: Live news updates pushed to connected clients
+- **Bookmarking System**: Save and organize important news articles
+- **Watchlist Management**: Track your favorite cryptocurrencies
+- **Sentiment Divergence Analysis**: Compare sentiment trends against price movements
+- **Trending Coins**: Discover the most mentioned cryptocurrencies in recent news
+
+### Dashboard Features
+
+- **News Feed**: Real-time stream of cryptocurrency news with sentiment indicators
+- **Market Overview**: Global market statistics including market cap, volume, BTC dominance, and Fear & Greed Index
+- **Price Charts**: Interactive price charts with multiple timeframes (1D to MAX)
+- **Trending Analysis**: Visualize the most mentioned coins in the news
+- **Sentiment Divergence Charts**: Compare sentiment polarity against price movements
+- **Coin-specific Views**: Filter news and data by specific cryptocurrencies
+
+### Technical Highlights
+
+- **JWT Authentication**: Secure user authentication with access and refresh tokens
+- **Scheduled Tasks**: Automated token cleanup and coin synchronization
+- **Caching**: Efficient API response caching with aiocache
+- **Database**: PostgreSQL with SQLModel ORM
+- **Modern Frontend**: React 19 with TanStack Router and Query
+- **Beautiful UI**: Tailwind CSS with Radix UI components and dark mode support
+
+## Architecture
+
+### Backend (FastAPI)
+
+```
+backend/
+├── app/
+│   ├── api/              # API routes (REST & WebSocket)
+│   ├── core/             # Core functionality (config, database, market clients, news providers)
+│   ├── ml_models/        # Sentiment analysis model
+│   ├── models/           # SQLModel database models
+│   ├── schemas/          # Pydantic schemas for validation
+│   ├── services/         # Business logic layer
+│   └── tests/            # Unit and integration tests
+```
+
+**Key Technologies:**
+
+- FastAPI with async support
+- PostgreSQL + SQLModel
+- PyTorch + Transformers (HuggingFace)
+- APScheduler for background tasks
+- CCXT for exchange data
+- WebSocket for real-time updates
+
+### Frontend (React + TypeScript)
+
+```
+frontend/
+├── src/
+│   ├── app/              # TanStack Router configuration
+│   ├── components/       # Reusable UI components
+│   ├── features/         # Feature-based modules (auth, news, market, etc.)
+│   ├── hooks/            # Custom React hooks
+│   └── lib/              # Utilities and API client
+```
+
+**Key Technologies:**
+
+- React 19 with TypeScript
+- TanStack Router (file-based routing)
+- TanStack Query (data fetching & caching)
+- Tailwind CSS + Radix UI
+- Zustand (state management)
+- Recharts & Lightweight Charts (data visualization)
+- React Hook Form + Zod (form validation)
 
 ## Getting Started
 
 ### Prerequisites
 
-You need Docker and Docker Compose installed on your system. You can download it from the official Docker website: [https://www.docker.com/products/docker-desktop/](https://www.docker.com/products/docker-desktop/).
+- Docker & Docker Compose
+- Node.js 20+ (for local development)
+- Python 3.12+ (for local development)
 
-### Setup
+### Environment Variables
 
-1. Download the project files, unzip them, and place them in a desired location on your computer.
+Create a `.env` file in the root directory:
 
-2. If `.env` doesn't exist, then proceed to create it and using the following contents:
+```env
+# Database
+POSTGRES_HOST=db
+POSTGRES_PORT=5432
+POSTGRES_USER=postgres
+POSTGRES_PASS=your_password
+POSTGRES_DB=sentix
 
-   ```bash
-   FRONTEND_URL=http://localhost:5173
+# Authentication
+SECRET_KEY=your_secret_key_here
+SUPERUSER_EMAIL=admin@example.com
+SUPERUSER_USERNAME=admin
+SUPERUSER_PASSWORD=admin_password
 
-   BACKEND_CORS_ORIGINS="http://localhost,http://localhost:5173,https://localhost,https://localhost:5173,http://localhost.tiangolo.com"
-   SECRET_KEY=7123ac49576369cb05c6efa938dad6b19979aa9c74ea92134ad5cb33b9241411
+# API Keys
+TREENEWS_API_KEY=your_treenews_api_key
+COINMARKETCAP_API_KEY=your_cmc_api_key
+COINGECKO_API_KEY=your_coingecko_api_key
+COINDESK_API_KEY=your_coindesk_api_key
 
-   SUPERUSER_USERNAME=admin
-   SUPERUSER_EMAIL=admin@gmail.com
-   SUPERUSER_PASSWORD=Password123!
+# CORS
+BACKEND_CORS_ORIGINS=http://localhost:5173
 
-   COINMARKETCAP_API_KEY=793d7cdf-c940-40f9-8ebc-dc6b348e2172
-   COINGECKO_API_KEY=CG-Gkh8Z3KS1npaAts2MNZaChm8
-   TREENEWS_API_KEY=3d97f7319b028d1590e25f2b2f4fe544cd70bb64e9f23fc53e0bbd7affab4b93
-   COINDESK_API_KEY=d77c11241b74b5412d5bab0a6ca79c7280ebe8ac0217f2a3c3858c00fc8388c1
+# Frontend
+VITE_API_URL=http://localhost:8000
+```
 
-   POSTGRES_HOST=db
-   POSTGRES_PORT=5432
-   POSTGRES_DB=app
-   POSTGRES_USER=sentix
-   POSTGRES_PASS=jdjd123
-   ```
+### Running with Docker Compose
 
-3. Open a terminal and navigate to the project directory.
+1. **Clone the repository**
 
-4. Run the following command to start the application:
+```bash
+git clone <repository-url>
+cd sentix
+```
 
-   ```bash
-   docker compose up --build
-   ```
+2. **Start all services**
 
-5. Wait for the application to start. Once it is running, you will be able to access the web application with a web browser using this link: `http://localhost:5173/`.
+```bash
+docker-compose up --build
+```
 
-## Using the web application
+3. **Access the application**
 
-Once the web application is running, the user interface will be easily accessible. Simply use the credentials "admin" and "Password123!" to log in. The application will automatically redirect you to the homepage, where you can explore its features.
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:8000
+- API Documentation: http://localhost:8000/api/v1/docs
 
-## Project Structure
+### Local Development
 
-- `backend/`: Contains the Python-based FastAPI backend, responsible for handling API requests, authentication, and data processing.
-  - `app`: Stores the core application logic, including API routes, database models, business services, and configuration.
-    - `api/`: Defines the application's API endpoints, separating them into REST and WebSocket routes.
-      - `rest/`: Contains all the REST API endpoints for features like authentication, news, market data, and bookmarks.
-      - `websocket/`: Manages the WebSocket connections for pushing real-time data such as news updates to connected clients.
-    - `core/`: Includes essential modules for backend configuration, database management, security, and API clients for external services.
-      - `market/`: Contains client modules for fetching cryptocurrency market data from third-party APIs like CoinGecko and CoinMarketCap.
-      - `news/`: Manages the ingestion of news from various providers and coordinates its distribution through the system.
-    - `models/`: Defines the SQLModel ORM models that represent the structure of database tables for users, posts, coins, etc.
-    - `schema/`: Contains Pydantic models used for data validation and for the request and response bodies of the API.
-    - `services/`: Encapsulates the application's business logic, acting as an intermediary between API routes and database models.
-  - `tests/`: All automated tests for the backend application to ensure code quality and correctness.
-    - `unit/`: Contains unit tests that verify the functionality of individual components and functions in isolation.
-    - `integration/`: Stores integration tests that check the interaction and data flow between multiple components of the application (e.g., API endpoints, database operations, and external services).
-- `frontend/`: Contains the React-based frontend application built with Vite and TypeScript, which serves as the user interface.
-  - `public/`: Stores static assets such as index.html, favicons, and images that are served directly to the browser.
-  - `src/`: Contains all the source code for the React application, including components, routes, and business logic.
-    - `app/`: Manages the application's core structure, including the main provider setup and file-based routing configuration.
-      - `routes/`: Defines the application's routes/pages and URL structure using the TanStack Router's file-based routing system.
-        - `_app/`: Contains layouts and dashboard routes that are protected and require user authentication.
-        - `(auth)/`: Holds the routes related to the user authentication process, including the login and registration pages.
-    - `assets/`: Stores static assets like images and logos that are imported and used within the React components.
-    - `components/`: Contains globally reusable UI components that are shared across different features of the application.
-      - `error/`: Holds components for displaying various error states, such as a "404 Not Found" page.
-      - `layout/`: Provides structural components that define the overall layout of the application, like headers and sidebars.
-      - `ui/`: Consists of general-purpose UI elements like buttons, inputs, and cards provided by shadcn/ui library.
-    - `features/`: Organises code into distinct domains, wherew each folder contains all related components, hooks, and API calls.
-      - `auth/`: Manages all aspects of user authentication, including forms, API requests, and state.
-      - `bookmarks/`: Contains the logic for creating, viewing, and deleting user-specific post bookmarks.
-      - `coins/`: Includes components and hooks for displaying cryptocurrency data like trending charts and sentiment divergence.
-      - `market/`: Handles the fetching and display of overall market statistics and detailed price charts for individual coins.
-      - `news/`: Contains the functionality for displaying, filtering, searching, and receiving real-time updates for news items.
-    - `hooks/`: Provides custom, reusable React hooks that encapsulate shared logic like authentication state or local storage management.
-    - `lib/`: Holds core library configurations and helper modules. For example, the Axios API client and React Query setup for server‑state management.
-    - `types/`: Defines shared TypeScript type definitions used throughout the frontend codebase.
-    - `utils/`: Contains miscellaneous utility functions for common tasks like formatting data or merging class names.
+#### Backend
+
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+fastapi dev app/main.py
+```
+
+#### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+## API Endpoints
+
+### Authentication
+
+- `POST /api/v1/auth/register` - Register new user
+- `POST /api/v1/auth/login` - Login user
+- `POST /api/v1/auth/logout` - Logout user
+- `POST /api/v1/auth/refresh` - Refresh access token
+- `GET /api/v1/auth/me` - Get current user
+
+### News
+
+- `GET /api/v1/news/` - Get paginated news feed
+- `GET /api/v1/news/{post_id}` - Get specific post
+- `GET /api/v1/news/search` - Search news articles
+- `GET /api/v1/news/coins` - Get all coins mentioned in news
+- `WS /api/v1/ws/news` - WebSocket for real-time news
+
+### Market
+
+- `GET /api/v1/market/` - Get global market statistics
+- `GET /api/v1/market/chart/{symbol}` - Get price chart data
+- `GET /api/v1/market/coins` - Get coin list with market data
+
+### Trending
+
+- `GET /api/v1/trending/coins` - Get trending coins by mentions
+
+### Bookmarks
+
+- `GET /api/v1/bookmarks/` - Get user bookmarks
+- `POST /api/v1/bookmarks/` - Create bookmark
+- `DELETE /api/v1/bookmarks/{bookmark_id}` - Delete bookmark
+
+## Testing
+
+### Backend Tests
+
+```bash
+cd backend
+pytest
+pytest --cov=app tests/  # With coverage
+```
+
+The test suite includes:
+
+- Unit tests for services, security, and news providers
+- Integration tests for API endpoints and WebSocket connections
+
+## Configuration
+
+### Backend Configuration
+
+Key settings in `backend/app/core/config.py`:
+
+- Token expiration times
+- API polling intervals
+- Database connection settings
+- CORS origins
+
+### Frontend Configuration
+
+- `vite.config.ts` - Vite build configuration
+- `tailwind.config.js` - Tailwind CSS customization
+- `components.json` - Shadcn UI configuration
+
+## Key Dependencies
+
+### Backend
+
+- `fastapi` - Modern web framework
+- `sqlmodel` - SQL databases with Python type annotations
+- `transformers` - HuggingFace transformers for ML
+- `torch` - PyTorch for deep learning
+- `ccxt` - Cryptocurrency exchange integration
+- `apscheduler` - Background task scheduling
+- `pyjwt` - JSON Web Token implementation
+
+### Frontend
+
+- `@tanstack/react-router` - Type-safe routing
+- `@tanstack/react-query` - Data fetching & caching
+- `react-hook-form` - Form management
+- `recharts` - Chart library
+- `lightweight-charts` - Financial charts
+- `zustand` - State management
+- `zod` - Schema validation
+
+## UI Components
+
+The application uses a custom component library built on:
+
+- Radix UI primitives
+- Tailwind CSS for styling
+- CVA (Class Variance Authority) for component variants
+- Lucide React for icons
+
+## Security Features
+
+- Password hashing with bcrypt
+- JWT-based authentication (access + refresh tokens)
+- HTTP-only cookies for refresh tokens
+- CORS protection
+- SQL injection prevention via SQLModel
+- Input validation with Pydantic
+
+## Sentiment Analysis
+
+The sentiment analysis uses a fine-tuned BERT model specifically trained for cryptocurrency content:
+
+- **Model**: `hstoklosa/finetuned-cryptobert`
+- **Classes**: Bearish (0), Neutral (1), Bullish (2)
+- **Output**: Label, confidence score, and polarity (-1 to +1)
+
+## News Sources
+
+- **TreeNews**: Real-time cryptocurrency news aggregator
+- **CoinDesk**: Leading cryptocurrency news platform
+
+News is streamed via WebSocket connections and processed in real-time with sentiment analysis.
+
+## Contributing
+
+1. Fork it (<https://github.com/hstoklosa/sentix/fork>)
+2. Create your feature branch (`git checkout -b feature/fooBar`)
+3. Commit your changes (`git commit -am 'Add some fooBar'`)
+4. Push to the branch (`git push origin feature/fooBar`)
+5. Create a new pull request
+
+## License
+
+H. Stoklosa - hubert.stoklosa23@gmail.com
+
+Distributed under the MIT license. See `LICENSE` for more information.
+
+[https://github.com/hstoklosa/](https://github.com/hstoklosa/)
