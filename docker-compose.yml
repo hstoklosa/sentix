@@ -12,6 +12,11 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASS}
       - POSTGRES_DB=${POSTGRES_DB}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
     image: sentix-backend
@@ -34,7 +39,8 @@ services:
     volumes:
       - ./backend/app:/app/app
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   frontend:
     image: sentix-frontend
