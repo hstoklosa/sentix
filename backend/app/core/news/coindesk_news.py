@@ -19,7 +19,6 @@ logger = logging.getLogger(__name__)
 
 class CoinDeskNews:
     """Fetch news from the CoinDesk API."""
-    
     def __init__(self):
         self.api_url = "https://data-api.coindesk.com/news/v1/article/list"
         self._callback: Optional[Callable[[NewsData], Any]] = None
@@ -27,11 +26,8 @@ class CoinDeskNews:
         self._task: Optional[asyncio.Task] = None
         self._last_article_id: Optional[int] = None
         self._session: Optional[aiohttp.ClientSession] = None
-        self._headers = {
-            "X-API-KEY": settings.COINDESK_API_KEY,
-            "Accept": "application/json",
-        }
-    
+
+
     async def connect(self, callback: Callable[[NewsData], Any]):
         """Start polling the CoinDesk API for news."""
         if self._running:
@@ -39,10 +35,14 @@ class CoinDeskNews:
 
         self._callback = callback
         self._running = True
-        self._session = aiohttp.ClientSession(headers=self._headers)
+        self._session = aiohttp.ClientSession(headers={
+            "X-API-KEY": settings.COINDESK_API_KEY,
+            "Accept": "application/json",
+        })
         self._task = asyncio.create_task(self._poll_articles())
         logger.info("Started CoinDesk news polling")
     
+
     async def disconnect(self):
         """Stop polling the CoinDesk API."""
         self._running = False
@@ -61,6 +61,7 @@ class CoinDeskNews:
 
         logger.info("Stopped CoinDesk news polling")
     
+
     @retry(
         stop=stop_after_attempt(5),
         wait=wait_exponential(multiplier=1, min=4, max=60),
@@ -87,6 +88,7 @@ class CoinDeskNews:
 
             return data["Data"]
     
+
     async def _poll_articles(self):
         """Continuously poll the CoinDesk API for new articles."""
         while self._running:
@@ -114,6 +116,7 @@ class CoinDeskNews:
                 logger.error(f"Error polling CoinDesk API: {e}")
                 await asyncio.sleep(60)
     
+
     async def _process_article(self, article: Dict[str, Any]):
         """
         Process an article from the CoinDesk API and convert it to NewsData.

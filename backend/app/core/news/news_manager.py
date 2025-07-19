@@ -21,6 +21,7 @@ class NewsIngestionService:
         self.connection_manager = connection_manager
         self.is_initialized = False
 
+
     async def initialize(self):
         """Initialize connections to all news providers."""
         if self.is_initialized:
@@ -31,6 +32,7 @@ class NewsIngestionService:
 
         self.is_initialized = True
         logger.info("All news providers initialised")
+
 
     async def shutdown(self):
         """Shutdown and disconnect from all providers."""
@@ -47,6 +49,7 @@ class NewsIngestionService:
         self.is_initialized = False
         logger.info("Disconnected from all news providers")
 
+
     async def _init_provider(self, provider, name: str):
         """Initialise a single provider with proper error handling."""
         try:
@@ -59,6 +62,7 @@ class NewsIngestionService:
         except Exception as e:
             logger.error(f"Failed to connect to provider {name}: {e}")
 
+
     async def _on_news_received(self, news_data: NewsData):
         """Process a news item and broadcast to connected clients."""
         saved_post = await self._process_and_save(news_data)
@@ -66,6 +70,7 @@ class NewsIngestionService:
             from app.schemas.news import serialize_post_for_ws
             message = serialize_post_for_ws(saved_post)
             await self.connection_manager.broadcast(message)
+
 
     async def _process_and_save(self, news_data: NewsData):
         """Run sentiment analysis and persist the news item."""

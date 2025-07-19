@@ -124,7 +124,8 @@ function PostComponent() {
 
     post.is_bookmarked
       ? deleteBookmark.mutate(post.id)
-      : createBookmark.mutate({ news_item_id: post.id });
+      : createBookmark.mutate({ post_id: post.id });
+      // : createBookmark.mutate({ news_item_id: post.id });
   };
 
   const handleCopyTitle = () => {

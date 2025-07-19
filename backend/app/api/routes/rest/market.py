@@ -1,15 +1,13 @@
 import logging
-from datetime import datetime, time, date
 from typing import Annotated, Union, Literal, List, Dict, Any
 
 from fastapi import APIRouter, Depends, HTTPException
 
 import ccxt.async_support as ccxt_async
 
-from app.core.market.coingecko import coingecko_client
+from app.providers.market.coingecko import coingecko_client
 from app.schemas.market import CoinResponse, MarketChartData, ChartDataPoint
 from app.schemas.pagination import PaginatedResponse, PaginationParams
-from app.models.post import Post
 from app.deps import AsyncSessionDep
 from app.services.coin import get_coin_sentiment_divergence_history
 
@@ -76,19 +74,16 @@ async def get_coin_chart_data(
     days: Union[int, Literal["max"]] = 30,
     interval: str = "daily",
 ):
-    # Validate interval parameter
     if interval not in VALID_CHART_INTERVALS:
         interval = "daily"
     ccxt_interval = VALID_CHART_INTERVALS[interval]
 
-    # Validate days parameter
     if days not in VALID_CHART_DAYS and days != "max":
         days = 30
 
     # coin_id is the symbol of the coin
     pair = f"{coin_id.upper()}/USDT"
 
-    # Fetch OHLCV data from Binance using ccxt
     binance = ccxt_async.binance()
     
     try:

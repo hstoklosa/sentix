@@ -19,6 +19,7 @@ from app.utils import datetime_from_timestamp, pretty_print
 
 logger = logging.getLogger(__name__)
 
+
 class TreeNews:
     """Fetch news from the TreeNews provider."""
 
@@ -52,7 +53,7 @@ class TreeNews:
                 await websocket.send(f"login {settings.TREENEWS_API_KEY}")
                 await self._listen()
         except WebSocketException as e:
-            logger.error(f"Error connecting to TreeNews (WS) provider: {e}")
+            logger.error(f"TREE_NEWS: Connection failed: {e}")
             raise
         except asyncio.CancelledError:
             logger.info("TreeNews connection task cancelled")
@@ -70,10 +71,10 @@ class TreeNews:
                 message = await self._socket.recv()
                 await self._handle_message(message)
             except websockets.ConnectionClosed:
-                logger.warning("WebSocket connection closed")
+                logger.warning("TREE_NEWS: WebSocket connection closed")
                 break
             except Exception as e:
-                logger.error(f"Error processing message: {e}")
+                logger.error(f"TREE_NEWS: Error while processing message: {e}")
                 continue
 
     async def _handle_message(self, message: str):

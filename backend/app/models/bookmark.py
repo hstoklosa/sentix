@@ -12,7 +12,6 @@ if TYPE_CHECKING:
 
 
 class PostBookmark(Base, table=True):
-    """Table to store user bookmarks for news posts"""
     __tablename__ = "post_bookmarks"
     
     user_id: int = Field(foreign_key="users.id", index=True)

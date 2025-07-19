@@ -39,7 +39,8 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
       toast.success("You have been signed up successfully");
     },
     onError: (error) => {
-      toast.error(error.detail);
+      const message = (error.response?.data as { detail?: string })?.detail || "Registration failed";
+      toast.error(message);
     },
   });
 

@@ -37,7 +37,10 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
       toast.success("You have been signed in successfully");
     },
     onError: (error) => {
-      toast.error(error.detail);
+      // toast.error(error.detail);
+      const message =
+        (error.response?.data as { detail?: string })?.detail || "Login failed";
+      toast.error(message);
     },
   });
 

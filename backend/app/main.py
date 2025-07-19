@@ -17,21 +17,16 @@ from app.core.news.news_manager import NewsIngestionService
 logger = setup_logger()
 scheduler = AsyncIOScheduler()
 
-news_service: NewsIngestionService | None = None
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Function that handles the startup and shutdown events."""
-    global news_service
-
     await create_db_and_tables()
     await sync_coins_from_coingecko()
 
     news_service = NewsIngestionService(connection_manager)
     await news_service.initialize()
 
-    # Schedule token cleanup task
     scheduler.add_job(
         id="cleanup_expired_tokens",
         name="Remove expired tokens from database",
@@ -40,7 +35,6 @@ async def lifespan(app: FastAPI):
         replace_existing=True,
     )
     
-    # Schedule regular coin synchronisation task
     scheduler.add_job(
         id="sync_coins",
         name="Synchronise coins from CoinGecko",

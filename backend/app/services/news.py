@@ -11,7 +11,7 @@ from app.models.coin import Coin
 from app.models.post import Post
 from app.models.post_coin import PostCoin
 from app.core.news.types import NewsData
-from app.core.market.coingecko import coingecko_client
+from app.providers.market.coingecko import coingecko_client
 
 logger = logging.getLogger(__name__)
 
@@ -190,14 +190,12 @@ async def search_news(
     """Search posts by query string in title and body"""
     offset = (page - 1) * page_size
     
-    # Prepare search condition (title or body contains the query)
     search_term = f"%{query}%"
     search_condition = or_(
         Post.title.ilike(search_term),
         Post.body.ilike(search_term)
     )
     
-    # Build date filter conditions
     date_conditions = []
     if start_date:
         date_conditions.append(Post.time >= start_date)
@@ -219,13 +217,11 @@ async def search_news(
         )
         date_conditions.append(coin_filter_condition)
     
-    # Combine all conditions
     all_conditions = [search_condition]
     if date_conditions:
         all_conditions.extend(date_conditions)
     where_clause = and_(*all_conditions)
     
-    # Count total matching items
     count_stmt = select(func.count()).select_from(Post).where(where_clause)
     result = await session.execute(count_stmt)
     total_count = result.scalar_one()
@@ -246,7 +242,6 @@ async def search_news(
 
 
 async def get_post_by_id(session: AsyncSession, post_id: int) -> Optional[Post]:
-    """Get a post by its ID"""
     stmt = (
         select(Post)
         .where(Post.id == post_id)

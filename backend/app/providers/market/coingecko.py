@@ -10,21 +10,23 @@ logger = logging.getLogger(__name__)
 class CoinGeckoClient(BaseApiClient):
     _API_BASE_URL = "https://api.coingecko.com/api/v3"
     _API_KEY = settings.COINGECKO_API_KEY
-    
     _COINS_MARKETS_TTL = 300  # 5 minutes
     _COIN_MARKET_CHART_TTL = 900  # 15 minutes
 
     def __init__(self):
-        headers = { "x-cg-demo-api-key": self._API_KEY }
-        super().__init__(self._API_BASE_URL, headers)
+        super().__init__(self._API_BASE_URL, { 
+            "x-cg-demo-api-key": self._API_KEY 
+        })
 
         self.set_cache_ttl("/coins/markets", self._COINS_MARKETS_TTL)
         self.set_cache_ttl("/coins/{id}/market_chart", self._COIN_MARKET_CHART_TTL)
     
+
     def _parse_next_update_time(self, response_data: Dict[str, Any]) -> Optional[int]:
         """Extract next update time from CoinGecko response if available"""
         # CoinGecko doesn't provide information about next update time
         return None
+
 
     async def get_coins_markets(self,
         vs: str = "usd",
@@ -51,6 +53,7 @@ class CoinGeckoClient(BaseApiClient):
             "/coins/markets", params=params, force_refresh=force_refresh
         ) or []
         
+
     async def get_coin_market_chart(self,
         coin_id: str,
         vs: str = "usd",

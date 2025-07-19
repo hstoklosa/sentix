@@ -1,12 +1,10 @@
 from datetime import datetime
-from sqlalchemy import func
-from sqlmodel import SQLModel, Field
+from sqlmodel import Field
 
 from app.models.base import Base #timestamp_field
 
 
 class Token(Base, table=True):
-    """Model for tracking blacklisted refresh tokens"""
     __tablename__ = "tokens"
     
     id: int = Field(default=None, primary_key=True)

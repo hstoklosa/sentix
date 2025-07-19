@@ -1,19 +1,17 @@
 import logging
-import asyncio
 from datetime import datetime, time, date, timedelta
 from typing import List, Tuple, Dict, Any, Union, Literal
 
 from sqlmodel import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
+import ccxt.async_support as ccxt_async
 
 from app.core.database import sessionmanager
-from app.core.market.coingecko import CoinGeckoClient
+from app.providers.market.coingecko import CoinGeckoClient, coingecko_client
 from app.models.coin import Coin
 from app.models.post import Post
 from app.models.post_coin import PostCoin
-import ccxt.async_support as ccxt_async
-from app.core.market.coingecko import coingecko_client
 
 logger = logging.getLogger(__name__)
 
